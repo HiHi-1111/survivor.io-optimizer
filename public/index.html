@@ -3,118 +3,158 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Survivor.io Optimization Matrix</title>
+  <meta name="description" content="Fan-made Survivor.io optimizer dashboard with full-system layout and original placeholder icons." />
+  <title>Survivor.io Optimizer Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="utility-header">
-    <section class="mode-tabs" aria-label="Scenario selector">
-      <button class="mode-btn is-active" data-scenario="clan" type="button">Expedition</button>
-      <button class="mode-btn" data-scenario="enders" type="button">Echo</button>
-      <button class="mode-btn" data-scenario="trials" type="button">Trials</button>
-    </section>
+  <div class="space-bg"></div>
 
-    <section class="stat-strip" aria-label="Base stats">
-      <label>Chapter<input type="number" id="chapter" min="1" value="126" class="glass-input" /></label>
-      <label>Base ATK<input type="number" id="base-atk" min="0" placeholder="0" class="glass-input" /></label>
-      <label>Crit %<input type="number" id="crit-rate" min="0" step="0.1" class="glass-input" /></label>
-      <label>Crit DMG<input type="number" id="crit-dmg" min="0" step="0.1" placeholder="100" class="glass-input" /></label>
-    </section>
-
-    <section class="share-tray" aria-label="Share configuration">
-      <input type="text" id="share-string-output" readonly class="glass-input share-field" />
-      <button id="btn-copy-string" class="copy-btn" type="button">Copy</button>
-      <span id="copy-status" class="copy-status" aria-live="polite"></span>
-    </section>
-  </header>
-
-  <main class="main-dashboard-grid">
-    <aside class="dashboard-column left-column">
-      <article class="panel survivor-panel">
-        <div class="panel-head">
-          <h3>Select Survivor</h3>
-          <span id="selected-survivor-label" class="mini-badge">Master Yang</span>
-        </div>
-        <div id="survivor-grid" class="survivor-grid"></div>
-      </article>
-
-      <article class="panel run-panel">
-        <div class="panel-head">
-          <h3>Run Evolution Setup</h3>
-          <span id="evo-count" class="mini-badge">0 ready</span>
-        </div>
-        <div id="skill-pairs" class="skill-pairs"></div>
-      </article>
-    </aside>
-
-    <section class="dashboard-column center-column">
-      <article class="panel equipment-panel">
-        <div class="panel-head">
-          <h3>Six-Slot Equipment Matrix</h3>
-          <span class="mini-badge">Normal • S • SS • AF • Xeno</span>
-        </div>
-        <div id="equipment-grid" class="equipment-grid"></div>
-      </article>
-    </section>
-
-    <aside class="dashboard-column right-column">
-      <article class="panel tech-panel">
-        <div class="panel-head">
-          <h3>Tech / Resonance / Twinborn</h3>
-          <span class="mini-badge">Priority</span>
-        </div>
-        <div id="tech-grid" class="tech-grid"></div>
-        <button id="btn-tech-order" class="btn-secondary wide" type="button">Generate Target Priority Checklist</button>
-        <div id="tech-checklist" class="collapsible-output"></div>
-      </article>
-
-      <article class="panel collectibles-panel">
-        <div class="collectible-header">
-          <h3>Collectibles</h3>
-          <button id="tooltip-guide-trigger" class="lightbulb" type="button" aria-label="Collectible guide">💡</button>
-          <div id="collectible-tooltip" class="tooltip-card" hidden>
-            <strong>Store strategy</strong>
-            <ul>
-              <li>Prioritize damage, crit, and gear-linked set bonuses.</li>
-              <li>Finish sets only when the final piece is close.</li>
-              <li>Avoid random shard spending with no breakpoint.</li>
-            </ul>
+  <div class="app-shell">
+    <main class="main-canvas">
+      <section class="profile-bar panel-card" id="profile">
+        <div>
+          <div class="profile-title">Current profile <span class="status-chip">Unnamed</span></div>
+          <div class="profile-actions">
+            <button class="mini-btn" type="button">♙ Profile</button>
+            <button class="mini-btn" type="button" id="export-profile">↗ Export</button>
+            <button class="mini-btn" type="button">↙ Import</button>
+            <button class="mini-btn" type="button" id="share-profile">🔗 Share</button>
+            <button class="mini-btn" type="button" id="reset-profile">↻ Reset</button>
           </div>
         </div>
-        <div id="collectibles-grid" class="collectibles-grid"></div>
-      </article>
+        <button class="menu-btn" type="button" aria-label="Menu">☰</button>
+      </section>
 
-      <article class="panel source-pack-panel">
-        <div class="panel-head">
-          <h3>Source-Pack Systems</h3>
-          <span id="source-system-count" class="mini-badge">0 active</span>
+      <div class="dashboard-grid">
+        <div class="left-stack">
+          <section class="panel-card section-card" id="result">
+            <h2 class="section-tab">Result</h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <p class="small-muted">Calculation based on <span class="strike">multiplier</span> <span class="toggle-on"></span> <span class="blue-text">damage</span> ⓘ</p>
+            <div class="result-number" id="total-damage">2,909,943,993,918,844</div>
+            <p class="caption">Total Damage</p>
+          </section>
+
+          <section class="panel-card section-card" id="scenario">
+            <h2 class="section-tab">Scenario</h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div class="radio-row" id="scenario-options"></div>
+            <p class="body-copy">To improve calculation accuracy, compare your selected build against the mode you actually play. The optimizer weights boss damage, low-effort clearing, skill uptime, and resource value differently by scenario.</p>
+            <button class="blue-btn" type="button">Share results</button>
+          </section>
+
+          <section class="panel-card section-card" id="atk">
+            <h2 class="section-tab">ATK</h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div class="info-box">
+              <strong>Set equipment, survivors, pets, tech, collectibles, mounts, and other modifiers first.</strong>
+              <span>Then enter the exact values from Detailed Stats. Non-equipment modifiers must be updated manually until full formulas are wired.</span>
+            </div>
+            <div class="field-list">
+              <label>Total ATK ⓘ <input id="total-atk" type="number" value="608917" /></label>
+              <label>Base ATK <input id="base-atk" type="number" value="213898" /></label>
+              <label>Final ATK <input id="final-atk" type="number" value="10000" /></label>
+              <label>Available Designs ⓘ <span class="split-input"><input id="designs" type="number" value="111376" /><span>Max gear level: 230</span></span></label>
+            </div>
+          </section>
+
+          <section class="panel-card section-card" id="custom-sets">
+            <h2 class="section-tab wide-tab">Custom Sets <span class="resource-pill purple">◆ 0</span> <span class="resource-pill gold">⬢ 0</span> <button class="tab-btn" type="button">Optimize</button></h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div id="custom-set-list" class="custom-set-list"></div>
+          </section>
+
+          <section class="panel-card section-card" id="evo-tree-skills">
+            <h2 class="section-tab wide-tab">Evo tree skills</h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div id="evo-grid" class="evo-grid"></div>
+          </section>
+
+          <section class="panel-card section-card" id="lunar-mine-turf">
+            <h2 class="section-tab wide-tab">Lunar Mine Turf <button class="tab-btn" type="button">Hint</button></h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <label class="mini-field">Clan Level <input id="clan-level" type="number" value="0" /></label>
+            <div id="lunar-grid" class="lunar-grid"></div>
+          </section>
         </div>
-        <input id="source-system-search" class="source-search" type="search" placeholder="Search every feature: pets, clan, mounts..." />
-        <div id="source-category-tabs" class="source-category-tabs"></div>
-        <div id="source-system-list" class="source-system-list"></div>
-        <div id="source-system-summary" class="source-summary"></div>
-      </article>
+
+        <div class="right-stack">
+          <section class="panel-card section-card" id="items">
+            <h2 class="section-tab wide-tab">Items <span class="resource-pill red">◈ 54</span> <span class="resource-pill gold">⬢ 420</span> <span class="resource-pill pink">⬢ 180</span> <span class="resource-pill purple">▰ 0</span> <button class="tab-btn" type="button" id="optimize-items">Optimize</button></h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div class="support-strip" id="item-support-strip"></div>
+            <div id="gear-grid" class="gear-grid"></div>
+          </section>
+
+          <section class="panel-card section-card" id="tech-parts">
+            <h2 class="section-tab wide-tab">Tech parts <button class="tab-btn" type="button">Optimize</button> <button class="tab-btn" type="button">Track</button></h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div id="tech-top-grid" class="tech-top-grid"></div>
+            <div class="warning-box" id="tech-warning">Current setup supports limited active skill slots. Disable extras or choose matching passives before trusting the score.</div>
+            <div id="tech-skill-grid" class="tech-skill-grid"></div>
+          </section>
+
+          <section class="panel-card section-card" id="survivors">
+            <h2 class="section-tab wide-tab">Survivors <span class="resource-pill blue">✹ 21</span> <span class="resource-pill gold">⚜ 2590</span> <button class="tab-btn" type="button">Optimize</button></h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <div class="synergy-row">⬟ Survivor Synergy Unlocked <input type="checkbox" checked /> <span class="slider-fake"></span> <button class="square-btn" type="button">＋</button> <input class="small-number" type="number" value="10" /></div>
+            <div id="featured-survivors" class="featured-survivors"></div>
+            <p class="center-label">Teamwork Passive</p>
+            <div class="teamwork-row"><button class="passive-slot">None</button><button class="passive-slot">None</button></div>
+            <div id="survivor-grid" class="survivor-grid"></div>
+          </section>
+
+          <section class="panel-card section-card" id="collectibles">
+            <h2 class="section-tab wide-tab">Collectibles <span class="resource-pill red">▣ 108</span> <span class="resource-pill gold">▣ 520</span> <span class="resource-pill purple">◆ 3.17M</span> <button class="tab-btn" type="button">Order</button> <button class="tab-btn" type="button">Sets</button></h2>
+            <button class="collapse-btn" type="button">⌄</button>
+            <label class="hide-row">Hide event collectibles <input type="checkbox" /></label>
+            <input class="filter-input" type="search" placeholder="Filter by affection, set, gear link, rarity..." />
+            <div id="collectibles-grid" class="collectibles-grid"></div>
+          </section>
+
+          <div class="bottom-duo">
+            <section class="panel-card section-card" id="pets">
+              <h2 class="section-tab wide-tab">Pets <span class="resource-pill gold">★ 350</span></h2>
+              <button class="collapse-btn" type="button">⌄</button>
+              <div id="pets-grid" class="pets-grid"></div>
+            </section>
+
+            <section class="panel-card section-card" id="mounts">
+              <h2 class="section-tab wide-tab">Mounts <span class="resource-pill gold">◉ 0</span> <button class="tab-btn" type="button">Tetris</button> <button class="tab-btn" type="button">Puzzle list</button></h2>
+              <button class="collapse-btn" type="button">⌄</button>
+              <div id="mounts-grid" class="mounts-grid"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel-card section-card settings-card" id="settings">
+        <h2 class="section-tab wide-tab">Settings</h2>
+        <div class="settings-grid">
+          <label>Damage formatting <select><option>Default</option><option>Scientific</option><option>Compact</option></select></label>
+          <label>Revivals of E-Suit <button class="mini-btn" type="button">Set</button></label>
+          <label>Multithread limit <input type="range" min="1" max="32" value="16" /> <input class="small-number" type="number" value="16" /></label>
+          <label>Compute pool <select><option>Auto</option><option>CPU</option><option>Fast mode</option></select></label>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side-nav" aria-label="Section navigation">
+      <a class="active" href="#scenario">Scenario</a>
+      <a href="#atk">ATK</a>
+      <a href="#items">Items</a>
+      <a href="#tech-parts">Tech parts</a>
+      <a href="#survivors">Survivors</a>
+      <a href="#custom-sets">Custom Sets</a>
+      <a href="#collectibles">Collectibles</a>
+      <a href="#evo-tree-skills">Evo tree skills</a>
+      <a href="#lunar-mine-turf">Lunar Mine Turf</a>
+      <a href="#pets">Pets</a>
+      <a href="#mounts">Mounts</a>
+      <a href="#settings">Settings</a>
     </aside>
-  </main>
-
-  <section class="optimization-footer">
-    <div class="footer-resources">
-      <label>Gems<input type="number" id="res-gems" class="input-large resource-input" value="0" min="0" /></label>
-      <label>Relic Cores<input type="number" id="res-relic-cores" class="input-large resource-input" value="0" min="0" /></label>
-      <label>Awakening Cores<input type="number" id="res-awakening-cores" class="input-large resource-input" value="0" min="0" /></label>
-      <label>Pet Crystals<input type="number" id="res-pet-crystals" class="input-large resource-input" value="0" min="0" /></label>
-      <label>Res Chips<input type="number" id="res-resonance-chips" class="input-large resource-input" value="0" min="0" /></label>
-      <label>Xeno Cores<input type="number" id="res-xeno-cores" class="input-large resource-input" value="0" min="0" /></label>
-      <label>S Selectors<input type="number" id="res-s-selectors" class="input-large resource-input" value="0" min="0" /></label>
-      <label>Collect Shards<input type="number" id="res-collectible-shards" class="input-large resource-input" value="0" min="0" /></label>
-    </div>
-    <div id="exclusion-toggles" class="toggle-row"></div>
-    <button id="btn-execute-optimization" class="execute-btn" type="button">RUN FULL SOURCE-PACK OPTIMIZATION MATRIX</button>
-  </section>
-
-  <section id="results-dashboard" class="results-dashboard" hidden>
-    <div id="results-grid" class="results-grid"></div>
-  </section>
+  </div>
 
   <script src="app.js"></script>
 </body>
