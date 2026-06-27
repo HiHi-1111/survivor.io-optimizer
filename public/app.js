@@ -1,5 +1,10 @@
 (() => {
-  const files = ["app-data.js?v=5", "app-render.js?v=5", "app-actions.js?v=5"];
+  const css = document.createElement("link");
+  css.rel = "stylesheet";
+  css.href = "readability-fix.css?v=6";
+  document.head.appendChild(css);
+
+  const files = ["app-data.js?v=6", "app-render.js?v=6", "app-actions.js?v=6"];
   const load = (i = 0) => {
     if (i >= files.length) return;
     const script = document.createElement("script");
