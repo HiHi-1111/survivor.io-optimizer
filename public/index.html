@@ -15,8 +15,9 @@
     </section>
 
     <section class="stat-strip" aria-label="Base stats">
+      <label>Chapter<input type="number" id="chapter" min="1" value="126" class="glass-input" /></label>
       <label>Base ATK<input type="number" id="base-atk" min="0" placeholder="0" class="glass-input" /></label>
-      <label>Crit %<input type="number" id="crit-rate" min="0" max="100" step="0.1" class="glass-input" /></label>
+      <label>Crit %<input type="number" id="crit-rate" min="0" step="0.1" class="glass-input" /></label>
       <label>Crit DMG<input type="number" id="crit-dmg" min="0" step="0.1" placeholder="100" class="glass-input" /></label>
     </section>
 
@@ -50,7 +51,7 @@
       <article class="panel equipment-panel">
         <div class="panel-head">
           <h3>Six-Slot Equipment Matrix</h3>
-          <span class="mini-badge">2 × 3 grid</span>
+          <span class="mini-badge">Normal • S • SS • AF • Xeno</span>
         </div>
         <div id="equipment-grid" class="equipment-grid"></div>
       </article>
@@ -59,7 +60,7 @@
     <aside class="dashboard-column right-column">
       <article class="panel tech-panel">
         <div class="panel-head">
-          <h3>Tech Parts</h3>
+          <h3>Tech / Resonance / Twinborn</h3>
           <span class="mini-badge">Priority</span>
         </div>
         <div id="tech-grid" class="tech-grid"></div>
@@ -74,7 +75,7 @@
           <div id="collectible-tooltip" class="tooltip-card" hidden>
             <strong>Store strategy</strong>
             <ul>
-              <li>Prioritize damage and crit bonuses first.</li>
+              <li>Prioritize damage, crit, and gear-linked set bonuses.</li>
               <li>Finish sets only when the final piece is close.</li>
               <li>Avoid random shard spending with no breakpoint.</li>
             </ul>
@@ -82,16 +83,33 @@
         </div>
         <div id="collectibles-grid" class="collectibles-grid"></div>
       </article>
+
+      <article class="panel source-pack-panel">
+        <div class="panel-head">
+          <h3>Source-Pack Systems</h3>
+          <span id="source-system-count" class="mini-badge">0 active</span>
+        </div>
+        <input id="source-system-search" class="source-search" type="search" placeholder="Search every feature: pets, clan, mounts..." />
+        <div id="source-category-tabs" class="source-category-tabs"></div>
+        <div id="source-system-list" class="source-system-list"></div>
+        <div id="source-system-summary" class="source-summary"></div>
+      </article>
     </aside>
   </main>
 
   <section class="optimization-footer">
     <div class="footer-resources">
-      <label>Universal Shards<input type="number" id="core-shards-pool" class="input-large" value="0" min="0" /></label>
-      <label>Stellar Cores<input type="number" id="core-stellar-pool" class="input-large" value="0" min="0" /></label>
+      <label>Gems<input type="number" id="res-gems" class="input-large resource-input" value="0" min="0" /></label>
+      <label>Relic Cores<input type="number" id="res-relic-cores" class="input-large resource-input" value="0" min="0" /></label>
+      <label>Awakening Cores<input type="number" id="res-awakening-cores" class="input-large resource-input" value="0" min="0" /></label>
+      <label>Pet Crystals<input type="number" id="res-pet-crystals" class="input-large resource-input" value="0" min="0" /></label>
+      <label>Res Chips<input type="number" id="res-resonance-chips" class="input-large resource-input" value="0" min="0" /></label>
+      <label>Xeno Cores<input type="number" id="res-xeno-cores" class="input-large resource-input" value="0" min="0" /></label>
+      <label>S Selectors<input type="number" id="res-s-selectors" class="input-large resource-input" value="0" min="0" /></label>
+      <label>Collect Shards<input type="number" id="res-collectible-shards" class="input-large resource-input" value="0" min="0" /></label>
     </div>
     <div id="exclusion-toggles" class="toggle-row"></div>
-    <button id="btn-execute-optimization" class="execute-btn" type="button">RUN PERFORMANCE OPTIMIZATION MATRIX</button>
+    <button id="btn-execute-optimization" class="execute-btn" type="button">RUN FULL SOURCE-PACK OPTIMIZATION MATRIX</button>
   </section>
 
   <section id="results-dashboard" class="results-dashboard" hidden>
