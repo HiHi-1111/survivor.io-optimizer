@@ -1,5 +1,5 @@
 window.SO={};
-SO.$=s=>document.querySelector(s);SO.$$=s=>[...document.querySelectorAll(s)];SO.STORE='survivorOptimizerProfileV6';
+SO.$=s=>document.querySelector(s);SO.$$=s=>[...document.querySelectorAll(s)];SO.STORE='survivorOptimizerProfileV7';
 SO.state={scenario:'LME Expedition Phase',order:'default',setMode:false,gearMeta:{}};
 SO.data={
  scenarios:['LME Expedition Phase','LME Battle Phase',"Ender's Echo"],
@@ -11,8 +11,10 @@ SO.data={
  featured:['Raphael','Robot Core','Aqua Scout'],sets:['Custom Collection Set #1','Custom Collection Set #2','Custom Collection Set #3','Custom Collection Set #4'],
  collects:Array.from({length:100},(_,i)=>`Collectible ${i+1}`),evo:['Expose Weakness','Viva la Materia','Overreaction','Watchmaker'],lunar:['ATK','Shield','Cart','Chest','Burst','Crit','Tower','Crystal'],pets:['Main pet: Rex','Motivation','Inspiration','Encouragement','Battle Lust','Gary'],mounts:['Electric Scooter','Tech Hoverboard','Doomsteed']
 };
+SO.slug=s=>String(s||'').toLowerCase().replace(/'/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
 SO.mark=(label)=>String(label).split(/\s+/).map(x=>x[0]).join('').slice(0,3).toUpperCase();
-SO.img=(c,k,l,b='↯')=>`<div class='${c} icon-block' data-kind='${k}'><span class='art-mark'>${SO.mark(l)}</span>${b?`<span class='icon-badge'>${b}</span>`:''}</div>`;
+SO.assetPath=(label,kind)=>{const pack=window.SO_ASSET_PATHS;if(!pack)return'';const keys=[SO.slug(label),SO.slug(`${kind} ${label}`),SO.slug(kind)];for(const k of keys){const id=pack.aliases?.[k];if(id&&pack.images?.[id])return pack.images[id]}return''};
+SO.img=(c,k,l,b='↯')=>{const src=SO.assetPath(l,k);const mark=`<span class='art-mark'>${SO.mark(l)}</span>`;const fallback=src?`<img class='asset-real' src='${src}' alt='${l}' onerror="this.remove();this.parentElement.classList.add('asset-missing')">`:'';return`<div class='${c} icon-block ${src?'has-asset':'asset-missing'}' data-kind='${k}'>${fallback}${mark}${b?`<span class='icon-badge'>${b}</span>`:''}</div>`};
 SO.starRows=()=>`<div class='forge-rows'><div><b>★</b><span>Yellow</span><em>3/6</em></div><div><b class='red-star'>★</b><span>Red</span><em>0/6</em></div><div><b>AF</b><span>Astral</span><em>0</em></div><div><b>SS</b><span>Forge</span><em>0</em></div><div><b>RC</b><span>Relic</span><em>0</em></div></div>`;
 SO.stars=(n,t=6)=>`<span class='stars'>${Array.from({length:t},(_,i)=>`<span class='${i<n?'star-on':'star-off'}'>★</span>`).join('')}</span>`;
 SO.opts=(a,s)=>a.map(x=>`<option ${x===s?'selected':''}>${x}</option>`).join('');
