@@ -1,6 +1,18 @@
 (()=>{
+  const BUILD='item-editor-live-v3';
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+
+  function mark(){
+    window.ASCENDANT_BUILD=BUILD;
+    if(document.querySelector('.live-build-badge'))return;
+    const top=document.querySelector('.topbar-actions')||document.body;
+    const b=document.createElement('span');
+    b.className='live-build-badge';
+    b.textContent=BUILD;
+    b.style.cssText='display:inline-flex;align-items:center;border:1px solid #37d6c4;background:#12302c;color:#c9fff7;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:900;letter-spacing:.04em';
+    top.prepend(b);
+  }
 
   function fire(input){
     if(!input)return;
@@ -90,11 +102,9 @@
       const cols=document.createElement('div');
       cols.className='forge-two-cols';
       const redrawAll=()=>{
-        panel.querySelectorAll('.forge-value').forEach(()=>{});
         const cur=valueOf(inputs[0],max);
         const tar=valueOf(inputs[1],max);
         if(tar<cur)setValue(inputs[1],cur,max);
-        control.querySelectorAll('.forge-box').forEach(x=>x.remove());
         cols.innerHTML='';
         cols.append(makeStepper(inputs[0],max,'current',redrawAll),makeStepper(inputs[1],max,'target',redrawAll));
       };
@@ -118,7 +128,7 @@
       grid.dataset.realHelp='1';
       const help=document.createElement('div');
       help.className='upgrade-help';
-      help.textContent='Item Optimizer is interactive now: use + / - or stars to set your current forge level and target forge level. Optimize reads these values.';
+      help.textContent='LIVE ITEM EDITOR: use + / - or stars to set current and target forge levels. Optimize reads these values.';
       grid.parentElement?.insertBefore(help,grid);
     }
     $$('.item-card',grid).forEach(enhanceItemCard);
@@ -146,7 +156,7 @@
     ['#techGrid','#petsGrid','#mountsGrid'].forEach(sel=>$$(sel+' .level-item').forEach(enhanceLevelItem));
   }
 
-  function run(){enhanceItemOptimizer();enhanceLevels();}
+  function run(){mark();enhanceItemOptimizer();enhanceLevels();}
   document.addEventListener('DOMContentLoaded',()=>{run();setTimeout(run,150);setTimeout(run,700)});
   document.addEventListener('click',e=>{
     if(e.target.closest('.nav-item')||e.target.closest('#btnLoadSample')||e.target.closest('#btnImport'))setTimeout(run,120);
