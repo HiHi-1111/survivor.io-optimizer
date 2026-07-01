@@ -1,0 +1,1 @@
+document.body.innerHTML='<main class="so-app"><h1>Survivor.io Optimizer</h1><section class="card"><div class="card-head"><div class="card-title">Clean restart loaded</div></div><div class="card-body"><p>This is the new clean shell. Next step is wiring the real database sections.</p><button class="btn primary">Optimize</button></div></section></main>';
