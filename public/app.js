@@ -9,7 +9,7 @@
   loadCss("readability-fix.css?v=8");
   loadCss("normal-app.css?v=2");
 
-  const files = ["asset-paths.js?v=4", "app-main.js?v=1"];
+  const files = ["asset-paths.js?v=5", "app-main.js?v=1"];
   const load = (i = 0) => {
     if (i >= files.length) return;
     const script = document.createElement("script");
