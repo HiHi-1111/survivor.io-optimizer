@@ -134,10 +134,10 @@ window.SO_ASSET_PATHS = {
     ss_belt: "f109",
     ss_boots: "f082",
 
-    // S-grade gear aliases that are reasonably matched from the uploaded sheet
-    lightchaser: "f104",
+    // S-grade gear shown in dropdowns
+    lightchaser: "f005",
     sword_of_disorder: "f010",
-    void_power: "f024",
+    void_power: "f003",
     eternal_necklace: "f067",
     eternal_gloves: "f047",
     voidwaker_handguards: "f039",
