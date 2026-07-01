@@ -8,7 +8,7 @@
 
   loadCss("readability-fix.css?v=8");
   loadCss("normal-app.css?v=2");
-  loadCss("cfix.css?v=1");
+  loadCss("cfix.css?v=2");
 
   const files = ["asset-paths.js?v=7", "app-main.js?v=1", "collectibles-fix.js?v=1"];
   const load = (i = 0) => {
