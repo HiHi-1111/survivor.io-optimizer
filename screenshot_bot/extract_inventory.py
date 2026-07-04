@@ -6,7 +6,7 @@ from typing import Any
 import cv2
 
 from .grid_detector import crop_box, detect_colored_grid, draw_cells, quantity_region
-from .ocr import read_int
+from .ocr import read_quantity
 from .template_matcher import draw_matches, load_image, match_best
 
 
@@ -21,8 +21,9 @@ def extract_inventory(
     Pipeline:
     1) detect the regular colored item grid
     2) template-match each cell against known item/material icons
-    3) OCR only the bottom-right quantity badge
-    4) export item + quantity + confidence
+    3) crop the bottom-right quantity badge
+    4) OCR only that small crop with number-focused OCR
+    5) export item + quantity + confidence
     """
     img = load_image(screenshot_path)
     cells = detect_colored_grid(img, expected_cols=5, max_rows=12)
@@ -45,7 +46,7 @@ def extract_inventory(
 
         qbox = quantity_region(cell.box)
         qcrop = crop_box(img, qbox)
-        qty = read_int(qcrop, default=1)
+        qty, ocr_result = read_quantity(qcrop, default=1)
         if qdebug:
             cv2.imwrite(str(qdebug / f"cell_{cell.index:03d}_qty.png"), qcrop)
 
@@ -59,6 +60,9 @@ def extract_inventory(
                 "confidence": round(match.score, 4) if match else 0,
                 "quantity": qty,
                 "quantity_box": qbox,
+                "ocr_text": ocr_result.text,
+                "ocr_confidence": round(ocr_result.confidence, 2),
+                "ocr_method": ocr_result.method,
             }
         )
 
