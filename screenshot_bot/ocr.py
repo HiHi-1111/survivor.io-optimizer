@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
+import re
+from dataclasses import dataclass
+from typing import Iterable
 
 import cv2
 import numpy as np
@@ -11,21 +13,146 @@ except Exception:  # pragma: no cover
     pytesseract = None
 
 
-def preprocess_for_ocr(img: np.ndarray) -> np.ndarray:
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return th
+@dataclass(frozen=True)
+class OCRResult:
+    text: str
+    confidence: float
+    method: str
 
 
-def read_text(img: np.ndarray) -> str:
+def _ensure_bgr(img: np.ndarray) -> np.ndarray:
+    if img.ndim == 2:
+        return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    return img
+
+
+def _pad(img: np.ndarray, px: int = 8) -> np.ndarray:
+    return cv2.copyMakeBorder(img, px, px, px, px, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+
+
+def preprocess_variants(img: np.ndarray) -> list[tuple[str, np.ndarray]]:
+    """Return several OCR-ready variants.
+
+    Survivor.io text has thick white fill, black stroke, green stat values, and
+    small bottom-right stack quantities. One preprocessing method will not work
+    on all of those, so we try a few cheap variants and pick the best OCR score.
+    """
+    bgr = _ensure_bgr(img)
+    bgr = _pad(bgr, 8)
+    scale = 4 if min(bgr.shape[:2]) < 70 else 3
+    big = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+    gray = cv2.cvtColor(big, cv2.COLOR_BGR2GRAY)
+
+    variants: list[tuple[str, np.ndarray]] = []
+    variants.append(("gray", gray))
+
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    _, otsu = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    variants.append(("otsu", otsu))
+    variants.append(("otsu_inv", cv2.bitwise_not(otsu)))
+
+    adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 7)
+    variants.append(("adaptive", adaptive))
+
+    hsv = cv2.cvtColor(big, cv2.COLOR_BGR2HSV)
+    # Green stat values in detailed stats screens.
+    green = cv2.inRange(hsv, (40, 60, 90), (95, 255, 255))
+    variants.append(("green_only", green))
+
+    # White/yellow quantity labels near item icons.
+    white = cv2.inRange(hsv, (0, 0, 150), (179, 90, 255))
+    yellow = cv2.inRange(hsv, (15, 80, 120), (45, 255, 255))
+    variants.append(("white_yellow", cv2.bitwise_or(white, yellow)))
+
+    kernel = np.ones((2, 2), np.uint8)
+    cleaned: list[tuple[str, np.ndarray]] = []
+    for name, v in variants:
+        v2 = cv2.morphologyEx(v, cv2.MORPH_CLOSE, kernel, iterations=1)
+        cleaned.append((name, v2))
+    return cleaned
+
+
+def _ocr_with_conf(img: np.ndarray, config: str) -> OCRResult:
     if pytesseract is None:
-        return ""
-    processed = preprocess_for_ocr(img)
-    return pytesseract.image_to_string(processed, config="--psm 7").strip()
+        return OCRResult("", 0.0, "missing_tesseract")
+    data = pytesseract.image_to_data(img, config=config, output_type=pytesseract.Output.DICT)
+    words: list[str] = []
+    confs: list[float] = []
+    for text, conf in zip(data.get("text", []), data.get("conf", [])):
+        text = (text or "").strip()
+        try:
+            c = float(conf)
+        except Exception:
+            c = -1
+        if text:
+            words.append(text)
+        if c >= 0:
+            confs.append(c)
+    return OCRResult(" ".join(words).strip(), float(np.mean(confs)) if confs else 0.0, "tesseract")
+
+
+def read_text(img: np.ndarray, *, psm: int = 7, whitelist: str | None = None) -> str:
+    result = read_text_result(img, psm=psm, whitelist=whitelist)
+    return result.text
+
+
+def read_text_result(img: np.ndarray, *, psm: int = 7, whitelist: str | None = None) -> OCRResult:
+    if pytesseract is None:
+        return OCRResult("", 0.0, "missing_tesseract")
+    config = f"--oem 3 --psm {psm}"
+    if whitelist:
+        config += f" -c tessedit_char_whitelist={whitelist}"
+
+    best = OCRResult("", 0.0, "none")
+    for name, variant in preprocess_variants(img):
+        res = _ocr_with_conf(variant, config)
+        score = res.confidence + min(len(res.text), 20) * 0.5
+        best_score = best.confidence + min(len(best.text), 20) * 0.5
+        if score > best_score:
+            best = OCRResult(res.text, res.confidence, name)
+    return best
+
+
+def parse_game_number(text: str, default: int | float | None = 0) -> int | float | None:
+    """Parse Survivor.io numbers like 1636K, 40.1M, 293.96%, or 5 / 0."""
+    if not text:
+        return default
+    t = text.upper().replace(",", "").replace(" ", "")
+    # Prefer first number before slash for core stock style: 45/0.
+    if "/" in t:
+        t = t.split("/", 1)[0]
+    m = re.search(r"[-+]?\d+(?:\.\d+)?", t)
+    if not m:
+        return default
+    num = float(m.group(0))
+    if "B" in t:
+        num *= 1_000_000_000
+    elif "M" in t:
+        num *= 1_000_000
+    elif "K" in t:
+        num *= 1_000
+    if "%" not in t and num.is_integer():
+        return int(num)
+    return num
+
+
+def read_number(img: np.ndarray, default: int | float | None = 0) -> int | float | None:
+    result = read_text_result(img, psm=7, whitelist="0123456789.,KkMmBb/%")
+    return parse_game_number(result.text, default=default)
 
 
 def read_int(img: np.ndarray, default: int = 0) -> int:
-    text = read_text(img)
-    digits = "".join(ch for ch in text if ch.isdigit())
-    return int(digits) if digits else default
+    val = read_number(img, default=default)
+    try:
+        return int(round(float(val)))
+    except Exception:
+        return default
+
+
+def read_quantity(img: np.ndarray, default: int = 1) -> tuple[int, OCRResult]:
+    result = read_text_result(img, psm=7, whitelist="xX0123456789.,KkMmBb")
+    qty = parse_game_number(result.text.replace("x", "").replace("X", ""), default=default)
+    try:
+        return int(round(float(qty))), result
+    except Exception:
+        return default, result
