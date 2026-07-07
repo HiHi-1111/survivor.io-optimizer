@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 import cv2
 import numpy as np
@@ -46,6 +45,36 @@ def _split_wide_regions(regions: list[tuple[int, int]], expected_count: int) -> 
     return sorted(regions)[:expected_count]
 
 
+def _keep_regular_grid_rows(regions: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Keep the top consecutive grid rows and drop far-away buttons/text.
+
+    Some screens have saturated buttons near the bottom of the modal. Projection
+    sees those as a fake inventory row. Real grid rows have fairly consistent
+    spacing; a giant vertical gap means the grid ended.
+    """
+    regions = sorted(regions)
+    if len(regions) <= 2:
+        return regions
+
+    heights = [b - a for a, b in regions]
+    normal_h = float(np.median(heights[: min(5, len(heights))]))
+    kept: list[tuple[int, int]] = []
+    prev: tuple[int, int] | None = None
+
+    for row in regions:
+        a, b = row
+        row_h = b - a
+        if normal_h and row_h < normal_h * 0.45:
+            break
+        if prev is not None:
+            gap = a - prev[1]
+            if gap > max(normal_h * 1.35, 45):
+                break
+        kept.append(row)
+        prev = row
+    return kept
+
+
 def detect_colored_grid(
     image: np.ndarray,
     *,
@@ -53,12 +82,7 @@ def detect_colored_grid(
     max_rows: int = 12,
     roi: tuple[float, float, float, float] = (0.03, 0.20, 0.94, 0.65),
 ) -> list[GridCell]:
-    """Find colored square inventory cells by saturation projection.
-
-    This is made for static Survivor.io screens where the item grid is regular.
-    It avoids heavy object detection and gives us stable boxes to template match
-    and OCR quantity badges.
-    """
+    """Find colored square inventory cells by saturation projection."""
     h, w = image.shape[:2]
     rx, ry, rw, rh = roi
     x0, y0 = int(rx * w), int(ry * h)
@@ -66,7 +90,6 @@ def detect_colored_grid(
     crop = image[y0:y1, x0:x1]
 
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    # Survivor.io item cells are highly saturated compared with the modal bg.
     mask = ((hsv[:, :, 1] > 70) & (hsv[:, :, 2] > 90)).astype(np.uint8)
     kernel = np.ones((3, 3), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
@@ -77,8 +100,8 @@ def detect_colored_grid(
     row_regions = _regions_from_projection(row_proj, threshold_frac=0.18, min_width=max(12, int(h * 0.012)))
     col_regions = _split_wide_regions(col_regions, expected_cols)
 
-    # Drop title/header regions that are too close to ROI top and keep visible grid rows.
     row_regions = [r for r in row_regions if r[0] > int(crop.shape[0] * 0.05)]
+    row_regions = _keep_regular_grid_rows(row_regions)
     row_regions = row_regions[:max_rows]
 
     cells: list[GridCell] = []
@@ -91,7 +114,6 @@ def detect_colored_grid(
             y = max(0, y0 + ya - pad_y)
             bw = min(w - x, (xb - xa) + pad_x * 2)
             bh = min(h - y, (yb - ya) + pad_y * 2)
-            # Keep roughly square-ish boxes only. Rows from large banners are ignored.
             if bw <= 0 or bh <= 0:
                 continue
             if 0.45 <= bw / max(1, bh) <= 1.9:
