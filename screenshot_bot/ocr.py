@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from typing import Iterable
@@ -11,6 +12,23 @@ try:
     import pytesseract
 except Exception:  # pragma: no cover
     pytesseract = None
+
+
+def _configure_tesseract() -> None:
+    if pytesseract is None:
+        return
+    candidates = [
+        os.environ.get("TESSERACT_CMD"),
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            pytesseract.pytesseract.tesseract_cmd = candidate
+            return
+
+
+_configure_tesseract()
 
 
 @dataclass(frozen=True)
@@ -75,7 +93,10 @@ def preprocess_variants(img: np.ndarray) -> list[tuple[str, np.ndarray]]:
 def _ocr_with_conf(img: np.ndarray, config: str) -> OCRResult:
     if pytesseract is None:
         return OCRResult("", 0.0, "missing_tesseract")
-    data = pytesseract.image_to_data(img, config=config, output_type=pytesseract.Output.DICT)
+    try:
+        data = pytesseract.image_to_data(img, config=config, output_type=pytesseract.Output.DICT)
+    except Exception as exc:
+        return OCRResult("", 0.0, f"ocr_error:{type(exc).__name__}")
     words: list[str] = []
     confs: list[float] = []
     for text, conf in zip(data.get("text", []), data.get("conf", [])):
