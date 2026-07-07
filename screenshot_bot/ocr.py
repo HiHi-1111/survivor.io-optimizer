@@ -170,10 +170,28 @@ def read_int(img: np.ndarray, default: int = 0) -> int:
         return default
 
 
+def _parse_quantity_text(text: str, default: int = 1) -> int:
+    """Parse small stack labels without letting OCR junk before the number matter.
+
+    Example: OCR may see x6 as mx6. That should be 6, not 6M. Only a suffix after
+    the number counts as K/M/B.
+    """
+    t = (text or "").upper().replace(",", "")
+    t = t.replace("O", "0")
+    match = re.search(r"(?:X\s*)?(\d+(?:\.\d+)?)([KMB])?", t)
+    if not match:
+        return default
+    num = float(match.group(1))
+    suffix = match.group(2) or ""
+    if suffix == "B":
+        num *= 1_000_000_000
+    elif suffix == "M":
+        num *= 1_000_000
+    elif suffix == "K":
+        num *= 1_000
+    return int(round(num))
+
+
 def read_quantity(img: np.ndarray, default: int = 1) -> tuple[int, OCRResult]:
     result = read_text_result(img, psm=7, whitelist="xX0123456789.,KkMmBb")
-    qty = parse_game_number(result.text.replace("x", "").replace("X", ""), default=default)
-    try:
-        return int(round(float(qty))), result
-    except Exception:
-        return default, result
+    return _parse_quantity_text(result.text, default=default), result
