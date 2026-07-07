@@ -49,19 +49,19 @@ def _pad(img: np.ndarray, px: int = 8) -> np.ndarray:
 
 
 def preprocess_variants(img: np.ndarray) -> list[tuple[str, np.ndarray]]:
-    """Return several OCR-ready variants.
+    """Return several OCR-ready variants."""
+    bgr0 = _ensure_bgr(img)
+    raw_scale = 4 if min(bgr0.shape[:2]) < 100 else 3
+    raw_big = cv2.resize(bgr0, None, fx=raw_scale, fy=raw_scale, interpolation=cv2.INTER_CUBIC)
+    raw_gray = cv2.cvtColor(raw_big, cv2.COLOR_BGR2GRAY)
 
-    Survivor.io text has thick white fill, black stroke, green stat values, and
-    small bottom-right stack quantities. One preprocessing method will not work
-    on all of those, so we try a few cheap variants and pick the best OCR score.
-    """
-    bgr = _ensure_bgr(img)
-    bgr = _pad(bgr, 8)
+    bgr = _pad(bgr0, 8)
     scale = 4 if min(bgr.shape[:2]) < 70 else 3
     big = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
     gray = cv2.cvtColor(big, cv2.COLOR_BGR2GRAY)
 
     variants: list[tuple[str, np.ndarray]] = []
+    variants.append(("raw_gray", raw_gray))
     variants.append(("gray", gray))
 
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -73,11 +73,9 @@ def preprocess_variants(img: np.ndarray) -> list[tuple[str, np.ndarray]]:
     variants.append(("adaptive", adaptive))
 
     hsv = cv2.cvtColor(big, cv2.COLOR_BGR2HSV)
-    # Green stat values in detailed stats screens.
     green = cv2.inRange(hsv, (40, 60, 90), (95, 255, 255))
     variants.append(("green_only", green))
 
-    # White/yellow quantity labels near item icons.
     white = cv2.inRange(hsv, (0, 0, 150), (179, 90, 255))
     yellow = cv2.inRange(hsv, (15, 80, 120), (45, 255, 255))
     variants.append(("white_yellow", cv2.bitwise_or(white, yellow)))
@@ -85,8 +83,10 @@ def preprocess_variants(img: np.ndarray) -> list[tuple[str, np.ndarray]]:
     kernel = np.ones((2, 2), np.uint8)
     cleaned: list[tuple[str, np.ndarray]] = []
     for name, v in variants:
-        v2 = cv2.morphologyEx(v, cv2.MORPH_CLOSE, kernel, iterations=1)
-        cleaned.append((name, v2))
+        if name == "raw_gray":
+            cleaned.append((name, v))
+        else:
+            cleaned.append((name, cv2.morphologyEx(v, cv2.MORPH_CLOSE, kernel, iterations=1)))
     return cleaned
 
 
@@ -128,7 +128,11 @@ def read_text_result(img: np.ndarray, *, psm: int = 7, whitelist: str | None = N
     for name, variant in preprocess_variants(img):
         res = _ocr_with_conf(variant, config)
         score = res.confidence + min(len(res.text), 20) * 0.5
+        if whitelist and "/" in whitelist and "/" in res.text:
+            score += 2.0
         best_score = best.confidence + min(len(best.text), 20) * 0.5
+        if whitelist and "/" in whitelist and "/" in best.text:
+            best_score += 2.0
         if score > best_score:
             best = OCRResult(res.text, res.confidence, name)
     return best
@@ -139,7 +143,6 @@ def parse_game_number(text: str, default: int | float | None = 0) -> int | float
     if not text:
         return default
     t = text.upper().replace(",", "").replace(" ", "")
-    # Prefer first number before slash for core stock style: 45/0.
     if "/" in t:
         t = t.split("/", 1)[0]
     m = re.search(r"[-+]?\d+(?:\.\d+)?", t)
@@ -171,11 +174,7 @@ def read_int(img: np.ndarray, default: int = 0) -> int:
 
 
 def _parse_quantity_text(text: str, default: int = 1) -> int:
-    """Parse small stack labels without letting OCR junk before the number matter.
-
-    Example: OCR may see x6 as mx6. That should be 6, not 6M. Only a suffix after
-    the number counts as K/M/B.
-    """
+    """Parse small stack labels without letting OCR junk before the number matter."""
     t = (text or "").upper().replace(",", "")
     t = t.replace("O", "0")
     match = re.search(r"(?:X\s*)?(\d+(?:\.\d+)?)([KMB])?", t)
