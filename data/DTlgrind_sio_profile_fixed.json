@@ -1,5 +1,5 @@
 {
-  "schema_version": "survivor_optimizer_spend_save_v5",
+  "schema_version": "survivor_optimizer_spend_save_v6",
   "player": {
     "name": "DTlgrind",
     "level": 138,
@@ -17,10 +17,10 @@
     "awakening_crystals": 22
   },
   "spend_now": [
-    "Core choice chests x6 -> Void cores",
-    "Relic core chests x2 -> SS gear relic cores",
-    "Tech core choice chests x40 -> Lightning Mode",
-    "Gems -> relic cores / tech selectors / Xeno crystals only"
+    "Core choice chest x6 -> Void cores",
+    "Tech core choice chest x40 -> Void tech cores / Void-type core choice, not Lightning/Soccer",
+    "Relic core chest x2 -> Relic cores",
+    "Gems -> relic cores, core selectors, tech-core selectors, Xeno crystals"
   ],
   "save": [
     "S-grade choice packs x12",
@@ -28,5 +28,6 @@
     "Awakening crystals x22 unless Nutjob/Xeno star completes",
     "Random pet/equipment chests"
   ],
-  "site_answer": "SPEND: Core choice -> Void cores. Relic chest -> SS relic cores. Tech core -> Lightning Mode. Gems -> relic/tech/Xeno selectors. SAVE: S packs, Void crate, random chests, awakening unless Xeno/Nutjob star finishes."
+  "site_answer": "SPEND: Core choice -> Void cores. Tech core choice -> Void tech cores/core type, not Lightning/Soccer. Relic chest -> Relic cores. Gems -> relic/core/tech-core/Xeno selectors. SAVE: S packs, Void crate, random chests, awakening unless Xeno/Nutjob star finishes.",
+  "definition_fix": "Tech Core Choice Chest is not a direct choice of Lightning, Soccer, Laser, Drone, or Rocket. It is treated as a core-type selector. The optimizer must not map it to a tech skill without a separate cost table."
 }
