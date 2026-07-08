@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Survivor.io Spend Optimizer</title>
+  <style>
+    :root { color-scheme: dark; --bg:#07111f; --panel:#101c2f; --panel2:#17253b; --text:#edf5ff; --muted:#a8b7cc; --good:#6ee7a8; --warn:#ffd166; --bad:#ff6b6b; --line:#263a59; --blue:#66aaff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: radial-gradient(circle at top, #152b4e 0, var(--bg) 48rem); color:var(--text); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 18px; }
+    h1 { font-size: 1.75rem; margin: 10px 0 6px; }
+    h2 { font-size: 1.12rem; margin: 0 0 10px; }
+    p { color: var(--muted); line-height: 1.45; }
+    .card { background: rgba(16,28,47,.92); border:1px solid var(--line); border-radius:18px; padding:16px; margin:14px 0; box-shadow: 0 10px 30px rgba(0,0,0,.22); }
+    .row { display:flex; flex-wrap:wrap; gap:10px; }
+    .pill { background: var(--panel2); border:1px solid var(--line); border-radius:999px; padding:8px 10px; color:var(--muted); }
+    .pill b { color:var(--text); }
+    input[type=file] { width:100%; padding:14px; border:1px dashed #4c6b99; border-radius:14px; background:#0c1728; color:var(--text); }
+    textarea { width:100%; min-height:150px; border:1px solid var(--line); border-radius:14px; background:#07111f; color:var(--text); padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    button { border:0; border-radius:14px; padding:12px 14px; font-weight:800; background:linear-gradient(135deg,#4ea1ff,#7c5cff); color:white; cursor:pointer; }
+    button.secondary { background:#263a59; }
+    table { width:100%; border-collapse: collapse; overflow:hidden; border-radius:12px; }
+    th,td { text-align:left; border-bottom:1px solid var(--line); padding:10px; vertical-align:top; }
+    th { color:#cfe1ff; background:#13223a; }
+    .rank { font-size:1.1rem; font-weight:900; color:var(--blue); }
+    .go { color:var(--good); font-weight:900; }
+    .save { color:var(--warn); font-weight:900; }
+    .no { color:var(--bad); font-weight:900; }
+    .small { font-size:.9rem; color:var(--muted); }
+    .footer { font-size:.85rem; color:#88a0be; margin-top:20px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Survivor.io JSON Spend Optimizer</h1>
+    <p>Upload your player JSON. This temporary phone-friendly page reads your stats/resources and tells you what to spend on now, what to save, and why.</p>
+    <section class="card"><h2>1) Upload JSON</h2><input id="file" type="file" accept=".json,application/json" /><p class="small">Rule: spend aggressively unless you cannot complete the upgrade, or a near-term option is drastically better.</p><div class="row"><button id="demo">Load DTlgrind example rules</button><button class="secondary" id="clear">Clear</button></div></section>
+    <section class="card"><h2>2) Parsed profile</h2><div id="summary" class="row"><span class="pill">No JSON loaded yet.</span></div></section>
+    <section class="card"><h2>3) Spend recommendations</h2><div id="recs"><p>Upload your JSON to generate recommendations.</p></div></section>
+    <section class="card"><h2>4) Raw JSON check</h2><textarea id="raw" placeholder="Your parsed JSON will show here. You can paste JSON here too, then tap Analyze pasted JSON."></textarea><div class="row"><button id="analyzePaste">Analyze pasted JSON</button></div></section>
+    <div class="footer">Temporary UI for the Survivor.io optimizer repo. It does not send your file anywhere; analysis runs in this browser.</div>
+  </main>
+<script>
+const $=(id)=>document.getElementById(id); const number=(v)=>typeof v==='number'?v:Number(String(v??'').replace(/[^0-9.-]/g,''))||0; const fmt=(n)=>number(n).toLocaleString();
+const demoProfile={player:{name:'DTlgrind',level:138,gems:130539,coins:42500000},stats:{total_atk:793156,base_atk:127352,final_atk:436568,damage_calc:'142,912,460,712,309,100'},resources:{relic_cores:45,relic_core_choice_chest:2,core_choice_chest:6,tech_core_choice_chest:40,s_grade_excellent_equipment_choice_pack:12,voidwalker_excellent_equipment_supply_crate:1,eternal_cores:20,chaos_cores:10,extra_awakening_crystals:22,gems:130539},gear:{type:'mostly SS',low_forge_slots:['SS chest','SS belt','SS boots'],high_forge_slots:['SS weapon','SS necklace','SS gloves']},tech:{drone_mode:900,rocket_mode:900,soccer_mode:550,lightning_mode:960,laser_mode:1260,molotov_mode:600,normal_molotov:2100},pets:{main:'Nutjob',sync_rate:85,xeno_stars:4},spend_policy:{aggressive:true,save_only_if_lacking_resources_or_drastically_better_near_term_option:true}};
+function get(obj,paths,fallback){for(const p of paths){const val=p.split('.').reduce((a,k)=>a&&a[k]!==undefined?a[k]:undefined,obj);if(val!==undefined&&val!==null&&val!=='')return val;}return fallback;}
+function flattenResources(profile){const r=Object.assign({},profile.resources||{},profile.inventory||{},profile.bag||{}); if(profile.player?.gems&&!r.gems)r.gems=profile.player.gems; return r;}
+function analyze(profile){const r=flattenResources(profile); const relic=number(r.relic_cores)+number(r.relic_core_choice_chest); const coreChoices=number(r.core_choice_chest); const techChoices=number(r.tech_core_choice_chest); const sPacks=number(r.s_grade_excellent_equipment_choice_pack); const voidCrates=number(r.voidwalker_excellent_equipment_supply_crate); const awaken=number(r.extra_awakening_crystals||r.awakening_crystals); const gems=number(r.gems); const eternal=number(r.eternal_cores); const chaos=number(r.chaos_cores); const gear=profile.gear||profile.items||{}; const lowForge=gear.low_forge_slots||['SS chest / belt / boots if they are still lower forge']; const tech=profile.tech||profile.tech_parts||{}; const recs=[]; const push=(rank,action,status,spend,why,save)=>recs.push({rank,action,status,spend,why,save});
+if(relic>=40||coreChoices>0)push(1,'Check SS forge breakpoint first','SPEND IF BREAKPOINT IS AVAILABLE',`Use relic cores/chests only on the next real SS breakpoint. Current usable relic count estimate: ${fmt(relic)} plus ${fmt(coreChoices)} core choice chests. Target low-forge slots: ${Array.isArray(lowForge)?lowForge.join(', '):lowForge}.`,'SS forge breakpoints are usually the hardest-gated DPS jumps. Do not open selectors until you know the exact core type needed.','Save only if the next SS step cannot be completed now or if it blocks a much stronger SS breakpoint within one step.'); else push(1,'SS forge breakpoint','SAVE','Not enough visible relic/core resources to force an SS breakpoint.','SS forge is still top priority, but incomplete upgrades do nothing.','Save relic selectors.');
+if(techChoices>=20){const values=Object.entries(tech).filter(([k,v])=>typeof v==='number'||!isNaN(Number(v))).map(([k,v])=>[k,number(v)]).sort((a,b)=>a[1]-b[1]); const low=values.slice(0,3).map(x=>x[0].replaceAll('_',' ')).join(', ')||'lowest resonance tech'; push(2,'Spend tech core choice chests','SPEND',`You have ${fmt(techChoices)} tech core choice chests. Push the best DPS resonance breakpoint, probably one of the lower/uneven techs: ${low}.`,'Tech choices are flexible and your resonance is uneven, so this is safer to spend than random S gear packs.','Save only if the chosen tech does not reach a breakpoint.');} else if(techChoices>0) push(2,'Tech resonance','MAYBE',`You have ${fmt(techChoices)} tech choices. Spend only if it completes a resonance step.`,'Good DPS category, but small partial spends may be weak.','Save if no breakpoint.');
+if(awaken>=20)push(3,'Nutjob / Xeno awakening','SPEND IF STAR BREAKPOINT',`You have ${fmt(awaken)} extra awakening crystals. Spend if this finishes the next Nutjob/Xeno star or unlocks a meaningful DPS stat.`,'Your build is already Nutjob/Xeno based, so awakening crystals are valuable, but only at real breakpoints.','Save if it only fills progress and does not unlock the next star/stat.'); else if(awaken>0)push(3,'Nutjob / Xeno awakening','SAVE OR PARTIAL',`Only ${fmt(awaken)} awakening crystals visible.`,'May not be enough for a useful breakpoint.','Save until a star/stat breakpoint.');
+if(sPacks>=10||voidCrates>0)push(4,'S-grade packs / Void crate','SAVE UNLESS IT FINISHES SS',`You have ${fmt(sPacks)} S-grade excellent choice packs and ${fmt(voidCrates)} Voidwalker crate. Keep them as SS forge fuel unless opening them immediately finishes a stronger step.`,'Choice packs are too valuable to open randomly. They are best as exact missing pieces.','Save by default.');
+if(gems>=100000)push(5,'Gems','SPEND ONLY ON HIGH-VALUE EVENT MATH',`You have ${fmt(gems)} gems. Spend on event paths that buy relic cores, tech selectors, xeno crystals, or guaranteed selectors. Avoid normal pet chest gambling unless event conversion is proven better.`,'Your account is advanced, so random chests are usually worse than guaranteed breakpoint materials.','Save gems if the event shop does not convert into top-3 upgrade materials.');
+if(eternal||chaos)push(6,'Eternal/Chaos cores','USE AS EXACT FILLER',`Visible stock: ${fmt(eternal)} Eternal cores, ${fmt(chaos)} Chaos cores. Use only when the SS forge screen needs that exact core type.`,'Wrong core type spending can trap you. Open core-choice chests last, not first.','Save if you do not know the exact next SS cost.'); return recs.sort((a,b)=>a.rank-b.rank);}
+function render(profile){$('raw').value=JSON.stringify(profile,null,2); const r=flattenResources(profile); const chips=[['Name',get(profile,['player.name','name'],'Unknown')],['Level',get(profile,['player.level','level'],'?')],['Final ATK',get(profile,['stats.final_atk','final_atk'],'?')],['Gems',r.gems??get(profile,['player.gems'],'?')],['Relic cores',r.relic_cores??'?'],['Relic core chests',r.relic_core_choice_chest??'?'],['Tech core chests',r.tech_core_choice_chest??'?'],['Awakening crystals',r.extra_awakening_crystals??r.awakening_crystals??'?']]; $('summary').innerHTML=chips.map(([k,v])=>`<span class="pill">${k}: <b>${typeof v==='number'?fmt(v):v}</b></span>`).join(''); const rows=analyze(profile).map(x=>`<tr><td class="rank">#${x.rank}</td><td><b>${x.action}</b><br><span class="small">${x.why}</span></td><td class="${x.status.includes('SPEND')?'go':x.status.includes('SAVE')?'save':'no'}">${x.status}</td><td>${x.spend}<br><span class="small"><b>Save rule:</b> ${x.save}</span></td></tr>`).join(''); $('recs').innerHTML=`<table><thead><tr><th>Rank</th><th>Upgrade</th><th>Status</th><th>What to do</th></tr></thead><tbody>${rows}</tbody></table>`;}
+$('file').addEventListener('change',async e=>{const f=e.target.files[0]; if(!f)return; try{render(JSON.parse(await f.text()));}catch(err){alert('Bad JSON file: '+err.message);}}); $('demo').onclick=()=>render(demoProfile); $('clear').onclick=()=>{$('raw').value=''; $('summary').innerHTML='<span class="pill">No JSON loaded yet.</span>'; $('recs').innerHTML='<p>Upload your JSON to generate recommendations.</p>';}; $('analyzePaste').onclick=()=>{try{render(JSON.parse($('raw').value));}catch(err){alert('Bad pasted JSON: '+err.message);}};
+</script>
+</body>
+</html>
