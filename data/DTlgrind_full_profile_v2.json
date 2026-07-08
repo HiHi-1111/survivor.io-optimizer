@@ -1,45 +1,119 @@
 {
-  "schema_version": "dtlgrind_full_profile_v2",
-  "player": {"name":"DTlgrind","level":138,"gems":130539,"coins":42500000,"focus":"DPS only"},
-  "sio_stats": {"total_atk":793156,"base_atk":127352,"final_atk":436568,"available_designs":83500,"max_gear_level":202,"damage_shown":"142,912,460,712,309,100"},
+  "schema_version": "dtlgrind_exact_spend_targets_v1",
+  "player": {
+    "name": "DTlgrind",
+    "level": 138,
+    "focus": "DPS only",
+    "gems_not_main_factor": true
+  },
   "gear": {
-    "SS Weapon":"3E/2V/2C",
-    "SS Necklace":"3E/3V/2C",
-    "SS Gloves":"3E/3V/2C",
-    "SS Chest":"1E/0V/0C",
-    "SS Belt":"1E/0V/0C",
-    "SS Boots":"1E/0V/0C"
+    "SS Weapon": "3E/2V/2C",
+    "SS Necklace": "3E/3V/2C",
+    "SS Gloves": "3E/3V/2C",
+    "SS Chest": "1E/0V/0C",
+    "SS Belt": "1E/0V/0C",
+    "SS Boots": "1E/0V/0C"
   },
-  "tech": {"Drone Mode":900,"Rocket Mode":"900 x1.2","Soccer Mode":550,"Lightning Mode":"960 x1.2","Laser Mode":"1260 x1.4","Molotov Mode":600},
-  "pet": {"main":"Nutjob","sync_rate_pct":85,"stars":{"Nutjob":4,"Gourmeow":2,"other_xeno_pets":1},"awakening_crystals":22},
-  "survivors": {"synergy_level":4,"Venato_main":"2 red stars","Common_right_support":"1 red star","Metallia_left_support":"1 red star"},
   "inventory": {
-    "relic_core_chest":2,
-    "core_choice_chest":6,
-    "tech_core_choice_chest":40,
-    "s_grade_choice_pack":12,
-    "voidwalker_supply_crate":1,
-    "eternal_cores":240,
-    "void_cores":170,
-    "chaos_cores":120,
-    "relic_cores":45,
-    "pet_cookies":7436,
-    "xeno_pet_crystal":830,
-    "xeno_pet_elixir":1,
-    "awakening_crystals":22,
-    "oil":1697000,
-    "base_tech_materials":189,
-    "blue_tech_shards":11600,
-    "designs":{"scroll":2536,"gloves":462,"chest":2691,"necklace":806,"belt":2628,"weapon":551}
+    "relic_core_chest": 2,
+    "core_choice_chest": 6,
+    "tech_core_choice_chest": 40,
+    "s_grade_choice_pack": 12,
+    "voidwalker_supply_crate": 1,
+    "eternal_cores": 240,
+    "void_cores": 170,
+    "chaos_cores": 120,
+    "relic_cores": 45,
+    "xeno_pet_crystal": 830,
+    "xeno_pet_elixir": 1,
+    "awakening_crystals": 22
   },
-  "collectible_summary": {"red_count":28,"red_5_star":["Dark Matter Construct"],"red_1_star_rule":"all other red collectibles are 1 star","best_custom_set":"Custom Collection Set 1"},
-  "collectibles_red": ["Human Genome Mapping 1","Book of Ancient Wisdom 1","Immortal Lucky Coin 1","Instellar Transition Matrix Design 1","Angelic Tear Crystal 1","Unicorn's Horn 1","Otherworld Key 1","Starcore Diamond 1","High-Lat Energy Cube 1","Void Bloom 1","Eye of True Vision 1","Life Hourglass 1","Nano-Mimetic Mask 1","Dice of Destiny 1","Dimension Foil 1","Mental Sync Helm 1","Atomic Mech 1","Time Essence Bottle 1","Dragon Tooth 1","Hyper Neuron 1","Dark Matter Construct 5","Timeline Cube 1","Pisces Starlight 1","Aries Starlight 1","Malfunctioned Satellite Part 1","Old School Camera 1","Forgotten Diary 1","Griffin Golden Egg 1"],
-  "optimizer_policy": "Spend aggressively when it creates real DPS progress. Gems are not the main factor. Do not treat tech core choice chests as Lightning/Soccer/Laser directly; they are core-type selector value.",
-  "recommendations": [
-    {"rank":1,"title":"SS forge/core spending","spend":"core choice x6, tech core choice x40, relic chest x2, relic cores x45","where":"SS forge core requirements first","advice":"Use these on the low SS slots because Belt/Boots/Chest are only 1E/0V/0C."},
-    {"rank":2,"title":"Low SS slots","spend":"Eternal/Void/Chaos cores plus S packs only if needed","where":"Belt first, then Boots, then Chest","advice":"Close the forge gap before spending on weaker side paths."},
-    {"rank":3,"title":"Xeno pet","spend":"xeno pet crystal x830 and xeno elixir x1","where":"Nutjob first","advice":"Do not spread Xeno resources across 1-star pets."},
-    {"rank":4,"title":"Collectibles","spend":"collectible resources","where":"Custom Collection Set 1 first, then sets 2/3/4 only for set completion","advice":"Spend around set bonuses, not random loose stars."},
-    {"rank":5,"title":"Hold","spend":"none","where":"S packs, Voidwalker crate, awakening crystals unless they finish a star","advice":"Keep flexible stuff unless it completes one of the top targets."}
+  "exact_spend_targets": [
+    {
+      "rank": 1,
+      "item": "S-grade excellent equipment choice pack",
+      "amount": 2,
+      "pick": "Eternal Suit / Eternal chest piece",
+      "put_into": "SS Chest E-side progress",
+      "reason": "Your SS Chest is only 1E/0V/0C, so this is the cleanest exact S-pack use."
+    },
+    {
+      "rank": 2,
+      "item": "S-grade excellent equipment choice pack",
+      "amount": 2,
+      "pick": "Voidwaker Sash / Void belt piece",
+      "put_into": "SS Belt V-side progress",
+      "reason": "Your SS Belt has 0V. Belt is a damage slot, so feed the weak V side."
+    },
+    {
+      "rank": 3,
+      "item": "S-grade excellent equipment choice pack",
+      "amount": 2,
+      "pick": "Voidwaker Treads / Void boots piece",
+      "put_into": "SS Boots V-side progress",
+      "reason": "Your SS Boots have 0V and are behind your weapon/neck/gloves."
+    },
+    {
+      "rank": 4,
+      "item": "Voidwalker excellent equipment supply crate",
+      "amount": 1,
+      "pick": "Voidwaker Sash if available; otherwise Voidwaker Treads",
+      "put_into": "SS Belt first, SS Boots second",
+      "reason": "Use the fixed Void crate on a weak Void side, not randomly."
+    },
+    {
+      "rank": 5,
+      "item": "Core choice chest",
+      "amount": 6,
+      "pick": "Void cores",
+      "put_into": "SS Belt/Boots V-side core needs",
+      "reason": "Your low SS slots are all 0V, so Void cores are the best default core pick."
+    },
+    {
+      "rank": 6,
+      "item": "Relic core chest",
+      "amount": 2,
+      "pick": "Relic cores",
+      "put_into": "next SS forge step after the S gear/core picks above",
+      "reason": "Relic cores are SS forge bottleneck value."
+    },
+    {
+      "rank": 7,
+      "item": "Tech core choice chest",
+      "amount": 40,
+      "pick": "Void tech cores / Void-type core choice",
+      "put_into": "Twinborn/tech core requirement that asks for Void-type cores",
+      "reason": "This chest is not a Lightning/Soccer/Laser pick. It is a core-type pick."
+    },
+    {
+      "rank": 8,
+      "item": "Xeno pet crystal",
+      "amount": 830,
+      "pick": "Nutjob",
+      "put_into": "Nutjob only",
+      "reason": "Nutjob is your main pet. Do not spread Xeno crystals to 1-star pets."
+    },
+    {
+      "rank": 9,
+      "item": "Xeno pet elixir",
+      "amount": 1,
+      "pick": "Nutjob",
+      "put_into": "Nutjob only",
+      "reason": "Same reason: main-pet scaling."
+    },
+    {
+      "rank": 10,
+      "item": "Awakening crystals",
+      "amount": 22,
+      "pick": "Nutjob/Xeno awakening only if it completes the next star",
+      "put_into": "Nutjob/Xeno star breakpoint",
+      "reason": "Do not spend these for partial progress if no star completes."
+    }
+  ],
+  "save_targets": [
+    "Remaining S-grade packs after the 6 listed above",
+    "Gems unless buying relic cores, selector cores, Xeno crystals, or guaranteed S/SS selector value",
+    "Random pet chests",
+    "Random equipment chests"
   ]
 }
