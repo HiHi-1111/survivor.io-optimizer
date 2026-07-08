@@ -1,0 +1,49 @@
+{
+  "source_note": "Manual correction from DTlgrind inventory screenshots and user correction. Public web search on 2026-07-08 did not return reliable indexable sources for these exact item names, so treat as user-verified/manual knowledge until confirmed by a better source pack.",
+  "items": [
+    {
+      "name": "Core Choice Chest",
+      "screen_icon_hint": "orange/yellow chest with core/faction badge",
+      "quantity_seen": 6,
+      "gives": "1 selectable equipment/core material: Eternal Core, Void Core, or Chaos Core",
+      "not_for": "Does not choose a tech skill such as Lightning, Laser, Soccer, Drone, or Rocket.",
+      "optimizer_rule": "For DTlgrind, choose the core type needed by the next SS forge step; if no forge screen requirement is visible, default recommendation is Void Core because Eternal=20 and Chaos=10 were already listed while Void stock was not listed."
+    },
+    {
+      "name": "Tech Core Choice Chest",
+      "screen_icon_hint": "purple/gray chest with hex/core symbol",
+      "quantity_seen": 40,
+      "gives": "1 selectable tech-core type material, not a direct tech-part upgrade and not a Lightning/Soccer/Laser choice by itself. If the selection screen offers Eternal/Void/Chaos tech cores, pick the type required by the tech/SS/Twinborn requirement being completed.",
+      "not_for": "Do not map this item to Soccer Mode, Lightning Mode, Laser Mode, etc. without a separate cost table showing that those modes require that exact core type.",
+      "optimizer_rule": "Keep as core selector value. Spend only when the target screen asks for a specific Eternal/Void/Chaos tech core type; for DTlgrind, prefer Void-type if the choice is unrestricted and Void stock is the bottleneck."
+    },
+    {
+      "name": "Relic Core Chest",
+      "screen_icon_hint": "orange/yellow chest with relic-core badge",
+      "quantity_seen": 2,
+      "gives": "Relic core / relic-core selector used for SS gear progression.",
+      "optimizer_rule": "Use only for SS gear breakpoint material. Do not spend if the SS upgrade cannot be completed immediately."
+    },
+    {
+      "name": "S Grade Excellent Equipment Choice Pack",
+      "screen_icon_hint": "purple S crate",
+      "quantity_seen": 12,
+      "gives": "Selectable S-grade excellent equipment item, used as gear/fodder/value storage.",
+      "optimizer_rule": "Save unless it directly completes a chosen SS forge/core/fodder requirement."
+    },
+    {
+      "name": "Voidwalker Excellent Equipment Supply Crate",
+      "screen_icon_hint": "purple S crate with red/pink center badge",
+      "quantity_seen": 1,
+      "gives": "Voidwalker excellent equipment supply item/crate.",
+      "optimizer_rule": "Save unless Voidwalker gear/fodder is the exact missing piece for a completed upgrade."
+    },
+    {
+      "name": "Awakening Crystal",
+      "screen_icon_hint": "gold star crystal",
+      "quantity_seen": 22,
+      "gives": "Awakening crystal resource.",
+      "optimizer_rule": "Spend only if it completes the next Nutjob/Xeno awakening star or stat breakpoint now; otherwise save."
+    }
+  ]
+}
