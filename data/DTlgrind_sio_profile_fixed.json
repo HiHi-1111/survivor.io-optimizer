@@ -1,89 +1,73 @@
 {
-  "schema_version": "survivor_optimizer_player_snapshot_v3",
+  "schema_version": "survivor_optimizer_player_snapshot_v4_simple",
   "player": {
     "name": "DTlgrind",
     "level": 138,
-    "focus": "DPS only / kill-before-killed",
-    "ignore_hp_for_optimization": true,
-    "damage_output": 142912460712309100,
     "total_atk": 793156,
-    "base_atk": 127352,
     "final_atk": 436568,
-    "available_designs": 83500,
-    "max_gear_level": 202
+    "focus": "DPS only"
   },
-  "resources": {
+  "inventory_used": {
     "gems": 130539,
-    "coins": 42500000,
-    "relic_cores": 45,
-    "relic_core_choice_chest": 2,
+    "relic_core_chest": 2,
     "core_choice_chest": 6,
     "tech_core_choice_chest": 40,
     "s_grade_excellent_equipment_choice_pack": 12,
     "voidwalker_excellent_equipment_supply_crate": 1,
     "eternal_cores": 20,
     "chaos_cores": 10,
-    "extra_awakening_crystals": 22,
-    "ss_material_a": 240,
-    "ss_material_b": 170,
-    "ss_material_c": 120
+    "awakening_crystals": 22
   },
-  "build_notes": {
-    "gear": "Mostly SS DPS gear. Weapon, necklace, and gloves are the high-forged damage core. Chest, belt, and boots are lower-forged.",
-    "tech": "Active high-impact techs include Lightning Mode, Laser Mode, Drone Mode, Rocket Mode, plus Molotov/Soccer modes. The old Soccer +3.82 reading was a SIO swap/toggle signal, not a spending target.",
-    "pet": "Nutjob/Xeno setup with 85% sync. Spend awakening only on a completed star/stat breakpoint."
-  },
-  "quick_answer": "Do NOT spend tech choices on Soccer. First spend into SS Belt forge if the forge screen lets you complete the step. Use relic core chests and exact core-choice chests only for that Belt step. Then use tech core choice chests on Lightning Mode first, Laser Mode second. Use awakening crystals only if Nutjob/Xeno reaches the next star now. Save S-grade packs unless they are exact SS forge fodder.",
-  "direct_spend_plan": [
+  "basic_answer": "Use selectors for SS Belt first. If Belt cannot upgrade, check SS Boots, then SS Chest. Tech cores go to Lightning, then Laser. Save S packs unless they finish SS forge. Awakening crystals only if Nutjob/Xeno star finishes now.",
+  "spend_plan": [
     {
       "rank": 1,
-      "title": "SS Belt forge is the first real spend target",
-      "status": "SPEND NOW IF THE STEP COMPLETES",
-      "resource_to_use": ["relic_cores x45", "relic_core_choice_chest x2", "core_choice_chest x6 only for exact missing core type", "eternal_cores x20 / chaos_cores x10 only if the Belt step asks"],
-      "target": "Open Equipment -> SS Belt -> forge screen. Try to complete the next Belt forge breakpoint. Open only the exact selectors required by that screen.",
-      "why": "Your damage-core gear slots already look stronger than the lower SS slots. Belt is the best lower-forged DPS slot to push before chest. This is more important than forcing random tech or pet partial progress.",
-      "exact_choice_rule": "If the Belt step asks for Void cores, pick Void cores from core choice chests. If it asks Eternal, pick Eternal. If it asks Chaos, pick Chaos. Do not pre-open all 6 core selectors.",
-      "stop_condition": "If SS Belt cannot complete a breakpoint with your current cores/selectors, check SS Boots next. If Boots cannot complete, check SS Chest. If none complete, save all unopened selectors."
+      "title": "SS Belt forge",
+      "use": "Relic chest x2 + Core choice x6 only as needed",
+      "do": "Open SS Belt forge. If upgrade can finish, do it.",
+      "save": "If Belt cannot finish, check Boots."
     },
     {
       "rank": 2,
-      "title": "Tech core choice chests go to Lightning Mode, not Soccer",
-      "status": "SPEND AFTER SS CHECK",
-      "resource_to_use": ["tech_core_choice_chest x40"],
-      "target": "Choose Lightning Mode tech cores first. If Lightning cannot take them or does not hit a breakpoint, choose Laser Mode next. After that: Drone Mode, then Rocket Mode.",
-      "why": "I previously mixed this up. Soccer +3.82% was not a material-spending instruction. Your active SIO tech impact shows Lightning and Laser are huge damage pieces, and Lightning is behind Laser, so Lightning is the better first tech-core target.",
-      "exact_choice_rule": "Priority order for the 40 chests: Lightning Mode -> Laser Mode -> Drone Mode -> Rocket Mode. Do not spend them on Soccer unless SIO after rerun explicitly ranks Soccer as the best active tech investment.",
-      "stop_condition": "Spend to the next visible resonance/breakpoint, rerun SIO, then continue only if Lightning/Laser still rank as the best damage gain."
+      "title": "SS Boots forge",
+      "use": "Same core/relic selectors",
+      "do": "If Belt cannot finish, try Boots next.",
+      "save": "If Boots cannot finish, check Chest."
     },
     {
       "rank": 3,
-      "title": "Use S-grade packs only as exact SS forge fodder",
-      "status": "SAVE UNLESS NEEDED FOR RANK #1",
-      "resource_to_use": ["s_grade_excellent_equipment_choice_pack x12", "voidwalker_excellent_equipment_supply_crate x1"],
-      "target": "Only open these when SS Belt/Boots/Chest forge needs a specific faction/core source you do not have.",
-      "why": "These packs are flexible value. Opening them randomly can create the wrong faction/core and does not guarantee a damage breakpoint.",
-      "exact_choice_rule": "If the forge step lacks Void cores, use the Voidwalker crate/choose Voidwalker fodder. If it lacks Eternal or Chaos, choose that exact faction instead.",
-      "stop_condition": "If opening the pack does not finish the forge step immediately, keep the pack closed."
+      "title": "SS Chest forge",
+      "use": "Same core/relic selectors",
+      "do": "Only after Belt/Boots cannot finish.",
+      "save": "If no SS step finishes, keep selectors closed."
     },
     {
       "rank": 4,
-      "title": "Awakening crystals only go into Nutjob/Xeno if next star finishes now",
-      "status": "CONDITIONAL SPEND",
-      "resource_to_use": ["extra_awakening_crystals x22"],
-      "target": "Nutjob/Xeno next star/stat breakpoint only.",
-      "why": "Your pet build is Nutjob/Xeno based, but partial awakening progress is weaker than completed SS/tech breakpoints.",
-      "exact_choice_rule": "If 22 crystals unlock the next Nutjob/Xeno star now, spend them. If they only fill progress, save them.",
-      "stop_condition": "Do not spend gems on normal pet chests for this unless the event gives guaranteed Xeno crystals at better value than relic/tech selectors."
+      "title": "Tech cores",
+      "use": "Tech core choice chest x40",
+      "do": "Lightning first, then Laser.",
+      "save": "Do not spend these on Soccer."
     },
     {
       "rank": 5,
-      "title": "Gems are for guaranteed breakpoint materials only",
-      "status": "EVENT-DEPENDENT",
-      "resource_to_use": ["gems x130,539"],
-      "target": "Buy relic cores, exact core selectors, tech core selectors, Xeno crystals, or guaranteed S/SS selectors.",
-      "why": "At your stage, random chests are usually worse than guaranteed materials that complete SS Belt, Lightning/Laser tech, or Nutjob/Xeno breakpoints.",
-      "exact_choice_rule": "Do not use gems on normal pet chest spam unless the event math guarantees more Xeno progress than direct selectors/relic cores.",
-      "stop_condition": "If the event shop does not sell top-3 breakpoint materials at good value, save gems."
+      "title": "S packs / Void crate",
+      "use": "S choice x12 + Void crate x1",
+      "do": "Open only if they finish the SS forge above.",
+      "save": "Do not open randomly."
+    },
+    {
+      "rank": 6,
+      "title": "Awakening crystals",
+      "use": "Awakening crystals x22",
+      "do": "Use only if Nutjob/Xeno next star finishes now.",
+      "save": "If not enough for star, save."
+    },
+    {
+      "rank": 7,
+      "title": "Gems",
+      "use": "Gems x130,539",
+      "do": "Buy relic cores, tech selectors, Xeno crystals, or guaranteed S/SS selectors.",
+      "save": "Skip random normal pet/equipment chests."
     }
   ]
 }
