@@ -1,0 +1,124 @@
+{
+  "schema_version": "survivor_optimizer_player_snapshot_v2",
+  "player": {
+    "name": "DTlgrind",
+    "level": 138,
+    "focus": "DPS only / kill-before-killed",
+    "ignore_hp_for_optimization": true,
+    "damage_output": 142912460712309100,
+    "total_atk": 793156,
+    "base_atk": 127352,
+    "final_atk": 436568,
+    "available_designs": 83500,
+    "max_gear_level": 202
+  },
+  "stats": {
+    "damage_output": 142912460712309100,
+    "total_atk": 793156,
+    "base_atk": 127352,
+    "final_atk": 436568
+  },
+  "resources": {
+    "gems": 130539,
+    "coins": 42500000,
+    "ss_relic_cores": 45,
+    "relic_cores": 45,
+    "relic_core_choice_chest": 2,
+    "core_choice_chest": 6,
+    "tech_core_choice_chest": 40,
+    "s_grade_excellent_equipment_choice_pack": 12,
+    "voidwalker_excellent_equipment_supply_crate": 1,
+    "eternal_cores": 20,
+    "chaos_cores": 10,
+    "extra_awakening_crystals": 22,
+    "ss_material_a": 240,
+    "ss_material_b": 170,
+    "ss_material_c": 120,
+    "pet_cookies": 7436,
+    "collectible_red_currency": 28,
+    "collectible_gold_currency": 178,
+    "collectible_purple_currency": 976800,
+    "custom_set_currency": 342000,
+    "custom_set_gold_currency": 40
+  },
+  "gear": {
+    "weapon": {"name": "SS weapon", "forge_estimate": "E3/V2"},
+    "necklace": {"name": "SS necklace", "forge_estimate": "E3/V2"},
+    "gloves": {"name": "SS gloves", "forge_estimate": "E3/V2"},
+    "chest": {"name": "SS chest", "forge_estimate": "E1/V0-ish"},
+    "belt": {"name": "SS belt", "forge_estimate": "E1/V0-ish"},
+    "boots": {"name": "SS boots", "forge_estimate": "E1/V0-ish"}
+  },
+  "gear_priority": {
+    "current_build": "Advanced SS DPS build. Weapon, necklace, and gloves are already high-forged. Chest, belt, and boots appear lower-forged.",
+    "next_ss_priority_order": ["SS Belt", "SS Boots", "SS Chest"],
+    "selector_rule": "Open selectors only when the forge screen shows the exact missing type. Do not pre-open all selectors."
+  },
+  "tech": {
+    "drone_mode": 900,
+    "rocket_mode": 900,
+    "soccer_mode": 550,
+    "lightning_mode": 960,
+    "laser_mode": 1260,
+    "molotov_mode": 600,
+    "normal_molotov": 2100
+  },
+  "pets": {
+    "main_pet": "Nutjob",
+    "sync_rate_pct": 85,
+    "main_pet_awakened_stars_estimate": 4
+  },
+  "quick_answer": "Spend tech core choice chests into Soccer Mode first. Then push SS Belt forge using exact selectors only if needed. After that, spend awakening crystals only if Nutjob/Xeno reaches the next star now. Save S-grade packs unless they finish that SS forge step.",
+  "direct_spend_plan": [
+    {
+      "rank": 1,
+      "title": "Spend tech core choice chests into Soccer Mode first",
+      "status": "SPEND NOW",
+      "resource_to_use": ["tech_core_choice_chest x40"],
+      "target": "Soccer Mode / Soccer Twinborn resonance until the next cheap breakpoint, then rerun SIO.",
+      "why": "Your tech resonance is uneven and Soccer Mode is one of the lowest at 550. Your SIO comparison showed Soccer as the visible positive swap (+3.82%), so this is the cleanest spend that does not burn relic/core selectors.",
+      "stop_condition": "After each breakpoint, rerun/reload SIO. If Soccer stops being positive, stop and move remaining tech cores to the next active DPS tech SIO ranks highest: Drone, Rocket, Laser, or Lightning.",
+      "confidence": "High for first spend direction; medium for exact final amount until exact breakpoint costs are added."
+    },
+    {
+      "rank": 2,
+      "title": "Push SS Belt next, then SS Boots, then SS Chest",
+      "status": "SPEND IF FORGE SCREEN ALLOWS",
+      "resource_to_use": ["ss_relic_cores x45", "relic_core_choice_chest x2 only if needed", "core_choice_chest x6 only for exact missing core type", "eternal_cores x20 / chaos_cores x10 only if exact requirement"],
+      "target": "Next affordable Astral/SS forge breakpoint on SS Belt first. If not affordable, try SS Boots. If not, try SS Chest.",
+      "why": "Your weapon, necklace, and gloves already look like the high-forge damage core. Belt is the best lower-forge damage slot to push next. Chest is last because this optimizer ignores HP/survival.",
+      "stop_condition": "Do not open all selectors in advance. Open only enough to complete the shown forge step. If the step cannot be completed now, save unopened selectors.",
+      "confidence": "Medium-high."
+    },
+    {
+      "rank": 3,
+      "title": "Use awakening crystals only if Nutjob/Xeno reaches next star now",
+      "status": "CONDITIONAL SPEND",
+      "resource_to_use": ["extra_awakening_crystals x22"],
+      "target": "Nutjob/Xeno next star/stat breakpoint, not random normal pets.",
+      "why": "Your build is already Nutjob/Xeno based with 85% sync and 4-star visible awakening power. Awakening crystals are good only when they complete a real stat/star breakpoint.",
+      "stop_condition": "If 22 crystals do not unlock the next star/stat, save them. Do not spend gems on normal pet chests unless the event gives guaranteed Xeno crystals better than direct selector value.",
+      "confidence": "Medium."
+    },
+    {
+      "rank": 4,
+      "title": "Keep S-grade packs as exact SS fodder",
+      "status": "SAVE UNLESS THEY COMPLETE RANK #2",
+      "resource_to_use": ["S-grade excellent equipment choice pack x12", "Voidwalker excellent equipment supply crate x1"],
+      "target": "Open only the exact S equipment needed to finish SS Belt, Boots, or Chest forge/core conversion.",
+      "why": "These packs are flexible stored value. Randomly opening them before the forge screen asks for a specific piece can trap the wrong faction/piece.",
+      "stop_condition": "If no exact SS forge step is available, keep all packs closed.",
+      "confidence": "High."
+    },
+    {
+      "rank": 5,
+      "title": "Spend gems only on guaranteed breakpoint materials",
+      "status": "EVENT-DEPENDENT",
+      "resource_to_use": ["gems x130,539"],
+      "target": "Relic cores, tech core selectors, Xeno crystals, or guaranteed S/SS selectors. Avoid random normal pet/equipment chest spam.",
+      "why": "At your account level, random chests are normally worse than guaranteed materials that finish one of the top three plans.",
+      "stop_condition": "If the event shop cannot buy one of those materials at good value, save gems.",
+      "confidence": "High."
+    }
+  ]
+}
