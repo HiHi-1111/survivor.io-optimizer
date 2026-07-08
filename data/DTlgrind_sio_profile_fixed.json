@@ -1,10 +1,8 @@
 {
-  "schema_version": "survivor_optimizer_player_snapshot_v4_simple",
+  "schema_version": "survivor_optimizer_spend_save_v5",
   "player": {
     "name": "DTlgrind",
     "level": 138,
-    "total_atk": 793156,
-    "final_atk": 436568,
     "focus": "DPS only"
   },
   "inventory_used": {
@@ -12,62 +10,23 @@
     "relic_core_chest": 2,
     "core_choice_chest": 6,
     "tech_core_choice_chest": 40,
-    "s_grade_excellent_equipment_choice_pack": 12,
-    "voidwalker_excellent_equipment_supply_crate": 1,
+    "s_grade_choice_pack": 12,
+    "voidwalker_supply_crate": 1,
     "eternal_cores": 20,
     "chaos_cores": 10,
     "awakening_crystals": 22
   },
-  "basic_answer": "Use selectors for SS Belt first. If Belt cannot upgrade, check SS Boots, then SS Chest. Tech cores go to Lightning, then Laser. Save S packs unless they finish SS forge. Awakening crystals only if Nutjob/Xeno star finishes now.",
-  "spend_plan": [
-    {
-      "rank": 1,
-      "title": "SS Belt forge",
-      "use": "Relic chest x2 + Core choice x6 only as needed",
-      "do": "Open SS Belt forge. If upgrade can finish, do it.",
-      "save": "If Belt cannot finish, check Boots."
-    },
-    {
-      "rank": 2,
-      "title": "SS Boots forge",
-      "use": "Same core/relic selectors",
-      "do": "If Belt cannot finish, try Boots next.",
-      "save": "If Boots cannot finish, check Chest."
-    },
-    {
-      "rank": 3,
-      "title": "SS Chest forge",
-      "use": "Same core/relic selectors",
-      "do": "Only after Belt/Boots cannot finish.",
-      "save": "If no SS step finishes, keep selectors closed."
-    },
-    {
-      "rank": 4,
-      "title": "Tech cores",
-      "use": "Tech core choice chest x40",
-      "do": "Lightning first, then Laser.",
-      "save": "Do not spend these on Soccer."
-    },
-    {
-      "rank": 5,
-      "title": "S packs / Void crate",
-      "use": "S choice x12 + Void crate x1",
-      "do": "Open only if they finish the SS forge above.",
-      "save": "Do not open randomly."
-    },
-    {
-      "rank": 6,
-      "title": "Awakening crystals",
-      "use": "Awakening crystals x22",
-      "do": "Use only if Nutjob/Xeno next star finishes now.",
-      "save": "If not enough for star, save."
-    },
-    {
-      "rank": 7,
-      "title": "Gems",
-      "use": "Gems x130,539",
-      "do": "Buy relic cores, tech selectors, Xeno crystals, or guaranteed S/SS selectors.",
-      "save": "Skip random normal pet/equipment chests."
-    }
-  ]
+  "spend_now": [
+    "Core choice chests x6 -> Void cores",
+    "Relic core chests x2 -> SS gear relic cores",
+    "Tech core choice chests x40 -> Lightning Mode",
+    "Gems -> relic cores / tech selectors / Xeno crystals only"
+  ],
+  "save": [
+    "S-grade choice packs x12",
+    "Voidwalker supply crate x1",
+    "Awakening crystals x22 unless Nutjob/Xeno star completes",
+    "Random pet/equipment chests"
+  ],
+  "site_answer": "SPEND: Core choice -> Void cores. Relic chest -> SS relic cores. Tech core -> Lightning Mode. Gems -> relic/tech/Xeno selectors. SAVE: S packs, Void crate, random chests, awakening unless Xeno/Nutjob star finishes."
 }
