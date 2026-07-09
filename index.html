@@ -1,1 +1,26 @@
-test
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSON Optimizer</title>
+<style>
+body{margin:0;background:#07111f;color:#edf5ff;font-family:Arial,sans-serif}.wrap{max-width:900px;margin:auto;padding:16px}.card{background:#101c2f;border:1px solid #2b4264;border-radius:18px;padding:16px;margin:12px 0}textarea,input{width:100%;background:#07111f;color:#edf5ff;border:1px solid #2b4264;border-radius:14px;padding:12px}button{border:0;border-radius:14px;padding:12px;margin-top:8px;background:#4ea1ff;color:white;font-weight:bold}.out{white-space:pre-wrap;background:#0b1628;border:1px solid #2b4264;border-radius:14px;padding:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card"><h1>JSON Optimizer</h1><p>Paste your JSON. The page answers only from JSON facts.</p><textarea id="data" rows="14" placeholder="paste optimizer JSON here"></textarea><button id="loadBtn">Load JSON</button></div>
+<div class="card"><h2>Ask</h2><input id="question" placeholder="inventory, build, spend, save, collectibles, or item name"><button id="askBtn">Ask optimizer</button><div id="out" class="out">No JSON loaded.</div></div>
+</div>
+<script>
+var state=null;
+function el(id){return document.getElementById(id)}
+function loadData(){try{state=JSON.parse(el('data').value);el('out').textContent='JSON loaded. Ask a question.'}catch(err){el('out').textContent='Bad JSON: '+err.message}}
+function walk(o,p,arr){arr=arr||[];if(o===null||o===undefined)return arr;if(typeof o!=='object'){arr.push([p,String(o)]);return arr}if(Array.isArray(o)){for(var i=0;i<o.length;i++)walk(o[i],p?p+'.'+i:String(i),arr);return arr}for(var k in o)walk(o[k],p?p+'.'+k:k,arr);return arr}
+function rowsText(rows){if(!rows||!rows.length)return 'No before_after rows in JSON.';var out=[];for(var i=0;i<rows.length;i++){var r=rows[i];out.push('#'+(i+1)+' '+(r.title||r.item||'row')+'\nBEFORE: '+(r.before||'')+'\nSPEND: '+(r.spend||'')+'\nAFTER: '+(r.after||''))}return out.join('\n\n')}
+function answer(){if(!state){el('out').textContent='Load JSON first.';return}var q=el('question').value.toLowerCase();if(q.indexOf('inventory')>=0){el('out').textContent=JSON.stringify(state.inventory||{},null,2);return}if(q.indexOf('build')>=0||q.indexOf('gear')>=0||q.indexOf('pet')>=0||q.indexOf('tech')>=0){el('out').textContent=JSON.stringify(state.build||{},null,2);return}if(q.indexOf('collect')>=0){el('out').textContent=JSON.stringify(state.collectibles||state.collectibles_red||{},null,2);return}if(q.indexOf('save')>=0){el('out').textContent=JSON.stringify(state.save||state.save_targets||[],null,2);return}if(q.indexOf('spend')>=0||q.indexOf('before')>=0||q.indexOf('after')>=0||q.indexOf('plan')>=0){el('out').textContent=rowsText(state.before_after||state.optimizer_output||state.exact_before_after||[]);return}var terms=q.split(/\s+/).filter(function(t){return t.length>2});var all=walk(state,'',[]);var hits=[];for(var a=0;a<all.length;a++){var key=all[a][0].toLowerCase(), val=all[a][1].toLowerCase();for(var b=0;b<terms.length;b++){if(key.indexOf(terms[b])>=0||val.indexOf(terms[b])>=0){hits.push(all[a][0]+': '+all[a][1]);break}}if(hits.length>=60)break}el('out').textContent=hits.length?hits.join('\n'):'No matching JSON facts.'}
+el('loadBtn').onclick=loadData;el('askBtn').onclick=answer;el('question').addEventListener('keydown',function(e){if(e.key==='Enter')answer()});
+</script>
+</body>
+</html>
