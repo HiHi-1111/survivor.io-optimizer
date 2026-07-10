@@ -5,6 +5,12 @@ Full-power candidate-space indexer for the Survivor.io optimizer.
 This intentionally still does NOT rank best spend. It burns CPU to enumerate the full
 legal choice-output space, validates counts/resources, writes stable hashes, and produces
 index tables that the later build-state simulator/scorer can consume.
+
+v2 nested-choice fix:
+- Relic Core Chest can output S-grade Excellent Choice Pack.
+- Those newly-created S packs must be included in the Eternal/Void/Chaos selector-family
+  allocation space.
+- Therefore the S-pack allocation count depends on each relic chest allocation.
 """
 from __future__ import annotations
 
@@ -12,11 +18,11 @@ import argparse
 import csv
 import hashlib
 import json
-import multiprocessing as mp
+import math
 import os
 import sys
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -49,6 +55,12 @@ def distributions(total: int, k: int) -> Iterable[Tuple[int, ...]]:
     for n in range(total + 1):
         for rest in distributions(total - n, k - 1):
             yield (n,) + rest
+
+
+def count_distributions(total: int, k: int) -> int:
+    if total < 0 or k <= 0:
+        return 0
+    return math.comb(total + k - 1, k - 1)
 
 
 def first_number(*values: Any, default: int = 0) -> int:
@@ -104,40 +116,52 @@ def derive_counts(state: Dict[str, Any]) -> Dict[str, int]:
     }
 
 
-def pack_counts(keys: Sequence[str], values: Sequence[int]) -> Dict[str, int]:
-    return {k: int(v) for k, v in zip(keys, values) if int(v)}
-
-
 def direct_outputs(core: Tuple[int, ...], relic: Tuple[int, ...], tech: Tuple[int, ...], s_pack: Tuple[int, ...], void_crates: int) -> Dict[str, int]:
+    """
+    Convert one fully-opened choice tuple into final direct outputs.
+
+    Important:
+    - Relic Core Chest -> S-grade Excellent Choice Pack is NOT left as a final direct output here.
+    - It is opened in the same candidate into Eternal/Void/Chaos equipment selector family outputs.
+    """
     out: Dict[str, int] = {}
     for k, v in zip(CORE_KEYS, core):
         if v:
             out[k] = out.get(k, 0) + int(v)
-    for k, v in zip(RELIC_KEYS, relic):
-        if v:
-            out[k] = out.get(k, 0) + int(v)
+
+    relic_core_count = int(relic[0])
+    if relic_core_count:
+        out["Relic Core"] = out.get("Relic Core", 0) + relic_core_count
+
     for k, v in zip(TECH_KEYS, tech):
         if v:
             out[k] = out.get(k, 0) + int(v)
+
     for k, v in zip(S_KEYS, s_pack):
         if v:
             out[k] = out.get(k, 0) + int(v)
+
     if void_crates:
         out["Voidwaker equipment selector"] = out.get("Voidwaker equipment selector", 0) + int(void_crates)
     return out
 
 
-def worker(args: Tuple[int, Tuple[int, ...], List[Tuple[int, ...]], List[Tuple[int, ...]], List[Tuple[int, ...]], int]) -> Dict[str, Any]:
-    core_idx, core, relics, techs, s_packs, void_crates = args
+def worker(args: Tuple[int, Tuple[int, ...], List[Tuple[int, ...]], List[Tuple[int, ...]], int, int]) -> Dict[str, Any]:
+    core_idx, core, relics, techs, base_s_pack_n, void_crates = args
     h = hashlib.sha256()
     count = 0
     by_relic = Counter()
     by_xeno = Counter()
     by_awake = Counter()
     by_res_chip = Counter()
+    by_total_s_packs = Counter()
     maxima: Dict[str, Tuple[int, Dict[str, int]]] = {}
 
     for relic in relics:
+        s_from_relic = int(relic[1])
+        total_s_pack_n = base_s_pack_n + s_from_relic
+        s_packs = list(distributions(total_s_pack_n, len(S_KEYS)))
+        by_total_s_packs[total_s_pack_n] += len(techs) * len(s_packs)
         for tech in techs:
             for s_pack in s_packs:
                 out = direct_outputs(core, relic, tech, s_pack, void_crates)
@@ -154,7 +178,7 @@ def worker(args: Tuple[int, Tuple[int, ...], List[Tuple[int, ...]], List[Tuple[i
                     prev = maxima.get(key)
                     if prev is None or val > prev[0]:
                         maxima[key] = (val, out)
-                # Compact stable hash. Enough to prove every tuple was visited without writing 20M rows.
+                # Compact stable hash. Enough to prove every tuple was visited without writing every row.
                 h.update((str(core_idx) + "|" + ",".join(map(str, core + relic + tech + s_pack)) + "\n").encode("utf-8"))
 
     return {
@@ -165,6 +189,7 @@ def worker(args: Tuple[int, Tuple[int, ...], List[Tuple[int, ...]], List[Tuple[i
         "by_xeno": dict(by_xeno),
         "by_awake": dict(by_awake),
         "by_resonance_chip": dict(by_res_chip),
+        "by_total_s_packs_to_allocate": dict(by_total_s_packs),
         "maxima": {k: {"value": v[0], "example_outputs": v[1]} for k, v in maxima.items()},
     }
 
@@ -185,25 +210,41 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
     core_allocs = list(distributions(counts["core_chest"], len(CORE_KEYS)))
     relic_allocs = list(distributions(counts["relic_core_chest"], len(RELIC_KEYS)))
     tech_allocs = list(distributions(counts["tech_core_choice_chest"], len(TECH_KEYS)))
-    s_pack_allocs = list(distributions(counts["s_grade_excellent_choice_pack"], len(S_KEYS)))
+    base_s_pack_n = counts["s_grade_excellent_choice_pack"]
+    base_s_pack_allocs = list(distributions(base_s_pack_n, len(S_KEYS)))
     void_crates = counts["voidwalker_supply_crate"]
 
-    expected_per_pass = len(core_allocs) * len(relic_allocs) * len(tech_allocs) * len(s_pack_allocs)
-    expected_known = 19744452
+    nested_s_pack_alloc_sum = 0
+    nested_s_pack_rows = []
+    for relic in relic_allocs:
+        s_from_relic = int(relic[1])
+        total_s_pack_n = base_s_pack_n + s_from_relic
+        allocs = count_distributions(total_s_pack_n, len(S_KEYS))
+        nested_s_pack_alloc_sum += allocs
+        nested_s_pack_rows.append({
+            "relic_core_chest_relic_cores": int(relic[0]),
+            "relic_core_chest_s_grade_packs": s_from_relic,
+            "total_s_grade_packs_to_allocate": total_s_pack_n,
+            "s_grade_family_allocations": allocs,
+        })
+
+    expected_per_pass = len(core_allocs) * len(tech_allocs) * nested_s_pack_alloc_sum
+    previous_undercount = len(core_allocs) * len(relic_allocs) * len(tech_allocs) * len(base_s_pack_allocs)
 
     print(f"Core allocations: {len(core_allocs)}")
     print(f"Relic allocations: {len(relic_allocs)}")
     print(f"Tech allocations: {len(tech_allocs)}")
-    print(f"S-pack allocations: {len(s_pack_allocs)}")
-    print(f"Expected per pass: {expected_per_pass:,}")
+    print(f"Base S-pack allocations: {len(base_s_pack_allocs)}")
+    print(f"Nested S-pack allocation sum across relic choices: {nested_s_pack_alloc_sum}")
+    print(f"Previous undercount if relic-created S packs are not opened: {previous_undercount:,}")
+    print(f"Expected per pass with nested S-pack expansion: {expected_per_pass:,}")
     print(f"Workers: {workers}")
     print(f"Passes: {passes}")
 
     all_passes = []
-    global_start = time.time()
     for p in range(1, passes + 1):
         start = time.time()
-        tasks = [(i, core, relic_allocs, tech_allocs, s_pack_allocs, void_crates) for i, core in enumerate(core_allocs)]
+        tasks = [(i, core, relic_allocs, tech_allocs, base_s_pack_n, void_crates) for i, core in enumerate(core_allocs)]
         completed = 0
         total_count = 0
         digest_parts = []
@@ -211,6 +252,7 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
         by_xeno = Counter()
         by_awake = Counter()
         by_res_chip = Counter()
+        by_total_s_packs = Counter()
         maxima: Dict[str, Dict[str, Any]] = {}
 
         print(f"\n=== FULL ENUMERATION PASS {p}/{passes} ===")
@@ -225,6 +267,7 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
                 merge_counters(by_xeno, result["by_xeno"])
                 merge_counters(by_awake, result["by_awake"])
                 merge_counters(by_res_chip, result["by_resonance_chip"])
+                merge_counters(by_total_s_packs, result["by_total_s_packs_to_allocate"])
                 update_maxima(maxima, result["maxima"])
                 if completed % max(1, verbose_every) == 0 or completed == len(tasks):
                     elapsed = time.time() - start
@@ -248,6 +291,7 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
             "by_xeno_pet_core_total": dict(sorted(by_xeno.items())),
             "by_awakening_core_total": dict(sorted(by_awake.items())),
             "by_resonance_chip_total": dict(sorted(by_res_chip.items())),
+            "by_total_s_grade_packs_to_allocate": dict(sorted(by_total_s_packs.items())),
             "max_direct_outputs": maxima,
         })
 
@@ -256,8 +300,8 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
     resource_view = read_resource_view(state, candidate)
 
     validation = []
-    if expected_per_pass != expected_known:
-        validation.append(f"WARNING: expected per pass {expected_per_pass} does not match known previous count {expected_known}")
+    if expected_per_pass <= previous_undercount:
+        validation.append("WARNING: nested S-pack expansion did not increase candidate space; check Relic Core Chest modeling")
     if resource_view.get("bag_free", {}).get("eternal_cores") != 240:
         validation.append("WARNING: eternal cores not mapped to 240")
     if resource_view.get("embedded_committed", {}).get("relic_cores_in_current_build") != 45:
@@ -265,12 +309,13 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
     if not deterministic:
         validation.append("WARNING: pass hashes differ; enumeration is not deterministic")
     if not validation:
-        validation.append("OK: full choice-space enumeration validated and deterministic")
+        validation.append("OK: full nested choice-space enumeration validated and deterministic")
 
     summary = {
-        "schema": "sio_fullpower_candidate_index_v1",
+        "schema": "sio_fullpower_candidate_index_v2_nested_choices",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "rule": "This is a full index/check of legal choice outputs, not a best-spend ranker.",
+        "nested_choice_rule": "S-grade Excellent Choice Packs created by Relic Core Chest are opened into Eternal/Void/Chaos selector-family allocations in the same candidate space.",
         "workers": workers,
         "passes": passes,
         "resource_view": resource_view,
@@ -279,10 +324,13 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
             "core_chest_allocations": len(core_allocs),
             "relic_core_chest_allocations": len(relic_allocs),
             "tech_core_allocations": len(tech_allocs),
-            "s_grade_pack_allocations": len(s_pack_allocs),
+            "base_s_grade_pack_allocations": len(base_s_pack_allocs),
+            "nested_s_grade_pack_allocation_sum_across_relic_choices": nested_s_pack_alloc_sum,
+            "previous_undercounted_choice_space_count_per_pass": previous_undercount,
             "combined_choice_space_count_per_pass": expected_per_pass,
             "combined_choice_space_total_checked": expected_per_pass * passes,
         },
+        "nested_s_grade_pack_by_relic_choice": nested_s_pack_rows,
         "passes_detail": all_passes,
         "deterministic_hash_match": deterministic,
         "validation": validation,
@@ -302,7 +350,13 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
         writer = csv.writer(f)
         writer.writerow(["pass", "metric", "value", "candidate_count"])
         for p in all_passes:
-            for metric_name in ["by_relic_core_total", "by_xeno_pet_core_total", "by_awakening_core_total", "by_resonance_chip_total"]:
+            for metric_name in [
+                "by_relic_core_total",
+                "by_xeno_pet_core_total",
+                "by_awakening_core_total",
+                "by_resonance_chip_total",
+                "by_total_s_grade_packs_to_allocate",
+            ]:
                 for value, count in p[metric_name].items():
                     writer.writerow([p["pass"], metric_name, value, count])
 
@@ -315,6 +369,13 @@ def run_full_index(state: Dict[str, Any], candidate: Dict[str, Any] | None, out:
     ]
     md += [f"- {x}" for x in validation]
     md += [
+        "",
+        "## Nested S-grade choice fix",
+        "- Relic Core Chest can output S-grade Excellent Choice Pack.",
+        "- Those new S-grade packs are now opened into Eternal/Void/Chaos selector family allocations.",
+        f"- previous undercount per pass: {previous_undercount:,}",
+        f"- corrected nested count per pass: {expected_per_pass:,}",
+        f"- added candidates per pass: {expected_per_pass - previous_undercount:,}",
         "",
         "## Machine usage",
         f"- workers: {workers}",
@@ -379,14 +440,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("Interrupted by user.", file=sys.stderr)
         sys.exit(130)
-    except Exception as exc:
-        err = {"error": str(exc), "type": type(exc).__name__, "time": datetime.now().isoformat(timespec="seconds")}
-        write_json(out / "fullpower_candidate_index_error.json", err)
-        print("ERROR:", exc, file=sys.stderr)
-        sys.exit(1)
 
 
 if __name__ == "__main__":
-    # Needed for Windows multiprocessing.
-    mp.freeze_support()
     main()
