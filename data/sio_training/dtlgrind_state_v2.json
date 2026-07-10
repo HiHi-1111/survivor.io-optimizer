@@ -1,9 +1,10 @@
 {
-  "schema_version": "dtlgrind_state_v2_for_sio_training",
+  "schema_version": "dtlgrind_state_v3_for_sio_training",
   "player": {
     "name": "DTlgrind",
     "goal": "maximum damage output",
-    "ignore_hp": true
+    "ignore_hp": true,
+    "optimizer_voice_rule": "optimizer must speak from data only; no assistant preference/opinion spend rules"
   },
   "gear": {
     "weapon": {"item": "SS Weapon", "E": 3, "V": 2, "C": 2},
@@ -30,14 +31,15 @@
     "xeno_pet_crystal": 830,
     "xeno_pet_elixir": 1
   },
-  "resources": {
-    "relic_cores_locked_in_current_build": 45,
-    "relic_cores_free_to_spend": 0,
+  "resource_accounting": {
+    "relic_cores_inside_current_build": 45,
+    "relic_core_rule": "These relic cores are not a free pile. They are already committed into the current equipped build. A simulator may only count them as available if it explicitly models removing or changing a current forge step and confirms that the game returns that material. Do not mark them as freely spendable by default.",
+    "build_material_mobility_rule": "Some materials inside the current build can be moved and some cannot. The optimizer must learn mobility from the sIO/game data or user correction, not assume all are locked or all are free.",
     "movable_awakening_cores": 23,
-    "awakening_cores_rule": "these are only the cores pullable from other Xeno pet awakening stars",
-    "eternal_cores": 240,
-    "void_cores": 170,
-    "chaos_cores": 120,
+    "awakening_core_rule": "Only awakening cores pullable from other Xeno pet awakening stars are movable. They are not new income and should not be double counted.",
+    "eternal_cores_current_count": 240,
+    "void_cores_current_count": 170,
+    "chaos_cores_current_count": 120,
     "gems": 130539
   },
   "choice_consumables": {
@@ -55,5 +57,12 @@
     "s_grade_excellent_choice_pack": ["Eternal equipment selector", "Voidwaker equipment selector", "Chaos equipment selector"],
     "voidwalker_supply_crate": ["Voidwaker equipment selector"],
     "tech_core_choice_chest": ["Eternal Tech Core", "Void Tech Core", "Chaos Tech Core"]
+  },
+  "simulation_required": {
+    "must_enumerate_all_valid_choice_allocations": true,
+    "must_compare_gear_tech_pet_collectible_options_together": true,
+    "must_not_split_lanes_before_scoring": true,
+    "must_not_force_relic_cores": true,
+    "must_output_if_uncertain": "unknown_or_needs_data_patch"
   }
 }
