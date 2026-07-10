@@ -4,6 +4,12 @@ Generate legal Survivor.io optimizer candidates from player state + choice items
 
 This is intentionally not a final scorer. It does not invent damage values.
 It creates candidate allocations and marks what still requires the sIO damage scorer or mechanics patch.
+
+v3 fix:
+- Relic Core Chest can create S-grade Excellent Choice Packs.
+- Those newly-created S packs are nested choices and must be included in the S-grade family
+  allocation count before final after-state/scoring.
+- Embedded/current-build materials remain locked unless a legal refund/move path is modeled.
 """
 from __future__ import annotations
 
@@ -28,7 +34,7 @@ def load_json(path: Path, default: Any = None) -> Any:
     if not path.exists():
         return default
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception as exc:
         return {"_load_error": str(exc), "_path": str(path)}
 
@@ -140,40 +146,68 @@ def validate_state_resource_view(state: Dict[str, Any], resource_view: Dict[str,
     return issues
 
 
+def nested_s_pack_count(base_s_pack_n: int, relic_allocs: List[Dict[str, int]]) -> tuple[int, List[Dict[str, int]]]:
+    """
+    Relic Core Chest can choose S-grade Excellent Choice Pack.
+    Those newly-created S packs are another selector choice, so the S-grade family space
+    depends on the relic allocation.
+    """
+    rows: List[Dict[str, int]] = []
+    total = 0
+    for relic in relic_allocs:
+        extra_s = int(relic.get("S-grade Excellent Choice Pack", 0) or 0)
+        total_s = base_s_pack_n + extra_s
+        cnt = count_distributions(total_s, len(S_GRADE_FAMILY_OPTIONS))
+        total += cnt
+        rows.append({
+            "relic_cores_from_relic_chests": int(relic.get("Relic Core", 0) or 0),
+            "s_grade_packs_from_relic_chests": extra_s,
+            "total_s_grade_packs_to_allocate": total_s,
+            "s_grade_family_allocations": cnt,
+        })
+    return total, rows
+
+
 def build_choice_candidates(state: Dict[str, Any], limit_preview: int) -> Dict[str, Any]:
     choice = state.get("choice_consumables", {})
     core_n = int(choice.get("core_chest", 0) or 0)
     relic_n = int(choice.get("relic_core_chest", 0) or 0)
     tech_n = int(choice.get("tech_core_choice_chest", 0) or 0)
-    s_pack_n = int(choice.get("s_grade_excellent_choice_pack", 0) or 0)
+    base_s_pack_n = int(choice.get("s_grade_excellent_choice_pack", 0) or 0)
     void_crate_n = int(choice.get("voidwalker_supply_crate", 0) or 0)
 
     core_allocs = list(distributions(core_n, CORE_CHEST_OPTIONS))
     relic_allocs = list(distributions(relic_n, RELIC_CORE_CHEST_OPTIONS))
-    # Tech core allocations can be huge but current 40 over 3 is only 861.
     tech_allocs = list(distributions(tech_n, TECH_CORE_OPTIONS)) if tech_n <= 60 else []
-    s_pack_allocs = list(distributions(s_pack_n, S_GRADE_FAMILY_OPTIONS)) if s_pack_n <= 30 else []
+    base_s_pack_allocs = list(distributions(base_s_pack_n, S_GRADE_FAMILY_OPTIONS)) if base_s_pack_n <= 30 else []
 
     total_core_relic = len(core_allocs) * len(relic_allocs)
-    total_with_tech = total_core_relic * (len(tech_allocs) if tech_allocs else 1)
-    total_with_s = total_with_tech * (len(s_pack_allocs) if s_pack_allocs else 1)
+    total_nested_s_pack_by_relic, nested_rows = nested_s_pack_count(base_s_pack_n, relic_allocs)
+    total_with_nested_s = len(core_allocs) * (len(tech_allocs) if tech_allocs else 1) * total_nested_s_pack_by_relic
 
     preview = []
     for c in core_allocs:
         for r in relic_allocs:
+            extra_s = int(r.get("S-grade Excellent Choice Pack", 0) or 0)
+            total_s = base_s_pack_n + extra_s
             gained = {
                 "Awakening Core": c.get("Awakening Core", 0),
                 "Xeno Pet Core": c.get("Xeno Pet Core", 0),
                 "Relic Core": c.get("Relic Core", 0) + r.get("Relic Core", 0),
                 "Resonance Chip": c.get("Resonance Chip", 0),
-                "S-grade Excellent Choice Pack": r.get("S-grade Excellent Choice Pack", 0),
             }
             preview.append({
-                "candidate_type": "core_plus_relic_chest_allocation",
-                "source_items": {"Core Chest": core_n, "Relic Core Chest": relic_n},
+                "candidate_type": "core_plus_relic_chest_allocation_with_nested_s_pack_bridge",
+                "source_items": {
+                    "Core Chest": core_n,
+                    "Relic Core Chest": relic_n,
+                    "base S-grade Excellent Choice Pack": base_s_pack_n,
+                },
                 "pick_from_core_chest": compact_counts(c),
                 "pick_from_relic_core_chest": compact_counts(r),
-                "direct_outputs_gained": compact_counts(gained),
+                "direct_outputs_gained_before_nested_s_pack_opening": compact_counts(gained),
+                "nested_s_grade_packs_to_allocate": total_s,
+                "nested_s_grade_family_allocations": count_distributions(total_s, len(S_GRADE_FAMILY_OPTIONS)),
                 "validity": "valid_choice_allocation_only_not_scored",
                 "needs_next": ["apply_to_build_state", "sio_damage_scorer"],
             })
@@ -188,16 +222,20 @@ def build_choice_candidates(state: Dict[str, Any], limit_preview: int) -> Dict[s
             "relic_core_chest_allocations": len(relic_allocs),
             "core_x_relic_allocations": total_core_relic,
             "tech_core_allocations": len(tech_allocs),
-            "s_grade_pack_family_allocations": len(s_pack_allocs),
+            "base_s_grade_pack_family_allocations": len(base_s_pack_allocs),
+            "nested_s_grade_pack_family_allocation_sum_across_relic_choices": total_nested_s_pack_by_relic,
             "voidwalker_supply_crate_fixed_void_selectors": void_crate_n,
-            "combined_choice_space_count_before_slot_level_build_sim": total_with_s,
+            "combined_choice_space_count_before_slot_level_build_sim": total_with_nested_s,
             "formula_check": {
                 "core_chest_expected": count_distributions(core_n, len(CORE_CHEST_OPTIONS)),
                 "relic_chest_expected": count_distributions(relic_n, len(RELIC_CORE_CHEST_OPTIONS)),
                 "tech_core_expected": count_distributions(tech_n, len(TECH_CORE_OPTIONS)),
-                "s_pack_expected": count_distributions(s_pack_n, len(S_GRADE_FAMILY_OPTIONS)),
+                "base_s_pack_expected": count_distributions(base_s_pack_n, len(S_GRADE_FAMILY_OPTIONS)),
+                "nested_s_pack_sum_expected": total_nested_s_pack_by_relic,
             },
         },
+        "nested_s_grade_pack_rule": "S-grade packs produced by Relic Core Chest are nested choices and must be allocated into Eternal/Void/Chaos selector families before after-state scoring.",
+        "nested_s_grade_pack_by_relic_choice": nested_rows,
         "preview_first_candidates": preview,
         "note": "This enumerates legal source-item outputs only. It does not decide what is best until build simulator and damage scorer are implemented.",
     }
@@ -263,7 +301,7 @@ def main() -> None:
     respec_templates = build_respec_action_templates(state, mechanics)
 
     generated = {
-        "schema": "sio_candidate_generation_v2",
+        "schema": "sio_candidate_generation_v3_nested_choices",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "rule": "Generate candidates from data only. Do not rank until sIO damage scorer is available.",
         "source_files": {
@@ -280,6 +318,7 @@ def main() -> None:
         "choice_candidate_space": choice_candidates,
         "respec_action_templates": respec_templates,
         "blocked_from_final_ranking_until": [
+            "apply_to_build_state implemented",
             "sio_damage_scorer_implemented",
             "exact gear AF/refund/rebuild cost tables parsed or patched",
             "xeno awakening reset/refund verified",
@@ -291,11 +330,14 @@ def main() -> None:
 
     unknowns = [
         "Candidate generation succeeded, but it is not final ranking.",
+        "Nested S-grade packs from Relic Core Chest are now counted as additional selector-family choices.",
+        "Need apply_to_build_state to convert candidate outputs into final gear/tech/pet/survivor after-state.",
         "Need damage scorer to convert candidate after-state into damage delta.",
         "Need AF cost/refund/rebuild tables before using committed gear equity as movable.",
         "Need Xeno awakening reset/refund proof before using all committed awakening cores as movable.",
         "Need survivor shard conversion rules before treating survivor investment as flexible.",
     ]
+    counts = choice_candidates["counts"]
     report = [
         "# Candidate generator report",
         "",
@@ -316,13 +358,19 @@ def main() -> None:
         "",
         "## Choice-space counts",
     ]
-    for k, v in choice_candidates["counts"].items():
+    for k, v in counts.items():
         report.append(f"- {k}: {v}")
     report += [
         "",
+        "## Nested choice fix",
+        "- Relic Core Chest can output S-grade Excellent Choice Pack.",
+        "- Those new packs are now counted as extra Eternal/Void/Chaos selector-family choices.",
+        "- This fixes the earlier undercount where only the base 12 S-grade packs were allocated.",
+        "",
         "## What exists now",
         "- Legal Core Chest + Relic Core Chest output allocations are enumerated.",
-        "- Tech Core and S-grade selector family allocation counts are computed.",
+        "- Tech Core allocations are computed.",
+        "- S-grade selector family allocations include nested S packs created by Relic Core Chest.",
         "- Current-build resources are separated from bag-free resources.",
         "- AF downlevel/reprioritize actions are templates only until refund/rebuild costs are verified.",
         "",
