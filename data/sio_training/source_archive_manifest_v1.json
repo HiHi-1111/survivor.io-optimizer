@@ -1,0 +1,25 @@
+{
+  "schema_version": "source_archive_manifest_v1",
+  "archive_name": "sio_tools.exp0.dev.zip",
+  "archive_status": "uploaded in ChatGPT session; exact binary should be kept as canonical source artifact",
+  "sha256": "7665a1d4ad479f799b9360347dad98ffdca8125d35c6fb0072c68343708c847d",
+  "size_bytes": 2756335,
+  "file_count": 285,
+  "repo_storage_note": "GitHub connector writes text files reliably; raw zip binary should be added locally with git or stored as a release/artifact. This manifest pins the exact archive by hash so the optimizer can verify it before extraction.",
+  "local_expected_path": "data/sio_training/archive/sio_tools.exp0.dev.zip",
+  "extraction_command": "python tools/sio_training/extract_sio_bundle.py data/sio_training/archive/sio_tools.exp0.dev.zip --out data/sio_training/generated",
+  "key_files_seen": [
+    "sio-tools.exp0.dev/index.html",
+    "sio-tools.exp0.dev/_next/static/chunks/2814-d154d2538147a2fc.js",
+    "sio-tools.exp0.dev/_next/static/chunks/7387-0fc79433213ba6fb.js",
+    "sio-tools.exp0.dev/_next/static/chunks/5153-4e905b538698aca0.js",
+    "sio-tools.exp0.dev/_next/static/chunks/3474-8a2b3194b7d707df.js",
+    "sio-tools.exp0.dev/_next/static/chunks/8492.f1c0c2b13e63ec44.js"
+  ],
+  "module_targets": {
+    "37013": "main bundled game data: items, AF E/V/C trees, techs, pets, xeno awakening, collectibles",
+    "32085": "constants/helpers: tech resonance, xeno arrays, item lists",
+    "39513": "rarity/type constants if present"
+  },
+  "training_instruction": "Do not retrain from user opinions. Re-index from this sIO archive, normalize the tables, enumerate every legal allocation, simulate after-builds, and rank by computed damage delta."
+}
