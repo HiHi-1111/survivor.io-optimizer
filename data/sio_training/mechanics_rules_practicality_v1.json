@@ -1,0 +1,98 @@
+{
+  "schema_version": "mechanics_rules_practicality_v1",
+  "purpose": "Rules the optimizer must use when comparing legal spend/rebuild options. These are data rules, not recommendation opinions.",
+  "global_rule": "The optimizer must enumerate all legal possibilities from inventory + movable/current-build resources, simulate each resulting build, then rank by computed damage result adjusted by modeled practical resource cost. It must not pre-pick relic cores, xeno cores, resonance chips, gear, tech, or pet lanes.",
+  "no_assistant_opinion_rule": "If a mechanic/cost/refund/swap rule is unknown, the optimizer must mark the candidate unknown/invalid and write an unknowns report. It must not fill gaps with guesses.",
+  "resource_accounting": {
+    "inventory_resources": "Items physically unused in inventory are directly spendable.",
+    "committed_build_resources": "Materials already inside current gear, tech, survivors, pets, collectibles, resonance, or AF levels are not free inventory.",
+    "movable_resources": "A committed resource is only considered movable if a modeled undo/downgrade/swap/conversion action exists and the returned resource amount/cost is known.",
+    "locked_resources": "A committed resource with no modeled recovery path is locked and cannot be counted as available.",
+    "expensive_movement_rule": "Moving resources is allowed only when the candidate includes the cost/penalty of pulling them out and putting them back elsewhere. The optimizer must not treat moved S gear, cores, shards, chips, or crystals as free.",
+    "reporting_rule": "Every recommended result must show direct inventory used, moved resources used, resources consumed/lost, resources returned, and final state."
+  },
+  "astral_forge_and_ss_gear": {
+    "can_downlevel_rule": "Astral Forge / SS side levels can be considered for downgrade/reprioritization only if the data model knows the exact downgrade/refund path and the re-implementation cost.",
+    "pullout_penalty": "Pulling S gear or cores out of one AF side and putting them into another has a practical cost because S gear selectors/fodder are expensive and may not be fully fungible.",
+    "candidate_generation": [
+      "current E/V/C state remains baseline",
+      "generate direct-upgrade candidates from extra inventory",
+      "generate downlevel/reallocate candidates only when refund/cost data exists",
+      "score direct and reallocated builds separately",
+      "do not prefer a lower total AF state unless the damage gain after practical cost is better"
+    ],
+    "unknowns_to_log": [
+      "exact AF downgrade refund rates by side and level",
+      "whether S gear fodder returns fully or partially",
+      "whether relic cores return fully or partially",
+      "whether a downgrade consumes currency or other penalty",
+      "slot/family restrictions after pulling S gear back out"
+    ]
+  },
+  "survivors_and_shards": {
+    "s_survivor_mobility_rule": "S survivor build movement can be cheaper/more practical when shard conversion exists and the conversion ratio/cooldown/limits are known.",
+    "candidate_generation": [
+      "count owned survivor shards",
+      "count convertible shards only if conversion rule is known",
+      "simulate swap between survivor targets",
+      "include conversion cost/limits if present",
+      "do not call shards universally free unless conversion data proves it"
+    ],
+    "unknowns_to_log": [
+      "exact shard conversion ratio",
+      "conversion limits or cooldowns",
+      "which survivor shards are eligible",
+      "cost to move awakened/star investment between survivors"
+    ]
+  },
+  "xeno_pets_and_awakening": {
+    "movable_awakening_core_rule": "Awakening cores currently in other Xeno pet stars may be movable only if dismantle/reset mechanics return them. The optimizer must distinguish movable cores from locked cores.",
+    "xeno_star_rule": "Pet star, crystal, elixir, xeno core, awakening core, and sync effects must be simulated together. Do not split pet lane from gear/tech lane unless final ranking is still global.",
+    "unknowns_to_log": [
+      "exact return/refund for moving awakening cores out of other Xeno pets",
+      "star-by-star cost for Nutjob and other Xeno pets",
+      "xeno pet core bottleneck effects",
+      "whether moving cores breaks existing useful support pet bonuses"
+    ]
+  },
+  "tech_and_resonance": {
+    "resonance_breakpoint_rule": "Resonance chips and tech cores must be valued by whether they reach a real breakpoint or deployed resonance effect in the data.",
+    "not_a_skill_selector_rule": "Tech Core Choice Chest selects Eternal/Void/Chaos tech core type, not specific Drone/Soccer/Laser unless a separate mechanic says so.",
+    "candidate_generation": [
+      "simulate current tech/deployed resonance state",
+      "generate every possible chip/core allocation",
+      "score by actual stat/resonance breakpoint gained",
+      "mark partial no-breakpoint spends as lower or zero immediate damage if data supports that"
+    ],
+    "unknowns_to_log": [
+      "chip counts required for next resonance breakpoints",
+      "whether resonance assist tech is locked/flexible",
+      "slot-specific harmony/resonance chip restrictions",
+      "overload cost and return mechanics"
+    ]
+  },
+  "collectibles_and_choice_items": {
+    "choice_item_rule": "Every choice chest/selector must be expanded into all valid outputs before scoring. The optimizer must not compress a selector into a preferred item without candidate simulation.",
+    "set_bonus_rule": "Collectible choices are only scored by actual stat/set bonuses they complete or progress toward.",
+    "unknowns_to_log": [
+      "exact choice selector contents",
+      "set bonus thresholds",
+      "whether duplicate collectible copies have partial or full immediate value"
+    ]
+  },
+  "ranking_output_rule": {
+    "primary_sort": "highest computed final damage or damage delta for the selected mode/scenario",
+    "secondary_sort": "practicality-adjusted resource cost when two options are close",
+    "must_show": [
+      "source items used",
+      "end items picked",
+      "moved resources and why they are movable",
+      "lost/consumed resources",
+      "final gear E/V/C",
+      "final tech/resonance state",
+      "final pet/xeno state",
+      "damage before/after/delta",
+      "unknowns if any candidate could not be proven"
+    ]
+  }
+}
