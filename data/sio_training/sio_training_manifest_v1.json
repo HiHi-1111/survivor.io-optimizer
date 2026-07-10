@@ -1,0 +1,85 @@
+{
+  "schema_version": "sio_training_manifest_v1",
+  "purpose": "Teach the Survivor.io optimizer to evaluate all possible spend choices using the same kind of data model used by sIO Tools, instead of hardcoded opinions.",
+  "source_zip": "sio_tools.exp0.dev.zip",
+  "status": "initial reverse-engineering map from uploaded bundled site code",
+  "important_correction_from_user": {
+    "relic_cores_45": "already used inside current build; do not treat as free/spendable",
+    "movable_awakening_cores": 23,
+    "movable_awakening_core_rule": "only awakening cores that can be pulled out from other Xeno pet awakening stars are movable",
+    "optimizer_goal": "compare all valid possibilities together and pick best damage output, not split lanes or force relic cores"
+  },
+  "sio_architecture_observed": {
+    "framework": "Next.js static export / webpack chunks",
+    "main_data_module": "webpack module 37013, export c",
+    "data_module_contains": [
+      "baseStats",
+      "heroes",
+      "collectibles",
+      "items with stats and af/e/v/c trees",
+      "petSkills",
+      "pets",
+      "xenoPetAwakening",
+      "techs with rarity, deployedRarity, resonance, deployedResonance, overload, collectibles, sets",
+      "mounts",
+      "skills"
+    ],
+    "utility_constants_module": "webpack module 32085",
+    "constants_seen": [
+      "tech resonance breakpoint arrays",
+      "xeno pet names",
+      "pet skill arrays",
+      "item grouping by slot",
+      "SS item slot mapping",
+      "resonance chip / overload tables"
+    ]
+  },
+  "formula_map": {
+    "stat_aggregation_pattern": "Start with base stats, then add contributions from gear, AF E/V/C, heroes, collectibles, tech rarity, deployed tech effects, resonance breakpoints, pet stars, xeno awakening, pet skills, mounts, and mode settings.",
+    "gear_pattern": "Each equipment item has base stats plus af.e, af.v, and af.c trees. A candidate upgrade must produce a concrete final E/V/C state before it can be scored.",
+    "tech_pattern": "For each equipped tech and mode, add rarity stats, deployedRarity stats if deployed, resonance breakpoint stats, deployedResonance stats if deployed, overload stats, collectible/set stats, then compute CE/resonance multiplier for that tech mode.",
+    "xeno_pet_awakening_pattern": "xenoPetAwakening is an ordered array. For each awakening row, count how many Xeno pets have stars greater than that row index, then add values[count] to the row stat.",
+    "xeno_pet_resonance_formula": "xenoResMultiplier = clamp(xenoResChance + lme.xenoResChance, 0, 100) * max(0, xenoResDamage + lme.xenoResDamage) * (4 + clamp(xenoResDuration + lme.xenoResDuration, 0, ?)) / 500",
+    "xeno_damage_formula": "xenoDamage = activePetDamageAtStars * xenoPetBaseMultiplier * ((xenoSyncRate + lme.xenoSyncRate) / 100) * skillDamageFactor(xenoSkillDamage)",
+    "optimizer_training_rule": "Generate all legal spend allocations first, simulate resulting build state, evaluate damage using extracted formula/data, then rank by marginal damage per limited resource. Never pre-split by lane or force a preferred item."
+  },
+  "candidate_generation_required": {
+    "input_state": [
+      "current gear slot E/V/C",
+      "locked resources already inside build",
+      "movable resources",
+      "choice consumables and their possible outputs",
+      "current tech modes/resonance/deployed state",
+      "current xeno pet stars/skills/supports",
+      "current collectibles",
+      "player goal = damage"
+    ],
+    "choice_space": [
+      "Core Chest: Awakening Core OR Xeno Pet Core OR Relic Core OR Resonance Chip",
+      "Relic Core Chest: Relic Core OR S-grade Excellent Choice Pack",
+      "Legend Collectible + Resonance Chip Choice Chest: Epic Quality Tech Choice Chest x2 OR Legend Collectible Choice Pack OR Resonance Chip",
+      "S-grade Excellent Choice Pack: exact S equipment family/slot selector",
+      "Voidwalker Supply Crate: exact Voidwaker family/slot selector",
+      "Tech Core Choice Chest: Eternal/Void/Chaos Tech Core selector"
+    ],
+    "output_needed": [
+      "plain total end items to pick/buy",
+      "which source item each output came from",
+      "final gear E/V/C state",
+      "final tech/resonance state",
+      "final xeno pet star/skill state",
+      "score and reason based on simulated damage, not opinion"
+    ]
+  },
+  "training_case_schema": {
+    "state_before": {},
+    "choice_inventory": {},
+    "candidate_allocation": {},
+    "state_after": {},
+    "damage_before": "number or computed object",
+    "damage_after": "number or computed object",
+    "delta_damage": "damage_after - damage_before",
+    "validity": "valid / invalid with reason",
+    "plain_output": "ITEM xN -> PICK Y -> END ITEM Z -> FINAL STATE"
+  }
+}
