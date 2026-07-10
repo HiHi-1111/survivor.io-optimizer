@@ -16,18 +16,30 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+VALID_CANDIDATE_SCHEMAS = {
+    "sio_candidate_generation_v2",
+    "sio_candidate_generation_v3_nested_choices",
+}
+
 
 def load_json(path: Path) -> Dict[str, Any]:
     if not path.exists():
         return {"_missing": True, "_path": str(path)}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception as exc:
         return {"_load_error": str(exc), "_path": str(path)}
 
 
 def bool_status(ok: bool) -> str:
     return "READY" if ok else "BLOCKED"
+
+
+def has_real_counts(counts: Dict[str, Any]) -> bool:
+    try:
+        return int(counts.get("combined_choice_space_count_before_slot_level_build_sim", 0) or 0) > 0
+    except Exception:
+        return False
 
 
 def main() -> None:
@@ -48,7 +60,9 @@ def main() -> None:
     embedded = rv.get("embedded_committed", {}) if isinstance(rv, dict) else {}
     counts = cand.get("choice_candidate_space", {}).get("counts", {}) if isinstance(cand, dict) else {}
 
-    candidate_ready = cand.get("schema") == "sio_candidate_generation_v2"
+    schema = cand.get("schema")
+    candidate_ready = schema in VALID_CANDIDATE_SCHEMAS
+    nested_choice_ready = schema == "sio_candidate_generation_v3_nested_choices" and has_real_counts(counts)
     resource_ready = (
         bag.get("eternal_cores") == 240
         and bag.get("void_cores") == 170
@@ -56,13 +70,15 @@ def main() -> None:
         and embedded.get("relic_cores_in_current_build") == 45
         and embedded.get("movable_awakening_cores_claimed") == 23
     )
-    choice_ready = counts.get("combined_choice_space_count_before_slot_level_build_sim", 0) > 0
+    choice_ready = has_real_counts(counts)
     normalized_ready = norm.get("schema") is not None and not norm.get("_missing") and not norm.get("_load_error")
     runtime_exact = norm.get("mode") not in ("python_static_fallback", None)
 
     blockers: List[str] = []
     if not candidate_ready:
-        blockers.append("Candidate file is missing or not v2. Rerun generate_sio_candidates.py.")
+        blockers.append(f"Candidate file schema is not supported: {schema!r}. Rerun generate_sio_candidates.py.")
+    if candidate_ready and not nested_choice_ready:
+        blockers.append("Candidate file is valid, but nested Relic Core Chest -> S-grade pack choices are not confirmed. Rerun generate_sio_candidates.py from latest scripts.")
     if not resource_ready:
         blockers.append("Resource accounting is not mapped correctly. Check v3 resource_accounting -> bag_free/embedded_committed.")
     if not choice_ready:
@@ -86,7 +102,8 @@ def main() -> None:
         f"Generated: {datetime.now().isoformat(timespec='seconds')}",
         "",
         "## Readiness checks",
-        f"- candidate_generator_v2: {bool_status(candidate_ready)}",
+        f"- candidate_schema_supported: {bool_status(candidate_ready)} ({schema})",
+        f"- nested_choice_candidate_space: {bool_status(nested_choice_ready)}",
         f"- corrected_resource_accounting: {bool_status(resource_ready)}",
         f"- choice_space_enumerated: {bool_status(choice_ready)}",
         f"- normalized_tables_present: {bool_status(normalized_ready)}",
@@ -117,8 +134,10 @@ def main() -> None:
 
     (out / "scoring_readiness_report.md").write_text("\n".join(report), encoding="utf-8")
     (out / "scoring_readiness.json").write_text(json.dumps({
-        "schema": "sio_scoring_readiness_v1",
+        "schema": "sio_scoring_readiness_v2",
+        "candidate_schema": schema,
         "candidate_ready": candidate_ready,
+        "nested_choice_ready": nested_choice_ready,
         "resource_ready": resource_ready,
         "choice_ready": choice_ready,
         "normalized_ready": normalized_ready,
