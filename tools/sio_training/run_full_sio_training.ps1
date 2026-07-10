@@ -63,6 +63,8 @@ $FullLog = "data\sio_training\training_runs\latest\full_run.log"
 $Summary = "data\sio_training\training_runs\latest\full_training_summary.md"
 $MechanicsUnknowns = "data\sio_training\training_runs\latest\mechanics_unknowns_report.md"
 Remove-Item $FullLog -Force -ErrorAction SilentlyContinue
+Remove-Item $Summary -Force -ErrorAction SilentlyContinue
+Remove-Item $MechanicsUnknowns -Force -ErrorAction SilentlyContinue
 
 Say "Step 1/4: Extract sIO zip and find important modules. Usually under 1 minute." "Cyan"
 powershell -ExecutionPolicy Bypass -File tools\sio_training\run_sio_training.ps1 2>&1 | Tee-Object -FilePath $FullLog -Append
@@ -71,8 +73,9 @@ Say "Step 2/4: Normalize sIO tables. If Node is missing, Python fallback should 
 powershell -ExecutionPolicy Bypass -File tools\sio_training\run_sio_normalize.ps1 2>&1 | Tee-Object -FilePath $FullLog -Append
 
 Say "Step 3/4: Build practical-mechanics training summary and unknowns..." "Cyan"
+$TmpPy = Join-Path $env:TEMP "sio_full_training_summary.py"
 $py = @'
-import json, hashlib, pathlib, datetime
+import json, hashlib, pathlib, datetime, traceback
 root = pathlib.Path('.')
 latest = root/'data/sio_training/training_runs/latest'
 latest.mkdir(parents=True, exist_ok=True)
@@ -87,90 +90,104 @@ paths = {
 }
 
 def sha(p):
-    if not p.exists(): return None
-    h=hashlib.sha256()
+    if not p.exists():
+        return None
+    h = hashlib.sha256()
     with p.open('rb') as f:
-        for b in iter(lambda:f.read(1024*1024), b''):
+        for b in iter(lambda: f.read(1024*1024), b''):
             h.update(b)
     return h.hexdigest()
 
 def load_json(p):
-    try: return json.loads(p.read_text(encoding='utf-8'))
-    except Exception as e: return {'_load_error': str(e)}
+    try:
+        return json.loads(p.read_text(encoding='utf-8'))
+    except Exception as e:
+        return {'_load_error': str(e)}
 
-extract = load_json(paths['extract_manifest']) if paths['extract_manifest'].exists() else {}
-normal = load_json(paths['normalized']) if paths['normalized'].exists() else {}
-mech = load_json(paths['mechanics']) if paths['mechanics'].exists() else {}
-state = load_json(paths['state']) if paths['state'].exists() else {}
+try:
+    extract = load_json(paths['extract_manifest']) if paths['extract_manifest'].exists() else {}
+    normal = load_json(paths['normalized']) if paths['normalized'].exists() else {}
+    mech = load_json(paths['mechanics']) if paths['mechanics'].exists() else {}
+    state = load_json(paths['state']) if paths['state'].exists() else {}
 
-unknowns=[]
-if not paths['zip'].exists(): unknowns.append('Missing holy-grail zip at data/sio_training/archive/sio_tools.exp0.dev.zip')
-if not paths['extract_manifest'].exists(): unknowns.append('Extractor manifest missing; extraction did not finish.')
-if not paths['normalized'].exists(): unknowns.append('Normalized tables missing; normalizer did not finish or only wrote unknown report.')
-if not paths['mechanics'].exists(): unknowns.append('Practical mechanics rules missing.')
-if not paths['state'].exists(): unknowns.append('DTlgrind state file missing.')
+    unknowns = []
+    if not paths['zip'].exists(): unknowns.append('Missing holy-grail zip at data/sio_training/archive/sio_tools.exp0.dev.zip')
+    if not paths['extract_manifest'].exists(): unknowns.append('Extractor manifest missing; extraction did not finish.')
+    if not paths['normalized'].exists(): unknowns.append('Normalized tables missing; normalizer did not finish or only wrote unknown report.')
+    if not paths['mechanics'].exists(): unknowns.append('Practical mechanics rules missing.')
+    if not paths['state'].exists(): unknowns.append('DTlgrind state file missing.')
 
-# These are intentional unknowns until the simulator can prove them from data or user patch.
-unknowns += [
-  'Need exact AF downgrade/refund rules per SS side/level before counting committed AF resources as movable.',
-  'Need exact S gear fodder recovery/re-implementation cost if moving AF investment between slots/sides.',
-  'Need exact survivor shard conversion ratio/limits/cooldown before treating S survivor shard movement as cheap/free.',
-  'Need exact Xeno pet awakening reset/refund behavior before counting all committed awakening cores as movable.',
-  'Need next resonance breakpoint costs/effects for current tech setup before valuing Resonance Chips precisely.',
-  'Need candidate generator to enumerate all choice outputs and respec/move paths together, not by separated lanes.',
-  'Need damage scorer to calculate before/after from normalized sIO stat formulas instead of hardcoded spend plan.'
-]
+    unknowns += [
+      'Need exact AF downgrade/refund rules per SS side/level before counting committed AF resources as movable.',
+      'Need exact S gear fodder recovery/re-implementation cost if moving AF investment between slots/sides.',
+      'Need exact survivor shard conversion ratio/limits/cooldown before treating S survivor shard movement as cheap/free.',
+      'Need exact Xeno pet awakening reset/refund behavior before counting all committed awakening cores as movable.',
+      'Need next resonance breakpoint costs/effects for current tech setup before valuing Resonance Chips precisely.',
+      'Need candidate generator to enumerate all choice outputs and respec/move paths together, not by separated lanes.',
+      'Need damage scorer to calculate before/after from normalized sIO stat formulas instead of hardcoded spend plan.'
+    ]
 
-summary = []
-summary.append('# Full sIO training/indexing summary')
-summary.append('')
-summary.append(f'Generated: {datetime.datetime.now().isoformat(timespec="seconds")}')
-summary.append('')
-summary.append('## What this run did')
-summary.append('- Extracted the uploaded sIO static-export zip.')
-summary.append('- Found webpack data/formula modules if present.')
-summary.append('- Ran normalizer or fallback normalizer.')
-summary.append('- Loaded practical movement rules so the optimizer does not treat committed resources as free.')
-summary.append('- Wrote unknowns that need data patches instead of guesses.')
-summary.append('')
-summary.append('## Source truth')
-summary.append(f'- Zip exists: {paths["zip"].exists()}')
-summary.append(f'- Zip SHA256: {sha(paths["zip"])}')
-summary.append(f'- Extract manifest exists: {paths["extract_manifest"].exists()}')
-summary.append(f'- Normalized tables exists: {paths["normalized"].exists()}')
-summary.append(f'- Mechanics rules exists: {paths["mechanics"].exists()}')
-summary.append('')
-summary.append('## Extractor modules found')
-mods = extract.get('module_hints_found', {}) or extract.get('modules_found', {})
-if mods:
-    for k,v in mods.items(): summary.append(f'- {k}: {v}')
-else:
-    summary.append('- none listed')
-summary.append('')
-summary.append('## Training rule now enforced')
-summary.append('- No forced relic cores / xeno cores / resonance chips / S selectors.')
-summary.append('- Enumerate all valid allocations from inventory and movable build resources.')
-summary.append('- A committed material is movable only if the simulator models the move/undo/refund path.')
-summary.append('- AF downlevel/reprioritize is legal only if refund and re-implementation cost are known.')
-summary.append('- S survivor switching can be cheaper only if shard conversion data proves it.')
-summary.append('- Output must be data-backed: source item -> picked item -> end item -> final build -> damage delta.')
-summary.append('')
-summary.append('## Current known player-state resource rule')
-summary.append('- Resources in current build are committed, not automatically free.')
-summary.append('- Some committed resources may be movable, but only with modeled move/refund cost.')
-summary.append('- If the rule is unknown, write unknown instead of guessing.')
-summary.append('')
-summary.append('## Next code step')
-summary.append('Build the candidate generator + simulator from the normalized tables. This run prepares the data; it does not yet produce a final best spend order.')
+    summary = []
+    summary.append('# Full sIO training/indexing summary')
+    summary.append('')
+    summary.append('Generated: ' + datetime.datetime.now().isoformat(timespec='seconds'))
+    summary.append('')
+    summary.append('## What this run did')
+    summary.append('- Extracted the uploaded sIO static-export zip.')
+    summary.append('- Found webpack data/formula modules if present.')
+    summary.append('- Ran normalizer or fallback normalizer.')
+    summary.append('- Loaded practical movement rules so the optimizer does not treat committed resources as free.')
+    summary.append('- Wrote unknowns that need data patches instead of guesses.')
+    summary.append('')
+    summary.append('## Source truth')
+    summary.append(f'- Zip exists: {paths["zip"].exists()}')
+    summary.append(f'- Zip SHA256: {sha(paths["zip"])}')
+    summary.append(f'- Extract manifest exists: {paths["extract_manifest"].exists()}')
+    summary.append(f'- Normalized tables exists: {paths["normalized"].exists()}')
+    summary.append(f'- Mechanics rules exists: {paths["mechanics"].exists()}')
+    summary.append('')
+    summary.append('## Extractor modules found')
+    mods = extract.get('module_hints_found', {}) or extract.get('modules_found', {})
+    if mods:
+        for k, v in mods.items():
+            summary.append(f'- {k}: {v}')
+    else:
+        summary.append('- none listed')
+    summary.append('')
+    summary.append('## Normalizer status')
+    summary.append(f'- Normalizer schema: {normal.get("schema", "unknown")}')
+    summary.append(f'- Normalizer mode: {normal.get("mode", normal.get("rule", "unknown"))}')
+    summary.append('')
+    summary.append('## Training rule now enforced')
+    summary.append('- No forced relic cores / xeno cores / resonance chips / S selectors.')
+    summary.append('- Enumerate all valid allocations from inventory and movable build resources.')
+    summary.append('- A committed material is movable only if the simulator models the move/undo/refund path.')
+    summary.append('- AF downlevel/reprioritize is legal only if refund and re-implementation cost are known.')
+    summary.append('- S survivor switching can be cheaper only if shard conversion data proves it.')
+    summary.append('- Output must be data-backed: source item -> picked item -> end item -> final build -> damage delta.')
+    summary.append('')
+    summary.append('## Current known player-state resource rule')
+    summary.append('- Resources in current build are committed, not automatically free.')
+    summary.append('- Some committed resources may be movable, but only with modeled move/refund cost.')
+    summary.append('- If the rule is unknown, write unknown instead of guessing.')
+    summary.append('')
+    summary.append('## Next code step')
+    summary.append('Build the candidate generator + simulator from the normalized tables. This run prepares the data; it does not yet produce a final best spend order.')
 
-unknown_md = ['# Training mechanics unknowns report',''] + [f'- {u}' for u in unknowns]
-latest.joinpath('full_training_summary.md').write_text('\n'.join(summary), encoding='utf-8')
-latest.joinpath('mechanics_unknowns_report.md').write_text('\n'.join(unknown_md), encoding='utf-8')
-print('\n'.join(summary))
-print('\nWROTE:', latest/'full_training_summary.md')
-print('WROTE:', latest/'mechanics_unknowns_report.md')
+    unknown_md = ['# Training mechanics unknowns report',''] + [f'- {u}' for u in unknowns]
+    latest.joinpath('full_training_summary.md').write_text('\n'.join(summary), encoding='utf-8')
+    latest.joinpath('mechanics_unknowns_report.md').write_text('\n'.join(unknown_md), encoding='utf-8')
+    print('\n'.join(summary))
+    print('\nWROTE:', latest/'full_training_summary.md')
+    print('WROTE:', latest/'mechanics_unknowns_report.md')
+except Exception:
+    err = traceback.format_exc()
+    latest.joinpath('summary_generation_error.txt').write_text(err, encoding='utf-8')
+    print(err)
+    raise
 '@
-python -c $py 2>&1 | Tee-Object -FilePath $FullLog -Append
+Set-Content -Path $TmpPy -Value $py -Encoding UTF8
+python $TmpPy 2>&1 | Tee-Object -FilePath $FullLog -Append
 
 Say "Step 4/4: Done. Files to send back if anything seems wrong:" "Green"
 Say "- data\sio_training\training_runs\latest\full_training_summary.md" "Yellow"
