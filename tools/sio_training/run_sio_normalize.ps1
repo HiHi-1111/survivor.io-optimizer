@@ -16,17 +16,17 @@ if (!(Test-Path $Zip)) {
 }
 
 $Node = Get-Command node -ErrorAction SilentlyContinue
-if (!$Node) {
-  Write-Host "ERROR: Node.js is not installed or not on PATH." -ForegroundColor Red
-  Write-Host "Install Node.js, reopen PowerShell, then rerun."
-  exit 1
+if ($Node) {
+  Write-Host "Node found: $($Node.Source). Exact webpack export mode will be used." -ForegroundColor Green
+} else {
+  Write-Host "Node.js not found. Continuing with Python-only static fallback mode." -ForegroundColor Yellow
+  Write-Host "This is OK for now. It extracts modules, field hints, and parser targets without installing Node."
 }
-Write-Host "Node found: $($Node.Source)" -ForegroundColor Green
 
 New-Item -ItemType Directory -Force $Out | Out-Null
 $Log = Join-Path $Out "powershell_normalize_run.log"
 Write-Host "Running normalizer. This should usually take under 1 minute." -ForegroundColor Yellow
-Write-Host "It writes raw module JSON, normalized tables, and a normalizer unknowns report."
+Write-Host "It writes normalized tables and a normalizer unknowns report."
 
 python tools\sio_training\normalize_sio_bundle.py $Zip --out $Out 2>&1 | Tee-Object -FilePath $Log
 
