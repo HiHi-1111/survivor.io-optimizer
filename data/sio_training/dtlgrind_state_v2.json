@@ -1,0 +1,59 @@
+{
+  "schema_version": "dtlgrind_state_v2_for_sio_training",
+  "player": {
+    "name": "DTlgrind",
+    "goal": "maximum damage output",
+    "ignore_hp": true
+  },
+  "gear": {
+    "weapon": {"item": "SS Weapon", "E": 3, "V": 2, "C": 2},
+    "necklace": {"item": "SS Necklace", "E": 3, "V": 3, "C": 2},
+    "gloves": {"item": "SS Gloves", "E": 3, "V": 3, "C": 2},
+    "chest": {"item": "SS Chest", "E": 1, "V": 0, "C": 0},
+    "belt": {"item": "SS Belt", "E": 1, "V": 0, "C": 0},
+    "boots": {"item": "SS Boots", "E": 1, "V": 0, "C": 0}
+  },
+  "tech": {
+    "Drone Mode": 900,
+    "Rocket Mode": "900 x1.2",
+    "Soccer Mode": 550,
+    "Lightning Mode": "960 x1.2",
+    "Laser Mode": "1260 x1.4",
+    "Molotov Mode": 600
+  },
+  "pet": {
+    "main": "Nutjob",
+    "sync_rate_percent": 85,
+    "Nutjob_stars": 4,
+    "Gourmeow_stars": 2,
+    "other_xeno_pets_stars": 1,
+    "xeno_pet_crystal": 830,
+    "xeno_pet_elixir": 1
+  },
+  "resources": {
+    "relic_cores_locked_in_current_build": 45,
+    "relic_cores_free_to_spend": 0,
+    "movable_awakening_cores": 23,
+    "awakening_cores_rule": "these are only the cores pullable from other Xeno pet awakening stars",
+    "eternal_cores": 240,
+    "void_cores": 170,
+    "chaos_cores": 120,
+    "gems": 130539
+  },
+  "choice_consumables": {
+    "core_chest": 6,
+    "relic_core_chest": 2,
+    "legend_collectible_and_resonance_chip_choice_chest": 0,
+    "s_grade_excellent_choice_pack": 12,
+    "voidwalker_supply_crate": 1,
+    "tech_core_choice_chest": 40
+  },
+  "choice_outputs": {
+    "core_chest": ["Awakening Core", "Xeno Pet Core", "Relic Core", "Resonance Chip"],
+    "relic_core_chest": ["Relic Core", "S-grade Excellent Choice Pack"],
+    "legend_collectible_and_resonance_chip_choice_chest": ["Epic Quality Tech Choice Chest x2", "Legend Collectible Choice Pack", "Resonance Chip"],
+    "s_grade_excellent_choice_pack": ["Eternal equipment selector", "Voidwaker equipment selector", "Chaos equipment selector"],
+    "voidwalker_supply_crate": ["Voidwaker equipment selector"],
+    "tech_core_choice_chest": ["Eternal Tech Core", "Void Tech Core", "Chaos Tech Core"]
+  }
+}
