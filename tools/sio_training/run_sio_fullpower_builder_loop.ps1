@@ -56,15 +56,15 @@ Log "Full-power builder loop started"
 Log "Repo root: $Repo"
 
 Run-Step "refresh scripts" {
-  Download-File "$Raw/tools/sio_training/extract_sio_bundle.py?fresh=fp1" "tools\sio_training\extract_sio_bundle.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/normalize_sio_bundle.py?fresh=fp1" "tools\sio_training\normalize_sio_bundle.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/generate_sio_candidates.py?fresh=fp1" "tools\sio_training\generate_sio_candidates.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/check_sio_scoring_readiness.py?fresh=fp1" "tools\sio_training\check_sio_scoring_readiness.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/fullpower_candidate_index.py?fresh=fp1" "tools\sio_training\fullpower_candidate_index.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/run_sio_deep_autopilot.ps1?fresh=fp1" "tools\sio_training\run_sio_deep_autopilot.ps1" | Out-Null
-  Download-File "$Raw/tools/sio_training/run_sio_normalize.ps1?fresh=fp1" "tools\sio_training\run_sio_normalize.ps1" | Out-Null
-  Download-File "$Raw/tools/sio_training/run_sio_candidates.ps1?fresh=fp1" "tools\sio_training\run_sio_candidates.ps1" | Out-Null
-  Download-File "$Raw/data/sio_training/dtlgrind_state_v2.json?fresh=fp1" "data\sio_training\dtlgrind_state_v2.json" | Out-Null
+  Download-File "$Raw/tools/sio_training/extract_sio_bundle.py?fresh=fp2" "tools\sio_training\extract_sio_bundle.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/normalize_sio_bundle.py?fresh=fp2" "tools\sio_training\normalize_sio_bundle.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/generate_sio_candidates.py?fresh=fp2" "tools\sio_training\generate_sio_candidates.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/check_sio_scoring_readiness.py?fresh=fp2" "tools\sio_training\check_sio_scoring_readiness.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/fullpower_candidate_index.py?fresh=fp2" "tools\sio_training\fullpower_candidate_index.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/run_sio_deep_autopilot.ps1?fresh=fp2" "tools\sio_training\run_sio_deep_autopilot.ps1" | Out-Null
+  Download-File "$Raw/tools/sio_training/run_sio_normalize.ps1?fresh=fp2" "tools\sio_training\run_sio_normalize.ps1" | Out-Null
+  Download-File "$Raw/tools/sio_training/run_sio_candidates.ps1?fresh=fp2" "tools\sio_training\run_sio_candidates.ps1" | Out-Null
+  Download-File "$Raw/data/sio_training/dtlgrind_state_v2.json?fresh=fp2" "data\sio_training\dtlgrind_state_v2.json" | Out-Null
 }
 
 Run-Step "deep autopilot warmup" {
@@ -72,25 +72,35 @@ Run-Step "deep autopilot warmup" {
 }
 
 Run-Step "resource sanity check before fullpower" {
-  python - <<'PY'
+  $checkPy = "data\sio_training\fullpower\latest\resource_sanity_check.py"
+  @'
 import json, pathlib, sys
-p=pathlib.Path('data/sio_training/candidates/dtlgrind_candidate_space.json')
+p = pathlib.Path('data/sio_training/candidates/dtlgrind_candidate_space.json')
 if not p.exists():
     print('candidate json missing')
     sys.exit(3)
-data=json.loads(p.read_text(encoding='utf-8-sig'))
-rv=data.get('resource_view',{})
-bag=rv.get('bag_free',{})
-emb=rv.get('embedded_committed',{})
-print('Resource view:', {'eternal':bag.get('eternal_cores'), 'void':bag.get('void_cores'), 'chaos':bag.get('chaos_cores'), 'gems':bag.get('gems'), 'embedded_relic':emb.get('relic_cores_in_current_build'), 'awakening':emb.get('movable_awakening_cores_claimed')})
+data = json.loads(p.read_text(encoding='utf-8-sig'))
+rv = data.get('resource_view', {})
+bag = rv.get('bag_free', {})
+emb = rv.get('embedded_committed', {})
+print('Resource view:', {
+    'eternal': bag.get('eternal_cores'),
+    'void': bag.get('void_cores'),
+    'chaos': bag.get('chaos_cores'),
+    'gems': bag.get('gems'),
+    'embedded_relic': emb.get('relic_cores_in_current_build'),
+    'awakening': emb.get('movable_awakening_cores_claimed'),
+})
 if bag.get('eternal_cores') != 240 or bag.get('void_cores') != 170 or bag.get('chaos_cores') != 120 or emb.get('relic_cores_in_current_build') != 45:
     print('BAD RESOURCE MAP: rerun candidate generator directly')
     sys.exit(4)
 print('OK resource sanity check')
-PY
+'@ | Set-Content -Path $checkPy -Encoding UTF8
+  python $checkPy
   if ($LASTEXITCODE -ne 0) {
     Log "Repairing stale candidate files"
     python tools\sio_training\generate_sio_candidates.py --state data\sio_training\dtlgrind_state_v2.json --out data\sio_training\candidates
+    python $checkPy
   }
 }
 
