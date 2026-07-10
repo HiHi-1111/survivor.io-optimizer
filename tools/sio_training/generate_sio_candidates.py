@@ -20,7 +20,6 @@ RELIC_CORE_CHEST_OPTIONS = ["Relic Core", "S-grade Excellent Choice Pack"]
 TECH_CORE_OPTIONS = ["Eternal Tech Core", "Void Tech Core", "Chaos Tech Core"]
 S_GRADE_FAMILY_OPTIONS = ["Eternal equipment selector", "Voidwaker equipment selector", "Chaos equipment selector"]
 
-
 GEAR_SLOTS = ["weapon", "necklace", "gloves", "chest", "belt", "boots"]
 SS_SIDES = ["E", "V", "C"]
 
@@ -64,28 +63,81 @@ def count_distributions(total: int, k: int) -> int:
     return math.comb(total + k - 1, k - 1)
 
 
+def first_number(*values: Any, default: int = 0) -> int:
+    for value in values:
+        if value is None:
+            continue
+        try:
+            if isinstance(value, str) and not value.strip():
+                continue
+            return int(value)
+        except Exception:
+            continue
+    return default
+
+
+def get_resource_sections(state: Dict[str, Any]) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    # v2 used resources. v3 uses resource_accounting.
+    resources = state.get("resources", {}) if isinstance(state.get("resources", {}), dict) else {}
+    accounting = state.get("resource_accounting", {}) if isinstance(state.get("resource_accounting", {}), dict) else {}
+    return resources, accounting
+
+
 def build_resource_view(state: Dict[str, Any]) -> Dict[str, Any]:
-    resources = state.get("resources", {})
+    resources, accounting = get_resource_sections(state)
     choice = state.get("choice_consumables", {})
     gear = state.get("gear", {})
+    pet = state.get("pet", {})
+
+    eternal_cores = first_number(resources.get("eternal_cores"), accounting.get("eternal_cores_current_count"))
+    void_cores = first_number(resources.get("void_cores"), accounting.get("void_cores_current_count"))
+    chaos_cores = first_number(resources.get("chaos_cores"), accounting.get("chaos_cores_current_count"))
+    gems = first_number(resources.get("gems"), accounting.get("gems"))
+
+    free_relic_cores = first_number(resources.get("relic_cores_free_to_spend"), accounting.get("relic_cores_free_to_spend"))
+    embedded_relic_cores = first_number(
+        resources.get("relic_cores_in_current_build"),
+        resources.get("relic_cores_locked_in_current_build"),
+        accounting.get("relic_cores_inside_current_build"),
+    )
+    movable_awakening_cores = first_number(resources.get("movable_awakening_cores"), accounting.get("movable_awakening_cores"))
+
     return {
         "bag_free": {
-            "eternal_cores": resources.get("eternal_cores", 0),
-            "void_cores": resources.get("void_cores", 0),
-            "chaos_cores": resources.get("chaos_cores", 0),
-            "relic_cores": resources.get("relic_cores_free_to_spend", 0),
-            "gems": resources.get("gems", 0),
-            "xeno_pet_crystal": state.get("pet", {}).get("xeno_pet_crystal", 0),
-            "xeno_pet_elixir": state.get("pet", {}).get("xeno_pet_elixir", 0),
+            "eternal_cores": eternal_cores,
+            "void_cores": void_cores,
+            "chaos_cores": chaos_cores,
+            "relic_cores": free_relic_cores,
+            "gems": gems,
+            "xeno_pet_crystal": first_number(pet.get("xeno_pet_crystal")),
+            "xeno_pet_elixir": first_number(pet.get("xeno_pet_elixir")),
         },
         "choice_items": choice,
         "embedded_committed": {
             "gear_evc_state": gear,
-            "relic_cores_in_current_build": resources.get("relic_cores_in_current_build", resources.get("relic_cores_locked_in_current_build", 0)),
-            "movable_awakening_cores_claimed": resources.get("movable_awakening_cores", 0),
+            "relic_cores_in_current_build": embedded_relic_cores,
+            "movable_awakening_cores_claimed": movable_awakening_cores,
+            "relic_core_rule": accounting.get("relic_core_rule") or resources.get("relic_core_rule") or "Committed build resources are not bag inventory. They are usable only through legal modeled reversion/move actions.",
+            "awakening_core_rule": accounting.get("awakening_core_rule") or resources.get("awakening_core_rule") or "Movable awakening cores require verified reset/refund mechanics before the simulator can use them.",
             "rule": "Committed build resources are not bag inventory. They are usable only through legal modeled reversion/move actions.",
         },
     }
+
+
+def validate_state_resource_view(state: Dict[str, Any], resource_view: Dict[str, Any]) -> List[str]:
+    issues: List[str] = []
+    resources, accounting = get_resource_sections(state)
+    if not resources and not accounting:
+        issues.append("State has neither resources nor resource_accounting section; resource totals may be zero.")
+    if accounting and not resources:
+        issues.append("State uses v3 resource_accounting schema; generator mapped it into bag_free/embedded_committed.")
+    if resource_view["bag_free"].get("eternal_cores", 0) == 0 and accounting.get("eternal_cores_current_count"):
+        issues.append("BUG: eternal_cores_current_count was not mapped correctly.")
+    if resource_view["embedded_committed"].get("relic_cores_in_current_build", 0) == 0 and accounting.get("relic_cores_inside_current_build"):
+        issues.append("BUG: relic_cores_inside_current_build was not mapped correctly.")
+    if resource_view["embedded_committed"].get("movable_awakening_cores_claimed", 0) == 0 and accounting.get("movable_awakening_cores"):
+        issues.append("BUG: movable_awakening_cores was not mapped correctly.")
+    return issues
 
 
 def build_choice_candidates(state: Dict[str, Any], limit_preview: int) -> Dict[str, Any]:
@@ -153,6 +205,8 @@ def build_choice_candidates(state: Dict[str, Any], limit_preview: int) -> Dict[s
 
 def build_respec_action_templates(state: Dict[str, Any], mechanics: Dict[str, Any]) -> List[Dict[str, Any]]:
     gear = state.get("gear", {})
+    resources, accounting = get_resource_sections(state)
+    movable_awakening_cores = first_number(resources.get("movable_awakening_cores"), accounting.get("movable_awakening_cores"))
     templates: List[Dict[str, Any]] = []
     for slot in GEAR_SLOTS:
         cur = gear.get(slot, {})
@@ -176,7 +230,7 @@ def build_respec_action_templates(state: Dict[str, Any], mechanics: Dict[str, An
             })
     templates.append({
         "action_type": "xeno_awakening_core_movement",
-        "claimed_movable_awakening_cores": state.get("resources", {}).get("movable_awakening_cores", 0),
+        "claimed_movable_awakening_cores": movable_awakening_cores,
         "classification": "UNKNOWN_OR_RECOVERABLE_EQUITY_IF_UI_PROVES_REFUND",
         "required_before_use": ["xeno awakening reset/refund screenshot or verified source"],
     })
@@ -204,11 +258,12 @@ def main() -> None:
     normalized = load_json(Path(args.normalized), {}) or {}
 
     resource_view = build_resource_view(state)
+    state_validation = validate_state_resource_view(state, resource_view)
     choice_candidates = build_choice_candidates(state, args.preview)
     respec_templates = build_respec_action_templates(state, mechanics)
 
     generated = {
-        "schema": "sio_candidate_generation_v1",
+        "schema": "sio_candidate_generation_v2",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "rule": "Generate candidates from data only. Do not rank until sIO damage scorer is available.",
         "source_files": {
@@ -220,6 +275,7 @@ def main() -> None:
             "schema": normalized.get("schema"),
             "mode": normalized.get("mode"),
         },
+        "state_validation": state_validation,
         "resource_view": resource_view,
         "choice_candidate_space": choice_candidates,
         "respec_action_templates": respec_templates,
@@ -244,6 +300,19 @@ def main() -> None:
         "# Candidate generator report",
         "",
         f"Generated: {generated['generated_at']}",
+        "",
+        "## State/resource validation",
+    ]
+    report += [f"- {x}" for x in state_validation] if state_validation else ["- OK: resource accounting mapped without schema errors."]
+    report += [
+        "",
+        "## Resource view",
+        f"- bag_free eternal_cores: {resource_view['bag_free']['eternal_cores']}",
+        f"- bag_free void_cores: {resource_view['bag_free']['void_cores']}",
+        f"- bag_free chaos_cores: {resource_view['bag_free']['chaos_cores']}",
+        f"- bag_free relic_cores: {resource_view['bag_free']['relic_cores']}",
+        f"- embedded relic_cores_in_current_build: {resource_view['embedded_committed']['relic_cores_in_current_build']}",
+        f"- embedded/movable awakening cores claimed: {resource_view['embedded_committed']['movable_awakening_cores_claimed']}",
         "",
         "## Choice-space counts",
     ]
