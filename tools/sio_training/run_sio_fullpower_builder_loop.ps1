@@ -51,20 +51,21 @@ Ensure-Dir "data\sio_training\fullpower\latest"
 $Transcript = "data\sio_training\fullpower\latest\fullpower_builder_loop.log"
 try { Stop-Transcript | Out-Null } catch {}
 Start-Transcript -Path $Transcript -Force | Out-Null
+$TranscriptRunning = $true
 
 Log "Full-power builder loop started"
 Log "Repo root: $Repo"
 
 Run-Step "refresh scripts" {
-  Download-File "$Raw/tools/sio_training/extract_sio_bundle.py?fresh=fp2" "tools\sio_training\extract_sio_bundle.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/normalize_sio_bundle.py?fresh=fp2" "tools\sio_training\normalize_sio_bundle.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/generate_sio_candidates.py?fresh=fp2" "tools\sio_training\generate_sio_candidates.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/check_sio_scoring_readiness.py?fresh=fp2" "tools\sio_training\check_sio_scoring_readiness.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/fullpower_candidate_index.py?fresh=fp2" "tools\sio_training\fullpower_candidate_index.py" | Out-Null
-  Download-File "$Raw/tools/sio_training/run_sio_deep_autopilot.ps1?fresh=fp2" "tools\sio_training\run_sio_deep_autopilot.ps1" | Out-Null
-  Download-File "$Raw/tools/sio_training/run_sio_normalize.ps1?fresh=fp2" "tools\sio_training\run_sio_normalize.ps1" | Out-Null
-  Download-File "$Raw/tools/sio_training/run_sio_candidates.ps1?fresh=fp2" "tools\sio_training\run_sio_candidates.ps1" | Out-Null
-  Download-File "$Raw/data/sio_training/dtlgrind_state_v2.json?fresh=fp2" "data\sio_training\dtlgrind_state_v2.json" | Out-Null
+  Download-File "$Raw/tools/sio_training/extract_sio_bundle.py?fresh=fp3" "tools\sio_training\extract_sio_bundle.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/normalize_sio_bundle.py?fresh=fp3" "tools\sio_training\normalize_sio_bundle.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/generate_sio_candidates.py?fresh=fp3" "tools\sio_training\generate_sio_candidates.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/check_sio_scoring_readiness.py?fresh=fp3" "tools\sio_training\check_sio_scoring_readiness.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/fullpower_candidate_index.py?fresh=fp3" "tools\sio_training\fullpower_candidate_index.py" | Out-Null
+  Download-File "$Raw/tools/sio_training/run_sio_deep_autopilot.ps1?fresh=fp3" "tools\sio_training\run_sio_deep_autopilot.ps1" | Out-Null
+  Download-File "$Raw/tools/sio_training/run_sio_normalize.ps1?fresh=fp3" "tools\sio_training\run_sio_normalize.ps1" | Out-Null
+  Download-File "$Raw/tools/sio_training/run_sio_candidates.ps1?fresh=fp3" "tools\sio_training\run_sio_candidates.ps1" | Out-Null
+  Download-File "$Raw/data/sio_training/dtlgrind_state_v2.json?fresh=fp3" "data\sio_training\dtlgrind_state_v2.json" | Out-Null
 }
 
 Run-Step "deep autopilot warmup" {
@@ -118,25 +119,33 @@ Run-Step "post fullpower scoring readiness" {
   python tools\sio_training\check_sio_scoring_readiness.py --candidate data\sio_training\candidates\dtlgrind_candidate_space.json --normalized data\sio_training\normalized\sio_normalized_tables.json --out data\sio_training\scoring
 }
 
-Run-Step "build final bundle" {
-  $bundle = "data\sio_training\fullpower\latest\sio_fullpower_reports.zip"
-  if (Test-Path $bundle) { Remove-Item $bundle -Force }
-  $files = @(
-    "data\sio_training\fullpower\latest\fullpower_candidate_index_report.md",
-    "data\sio_training\fullpower\latest\fullpower_candidate_index.json",
-    "data\sio_training\fullpower\latest\fullpower_distribution_index.csv",
-    "data\sio_training\fullpower\latest\fullpower_builder_loop.log",
-    "data\sio_training\scoring\scoring_readiness_report.md",
-    "data\sio_training\candidates\candidate_generator_report.md",
-    "data\sio_training\normalized\normalizer_unknowns_report.md",
-    "data\sio_training\generated\unknowns_report.md"
-  ) | Where-Object { Test-Path $_ }
+Log "Full-power builder loop finished"
+Log "Stopping transcript before bundling so the log file is not locked"
+try {
+  Stop-Transcript | Out-Null
+  $TranscriptRunning = $false
+} catch {}
+
+$bundle = "data\sio_training\fullpower\latest\sio_fullpower_reports.zip"
+if (Test-Path $bundle) { Remove-Item $bundle -Force }
+$files = @(
+  "data\sio_training\fullpower\latest\fullpower_candidate_index_report.md",
+  "data\sio_training\fullpower\latest\fullpower_candidate_index.json",
+  "data\sio_training\fullpower\latest\fullpower_distribution_index.csv",
+  "data\sio_training\fullpower\latest\fullpower_builder_loop.log",
+  "data\sio_training\scoring\scoring_readiness_report.md",
+  "data\sio_training\candidates\candidate_generator_report.md",
+  "data\sio_training\normalized\normalizer_unknowns_report.md",
+  "data\sio_training\generated\unknowns_report.md"
+) | Where-Object { Test-Path $_ }
+if ($files.Count -eq 0) {
+  Write-Host "No files found to bundle. Send fullpower_candidate_index_report.md instead."
+} else {
   Compress-Archive -Path $files -DestinationPath $bundle -Force
   Write-Host "BUNDLE: $bundle"
 }
 
-Log "Full-power builder loop finished"
 Write-Host ""
 Write-Host "SEND THIS FILE: data\sio_training\fullpower\latest\sio_fullpower_reports.zip"
 Write-Host "Or send: data\sio_training\fullpower\latest\fullpower_candidate_index_report.md"
-try { Stop-Transcript | Out-Null } catch {}
+if ($TranscriptRunning) { try { Stop-Transcript | Out-Null } catch {} }
