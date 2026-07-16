@@ -1,0 +1,39 @@
+name: Export V12 Source
+
+on:
+  push:
+    branches:
+      - codex-v12-source-export
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Build source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -r -q survivor-optimizer-current.zip . \
+            -x '.git/*' \
+               '.venv/*' \
+               '.cropvenv/*' \
+               '**/__pycache__/*' \
+               '*.pyc' \
+               '.aider.tags.cache.v4/*'
+          ls -lh survivor-optimizer-current.zip
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: survivor-optimizer-current
+          path: survivor-optimizer-current.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
