@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - codex-v12-source-export
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
