@@ -1,0 +1,47 @@
+name: Materialize V12.6 External Audit Source
+
+on:
+  push:
+    branches:
+      - v12-6-external-ai-audit
+    paths:
+      - .github/workflows/materialize-v12-6-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: v12-6-external-ai-audit
+          fetch-depth: 1
+
+      - name: Reconstruct and verify ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat external_ai_audit/V12_6_ZIP_BASE64_PART_*.txt | base64 --decode > /tmp/v12_6.zip
+          echo 'de7084395b476f00fd004fa4888479bf45bfd152830f73faef6ed29023ad62cb  /tmp/v12_6.zip' | sha256sum --check
+          rm -rf external_ai_audit/source
+          mkdir -p external_ai_audit/source
+          unzip -q /tmp/v12_6.zip -d external_ai_audit/source
+          find external_ai_audit/source -type f -maxdepth 4 | sort
+
+      - name: Commit normal browsable source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add external_ai_audit/source
+          if git diff --cached --quiet; then
+            echo 'Source already materialized.'
+            exit 0
+          fi
+          git commit -m 'Materialize V12.6 source for external AI audit'
+          git push origin HEAD:v12-6-external-ai-audit
