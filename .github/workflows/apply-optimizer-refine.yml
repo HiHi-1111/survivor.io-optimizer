@@ -64,12 +64,12 @@ jobs:
           pytest -q \
             tests/test_optimizer_refine_mounts.py \
             tests/test_global_planner_exact_baseline.py \
-            tests/test_state_transition.py \
+            tests/test_player_state.py \
             tests/test_state_hash.py \
             tests/test_global_planner.py \
             tests/test_source_pack_optimizer.py \
-            tests/test_main.py \
-            tests/test_optimizer.py
+            tests/test_action_graph.py \
+            tests/test_adversarial_optimizer_features.py
 
       - name: Commit verified refinement
         shell: bash
