@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           cat .optimizer-refine/payload.part* > /tmp/optimizer-refine.b64
           base64 --decode /tmp/optimizer-refine.b64 > /tmp/optimizer-refine.tar.gz
-          echo "299f10186af22254ed975684d4ac20d39fd79b12e83214d006e4854ccc567f5  /tmp/optimizer-refine.tar.gz" | sha256sum --check --strict
+          echo "20b2670c6380578d25f89b75327e542d26a987d6c8441ba261fc58163dfbcd94  /tmp/optimizer-refine.tar.gz" | sha256sum --check --strict
           tar -xzf /tmp/optimizer-refine.tar.gz
 
       - name: Install test dependencies
