@@ -1,0 +1,85 @@
+name: Apply optimizer refinement
+
+on:
+  push:
+    branches:
+      - optimizer-heavy-refine-20260718
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out review branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Verify and extract reviewed patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .optimizer-refine/payload.part* > /tmp/optimizer-refine.b64
+          base64 --decode /tmp/optimizer-refine.b64 > /tmp/optimizer-refine.tar.gz
+          echo "299f10186af22254ed975684d4ac20d39fd79b12e83214d006e4854ccc567f5  /tmp/optimizer-refine.tar.gz" | sha256sum --check --strict
+          tar -xzf /tmp/optimizer-refine.tar.gz
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Compile changed modules
+        run: |
+          python -m py_compile \
+            optimizer/action_types.py \
+            optimizer/player_state.py \
+            optimizer/state_transition.py \
+            optimizer/state_hash.py \
+            optimizer/state_value.py \
+            optimizer/action_generators/mounts.py \
+            optimizer/mount_component_solver.py \
+            optimizer/action_registry.py \
+            optimizer/proposal_budget.py \
+            optimizer/coverage.py \
+            optimizer/global_planner.py \
+            optimizer/main.py \
+            optimizer/scorer.py \
+            optimizer/source_pack_optimizer.py \
+            optimizer/training_cache.py
+
+      - name: Run focused and compatibility tests
+        run: |
+          pytest -q \
+            tests/test_optimizer_refine_mounts.py \
+            tests/test_global_planner_exact_baseline.py \
+            tests/test_state_transition.py \
+            tests/test_state_hash.py \
+            tests/test_global_planner.py \
+            tests/test_source_pack_optimizer.py \
+            tests/test_main.py \
+            tests/test_optimizer.py
+
+      - name: Commit verified refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .optimizer-refine
+          rm -f .github/workflows/apply-optimizer-refine.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Refine exact optimizer logic and add mount planning"
+          git push origin HEAD:optimizer-heavy-refine-20260718
