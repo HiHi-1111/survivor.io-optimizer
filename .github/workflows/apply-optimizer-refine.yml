@@ -1,7 +1,9 @@
 name: Apply optimizer refinement
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - optimizer-heavy-refine-20260718
 
 permissions:
   contents: write
@@ -36,6 +38,10 @@ jobs:
           base64 --decode /tmp/optimizer-refine-compat.b64 > /tmp/optimizer-refine-compat.tar.gz
           echo "b1e05f8106e8dea326bc64213ba08d8f2716907984716d96671b195aafaa7d69  /tmp/optimizer-refine-compat.tar.gz" | sha256sum --check --strict
           tar -xzf /tmp/optimizer-refine-compat.tar.gz
+          cat .optimizer-refine/final.part* > /tmp/optimizer-refine-final.b64
+          base64 --decode /tmp/optimizer-refine-final.b64 > /tmp/optimizer-refine-final.tar.gz
+          echo "64e49649fe2efc37696d59978b99097e10028dbf8bd1874a91abba588953a9df  /tmp/optimizer-refine-final.tar.gz" | sha256sum --check --strict
+          tar -xzf /tmp/optimizer-refine-final.tar.gz
 
       - name: Install test dependencies
         run: |
