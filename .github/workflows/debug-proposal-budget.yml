@@ -1,0 +1,60 @@
+name: Debug proposal budget
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract reviewed code
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .optimizer-refine/payload.part* | base64 --decode > /tmp/base.tar.gz
+          echo "20b2670c6380578d25f89b75327e542d26a987d6c8441ba261fc58163dfbcd94  /tmp/base.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/base.tar.gz
+          cat .optimizer-refine/compat.part* | base64 --decode > /tmp/compat.tar.gz
+          echo "b1e05f8106e8dea326bc64213ba08d8f2716907984716d96671b195aafaa7d69  /tmp/compat.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/compat.tar.gz
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+      - name: Trace retained and missed actions
+        run: |
+          python - <<'PY'
+          from optimizer.action_registry import generate_inventory_actions
+          from optimizer.global_planner import plan_global_inventory
+          from optimizer.player_state import PlayerState
+
+          knowledge = {
+              "metadata": {"schema_version": "1.0"},
+              "items": [{"id": "red_collectible_chest", "name": "Red Collectible Choice Chest", "category": "chest", "rarity": "red", "selector": True, "contents": ["collectible_shard"], "source_refs": ["t"], "confidence": "high"}],
+              "pets": [{"id": "pet_a", "name": "Pet A", "rarity": "epic", "source_refs": ["t"], "confidence": "high"}],
+              "pet_awakenings": [{"id": "pet_a_aw1", "name": "Pet A Awakening 1", "pet_id": "pet_a", "stars": 1, "crystals_required": 1, "source_refs": ["t"], "confidence": "high"}],
+              "xeno_pets": [{"id": "xeno_alpha", "name": "Xeno Alpha", "effects": [{"type": "damage_pct", "value": 18}], "source_refs": ["t"], "confidence": "high"}],
+              "collectibles": [{"id": "collectible_a", "name": "Collectible A", "target_item_id": "item_a", "rarity": "red", "shards_per_star": 100, "max_stars": 5, "effects": [{"type": "damage_pct", "value": 5}], "source_refs": ["t"], "confidence": "high"}],
+          }
+          state = PlayerState(inventory={"items": {"collectible_shard": 1000}, "selector_chests": {"epic_pet_chest": 1}}, resources={"xeno_core": 1, "red_collectible_chest": 1})
+          common = dict(systems=None, include_saves=True, include_random_ev=False, include_missing_placeholders=False, use_cache=False, scoreable_only=True, total_proposal_budget=24)
+          all_actions = generate_inventory_actions(state, knowledge, proposal_budget=False, **common)
+          budgeted = generate_inventory_actions(state, knowledge, proposal_budget=True, **common)
+          result = plan_global_inventory(state, knowledge, chain_depth=3, beam_size=2, gpu_preprune=False, preprune_audit=True, proposal_budget_enabled=True, total_proposal_budget=24)
+          print("TRACE_ALL_COUNT", len(all_actions))
+          print("TRACE_BUDGET_COUNT", len(budgeted))
+          print("TRACE_ALL_IDS", [row.get("action_id") for row in all_actions])
+          print("TRACE_BUDGET_IDS", [row.get("action_id") for row in budgeted])
+          print("TRACE_BEST_STEPS", [row.get("action_id") for row in result["best_action_chain"]["ordered_steps"]])
+          print("TRACE_MISSED", result["metrics"]["proposal_budget_missed_action"])
+          for row in all_actions:
+              if row.get("action_id") == result["metrics"]["proposal_budget_missed_action"]:
+                  print("TRACE_MISSED_ROW", row)
+          PY
