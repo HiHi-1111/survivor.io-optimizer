@@ -1,9 +1,7 @@
 name: Apply optimizer refinement
 
 on:
-  push:
-    branches:
-      - optimizer-heavy-refine-20260718
+  workflow_dispatch:
 
 permissions:
   contents: write
