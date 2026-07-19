@@ -72,3 +72,26 @@ def test_raw_layout_evidence_is_retained_even_though_it_is_not_a_feature() -> No
     candidate = accepted[0]["candidates"][0]
     assert candidate["metadata"]["placements"] == original["candidates"][0]["metadata"]["placements"]
     assert all(key not in candidate["features"] for key in LAYOUT_ONLY_KEYS)
+
+
+def test_layout_marker_uses_exact_keys_not_substrings() -> None:
+    accepted, quarantined = prepare_exact_training_rows(
+        [
+            {
+                "candidates": [
+                    {
+                        "action_id": "ordinary_action",
+                        "metadata": {
+                            "growth_value": 3,
+                            "brown_resource": 4,
+                            "pathway_bonus": 5,
+                        },
+                        "exact_damage_delta": 1,
+                    }
+                ]
+            }
+        ]
+    )
+    assert not quarantined
+    candidate = accepted[0]["candidates"][0]
+    assert "training_exclusions" not in candidate
