@@ -16,6 +16,7 @@ TESTS = [
     "tests/test_sio_tech_progression.py",
     "tests/test_sio_tech_configurations.py",
     "tests/test_sio_survivor_configurations.py",
+    "tests/test_sio_pet_configurations.py",
     "tests/test_sio_progression_frontiers.py",
     "tests/test_sio_tetris.py",
     "tests/test_sio_mount_puzzle_bridge.py",
