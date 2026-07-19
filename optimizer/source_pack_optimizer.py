@@ -24,7 +24,9 @@ from optimizer.sio_exact_actions import (
     resource_counts,
 )
 from optimizer.sio_item_reallocations import generate_exhaustive_item_reallocations
+from optimizer.sio_mount_puzzle_bridge import apply_verified_mount_puzzle_stats
 from optimizer.sio_progression_frontiers import generate_progression_frontiers
+from optimizer.sio_survivor_configurations import plan_survivor_configurations
 from optimizer.sio_tech_configurations import generate_twinborn_mode_actions
 from optimizer.sio_tech_progression import generate_tech_progression_actions
 
@@ -73,6 +75,12 @@ def _profile_data(profile: PlayerState | Mapping[str, Any]) -> dict[str, Any]:
     normalized = _plain(profile)
     if not isinstance(normalized, dict):
         raise TypeError("player state must normalize to a mapping")
+    normalized, puzzle_report = apply_verified_mount_puzzle_stats(normalized)
+    audit = normalized.get("_sio_optimizer_audit")
+    if not isinstance(audit, dict):
+        audit = {}
+    audit["mount_puzzle_bridge"] = puzzle_report
+    normalized["_sio_optimizer_audit"] = audit
     return normalized
 
 
@@ -196,11 +204,24 @@ def _action_key(action: Mapping[str, Any]) -> str:
     return str(action.get("action_id"))
 
 
-def _all_actions(profile: Mapping[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+def _all_actions(
+    profile: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, str]], dict[str, Any]]:
+    survivor_plan = plan_survivor_configurations(profile)
+    survivor_summary = {
+        "complete": survivor_plan.complete,
+        "total_states": survivor_plan.total_states,
+        "max_states": survivor_plan.max_states,
+        "reason": survivor_plan.reason,
+        "main_candidates": list(survivor_plan.main_candidates),
+        "actions_generated": len(survivor_plan.actions),
+        "teamwork_search": "unordered_combinations",
+    }
     base_actions = [
         *generate_exact_actions(profile),
         *generate_exhaustive_item_reallocations(profile),
         *generate_twinborn_mode_actions(profile),
+        *([deepcopy(action) for action in survivor_plan.actions] if survivor_plan.complete else []),
         *generate_tech_progression_actions(profile),
         *generate_progression_frontiers(profile),
         *load_source_pack_actions(),
@@ -241,7 +262,7 @@ def _all_actions(profile: Mapping[str, Any]) -> tuple[list[dict[str, Any]], list
         seen_keys[key] = action_id
         seen_ids.add(action_id)
         result.append(action)
-    return result, deduplicated
+    return result, deduplicated, {"survivor_configurations": survivor_summary}
 
 
 def _candidate(
@@ -280,7 +301,7 @@ def _candidate(
 
 def _prepare_profile(profile_input: PlayerState | Mapping[str, Any]) -> dict[str, Any]:
     profile = _profile_data(profile_input)
-    actions, deduplicated = _all_actions(profile)
+    actions, deduplicated, configuration_searches = _all_actions(profile)
     transitions: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
     rejected: list[dict[str, str]] = []
     for action in actions:
@@ -289,12 +310,15 @@ def _prepare_profile(profile_input: PlayerState | Mapping[str, Any]) -> dict[str
             rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
         else:
             transitions.append((action, after, certificate))
+    audit = profile.get("_sio_optimizer_audit") if isinstance(profile.get("_sio_optimizer_audit"), Mapping) else {}
     return {
         "profile": profile,
         "actions": actions,
         "transitions": transitions,
         "rejected": rejected,
         "deduplicated": deduplicated,
+        "configuration_searches": configuration_searches,
+        "input_audit": deepcopy(dict(audit)),
     }
 
 
@@ -303,6 +327,12 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
     transitions = list(prepared["transitions"])
     rejected = [dict(row) for row in prepared["rejected"]]
     deduplicated = [dict(row) for row in prepared.get("deduplicated", [])]
+    configuration_searches = deepcopy(dict(prepared.get("configuration_searches") or {}))
+    configuration_complete = all(
+        bool(report.get("complete", False))
+        for report in configuration_searches.values()
+        if isinstance(report, Mapping)
+    )
     if not reports:
         reports = [{"supported": False, "reason": "missing_baseline_formula_report"}]
     before = reports[0]
@@ -331,7 +361,8 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         )
     )
     ranked = ranked_all[: max(0, top_k)]
-    best_spend = ranked_all[0] if ranked_all and float(ranked_all[0]["expected_dps_gain"]) > 0 else None
+    best_evaluated = ranked_all[0] if ranked_all and float(ranked_all[0]["expected_dps_gain"]) > 0 else None
+    best_spend = best_evaluated if configuration_complete else None
     baseline = {
         "action_id": "save_hold_no_op",
         "system": "baseline",
@@ -343,13 +374,32 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "refunded_items": {},
         "legality_certificate": {"legal": True, "balanced": True, "missing": {}},
     }
+    warnings = [
+        "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
+        "Every exact cumulative progression frontier is evaluated, not only the next level.",
+        "Every exact directional two-slot item reallocation frontier is evaluated before structural deduplication.",
+        "Twinborn modes are evaluated as complete per-tech assignments, never item permutations.",
+        "Teamwork members are evaluated as unordered combinations; Main and Harmony remain role-specific.",
+        "Choice chests use canonical multiset allocations, never pick-order permutations.",
+        "Tetris layout geometry is excluded; only verified aggregate mount component stats are scored.",
+        "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
+    ]
+    if not configuration_complete:
+        warnings.append(
+            "A mapped exact configuration search exceeded its declared state budget, so the global recommendation is withheld rather than approximated."
+        )
     return {
         "best": best_spend,
+        "provisional_best_evaluated": best_evaluated if not configuration_complete else None,
         "best_including_no_op": best_spend or baseline,
         "no_op_baseline": baseline,
-        "no_action_recommended": best_spend is None,
+        "no_action_recommended": configuration_complete and best_spend is None,
+        "recommendation_withheld": not configuration_complete,
+        "optimization_complete": configuration_complete,
+        "configuration_searches": configuration_searches,
+        "input_audit": deepcopy(dict(prepared.get("input_audit") or {})),
         "ranked_actions": ranked,
-        "ranked_alternatives": ranked[1:] if best_spend else ranked,
+        "ranked_alternatives": ranked[1:] if best_evaluated else ranked,
         "templates_considered": len(actions),
         "actionable_count": len(ranked_all),
         "rejected_count": len(rejected),
@@ -358,18 +408,15 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "deduplicated_actions": deduplicated,
         "false_prunes": [],
         "pruning_policy": "none; every legal exact after-state is batch-scored",
-        "warnings": [
-            "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
-            "Every exact cumulative progression frontier is evaluated, not only the next level.",
-            "Every exact directional two-slot item reallocation frontier is evaluated before structural deduplication.",
-            "Twinborn modes are evaluated as complete per-tech assignments, never item permutations.",
-            "Choice chests use canonical multiset allocations, never pick-order permutations.",
-            "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
-        ],
+        "warnings": warnings,
         "explanation": (
-            f"{best_spend['action_id']} has the largest exact sIO Clan Expedition damage gain."
-            if best_spend
-            else "No legal action beat the mandatory zero-cost no-op baseline."
+            "No global recommendation was issued because an exact configuration frontier exceeded its state budget."
+            if not configuration_complete
+            else (
+                f"{best_spend['action_id']} has the largest exact sIO Clan Expedition damage gain."
+                if best_spend
+                else "No legal action beat the mandatory zero-cost no-op baseline."
+            )
         ),
     }
 
