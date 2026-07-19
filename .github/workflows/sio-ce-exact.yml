@@ -1,0 +1,44 @@
+name: sIO CE exact and champion lineage
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-ce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+      - name: Compile exact optimizer modules
+        run: >-
+          python -m compileall -q
+          optimizer/sio_ce_account.py
+          optimizer/sio_runtime_oracle.py
+          optimizer/sio_exact_actions.py
+          optimizer/champion_lineage.py
+          optimizer/exact_training_labels.py
+          tools/sio_training/train_champion_lineage.py
+      - name: Validate offline oracle JavaScript
+        run: node --check tools/sio_runtime/sio_ce_oracle.js
+      - name: Run focused exact CE and lineage suite
+        run: python tools/run_sio_ce_tests.py
+      - name: Verify lineage CLI
+        run: python tools/sio_training/train_champion_lineage.py --help
