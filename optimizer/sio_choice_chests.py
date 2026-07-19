@@ -1,40 +1,26 @@
 """Expand exact actions with selector/choice-chest resource combinations.
 
 A choice chest is order-independent: choosing Eternal then Void is the same
-inventory transition as choosing Void then Eternal. This module enumerates
-multiset count allocations directly and never creates ordered pick sequences.
+inventory transition as choosing Void then Eternal. This module searches
+canonical multiset count allocations directly and never creates ordered pick
+sequences.
 
-The profile must supply the exact chest options and units. No reward conversion
-is guessed. Supported input shape, at the profile root or under ``sio_ce``::
-
-    "choice_chests": {
-        "core_selector_chest": {
-            "count": 3,
-            "options": {
-                "eternal_core": 1,
-                "void_core": 1,
-                "chaos_core": 1
-            }
-        }
-    }
-
-``count`` may be omitted when the chest is already present in normal resources.
-Only allocations that exactly cover shortages are emitted, so no unrepresented
-leftover reward is silently discarded.
+The profile must supply exact chest options and reward units. No conversion is
+guessed. Only allocations that exactly cover an action's shortages are emitted,
+so no unrepresented leftover reward is silently discarded.
 """
 from __future__ import annotations
 
 from copy import deepcopy
+from functools import lru_cache
 import math
 import re
 from typing import Any, Iterable, Mapping
 
-from optimizer.sio_combinations import (
-    allocation_key,
-    allocation_slug,
-    bounded_multiset_allocations,
-    canonical_json,
-)
+from optimizer.sio_combinations import allocation_key, allocation_slug, canonical_json
+
+ROUND_DIGITS = 9
+EPSILON = 1e-9
 
 
 def _number(value: Any, default: float = 0.0) -> float:
@@ -43,6 +29,10 @@ def _number(value: Any, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return number if math.isfinite(number) else default
+
+
+def _rounded(value: Any) -> float:
+    return round(_number(value), ROUND_DIGITS)
 
 
 def _slug(value: Any) -> str:
@@ -87,22 +77,28 @@ def normalize_choice_chests(
         options_raw = raw_row.get("options") or raw_row.get("rewards") or {}
         options: dict[str, float] = {}
         if isinstance(options_raw, Mapping):
-            for resource_id, units_raw in options_raw.items():
-                units = _number(
-                    units_raw.get("amount", units_raw.get("units", units_raw.get("count", 0)))
-                    if isinstance(units_raw, Mapping)
-                    else units_raw
-                )
-                if units > 0:
-                    options[str(resource_id)] = units
+            option_rows = options_raw.items()
         elif isinstance(options_raw, list):
-            for option in options_raw:
-                if not isinstance(option, Mapping):
-                    continue
-                resource_id = option.get("resource_id") or option.get("id")
-                units = _number(option.get("amount", option.get("units", option.get("count", 0))))
-                if resource_id is not None and units > 0:
-                    options[str(resource_id)] = units
+            option_rows = (
+                (
+                    option.get("resource_id") or option.get("id"),
+                    option,
+                )
+                for option in options_raw
+                if isinstance(option, Mapping)
+            )
+        else:
+            option_rows = ()
+        for resource_id, units_raw in option_rows:
+            if resource_id is None:
+                continue
+            units = _number(
+                units_raw.get("amount", units_raw.get("units", units_raw.get("count", 0)))
+                if isinstance(units_raw, Mapping)
+                else units_raw
+            )
+            if units > 0:
+                options[str(resource_id)] = _rounded(units)
         if not options:
             continue
         supplied_count = _number(raw_row.get("count", raw_row.get("quantity", 0)))
@@ -127,57 +123,168 @@ def _missing_resources(
 ) -> dict[str, float]:
     consumed = action.get("consumed_items") if isinstance(action.get("consumed_items"), Mapping) else {}
     refunded = action.get("refunded_items") if isinstance(action.get("refunded_items"), Mapping) else {}
-    return {
-        str(resource): round(required - available.get(str(resource), 0.0) - _number(refunded.get(resource)), 9)
-        for resource, raw_required in consumed.items()
-        if (required := _number(raw_required))
-        > available.get(str(resource), 0.0) + _number(refunded.get(resource)) + 1e-9
-    }
+    missing: dict[str, float] = {}
+    for resource, raw_required in consumed.items():
+        key = str(resource)
+        required = _number(raw_required)
+        shortage = required - _number(available.get(key)) - _number(refunded.get(resource))
+        if shortage > EPSILON:
+            missing[key] = _rounded(shortage)
+    return missing
 
 
-def _allocations_for_chest(chest: Mapping[str, Any]) -> list[dict[str, Any]]:
-    options = chest["options"]
-    rows: list[dict[str, Any]] = [
-        {"chests": {}, "grants": {}, "option_counts": {}}
-    ]
-    for used in range(1, int(chest["count"]) + 1):
-        for allocation in bounded_multiset_allocations(options, used):
-            grants = {
-                resource: round(count * _number(options[resource]), 9)
-                for resource, count in allocation.items()
-                if count
-            }
+def _remaining_key(resources: tuple[str, ...], remaining: Mapping[str, float]) -> tuple[float, ...]:
+    return tuple(_rounded(remaining.get(resource, 0.0)) for resource in resources)
+
+
+def _per_chest_exact_contributions(
+    chest: Mapping[str, Any],
+    resources: tuple[str, ...],
+    remaining: tuple[float, ...],
+) -> tuple[dict[str, Any], ...]:
+    """Enumerate only count allocations that do not exceed current shortages.
+
+    The recursion chooses a count per canonical reward option. It never builds a
+    pick-order sequence, and the maximum count for each option is bounded by both
+    available chests and the shortage that option can satisfy.
+    """
+    resource_index = {resource: index for index, resource in enumerate(resources)}
+    options = tuple(
+        (resource, _number(units))
+        for resource, units in sorted((chest.get("options") or {}).items())
+        if resource in resource_index and _number(units) > 0
+    )
+    chest_limit = int(chest.get("count", 0) or 0)
+    rows: list[dict[str, Any]] = []
+
+    def visit(
+        option_index: int,
+        chests_left: int,
+        grants: list[float],
+        counts: dict[str, int],
+    ) -> None:
+        if option_index >= len(options):
+            used = chest_limit - chests_left
             rows.append(
                 {
-                    "chests": {str(chest["resource_id"]): used},
-                    "grants": grants,
-                    "option_counts": {str(chest["resource_id"]): dict(allocation_key(allocation))},
+                    "used": used,
+                    "grants": {
+                        resource: _rounded(amount)
+                        for resource, amount in zip(resources, grants)
+                        if amount > EPSILON
+                    },
+                    "option_counts": dict(allocation_key(counts)),
                 }
             )
-    return rows
+            return
+        resource, units = options[option_index]
+        index = resource_index[resource]
+        shortage_left = _rounded(remaining[index] - grants[index])
+        maximum = min(chests_left, int(math.floor((shortage_left + EPSILON) / units)))
+        for count in range(maximum + 1):
+            next_grants = list(grants)
+            if count:
+                next_grants[index] = _rounded(next_grants[index] + count * units)
+                counts[resource] = count
+            visit(option_index + 1, chests_left - count, next_grants, counts)
+            counts.pop(resource, None)
+
+    visit(0, chest_limit, [0.0] * len(resources), {})
+    # Structural dedup protects against duplicate aliases with the same exact
+    # grant vector while retaining different chest-use counts when meaningful.
+    unique: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = canonical_json({"used": row["used"], "grants": row["grants"], "counts": row["option_counts"]})
+        unique.setdefault(key, row)
+    return tuple(unique.values())
 
 
-def _combine_chest_allocations(chests: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    combined = [{"chests": {}, "grants": {}, "option_counts": {}}]
-    for chest in chests:
-        next_rows: list[dict[str, Any]] = []
-        for left in combined:
-            for right in _allocations_for_chest(chest):
+def _pareto_allocations(rows: Iterable[dict[str, Any]], chest_ids: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Keep allocations not dominated in every chest type.
+
+    This avoids assuming all chest types have equal opportunity cost. An
+    allocation is removed only when another exact allocation uses no more of any
+    chest type and strictly less of at least one.
+    """
+    values = list(rows)
+    result: list[dict[str, Any]] = []
+    for index, row in enumerate(values):
+        vector = tuple(int(row["chests"].get(chest_id, 0)) for chest_id in chest_ids)
+        dominated = False
+        for other_index, other in enumerate(values):
+            if index == other_index:
+                continue
+            other_vector = tuple(int(other["chests"].get(chest_id, 0)) for chest_id in chest_ids)
+            if all(left <= right for left, right in zip(other_vector, vector)) and any(
+                left < right for left, right in zip(other_vector, vector)
+            ):
+                dominated = True
+                break
+        if not dominated:
+            result.append(row)
+    return result
+
+
+def exact_cover_allocations(
+    chests: list[dict[str, Any]],
+    missing: Mapping[str, float],
+) -> list[dict[str, Any]]:
+    """Find exact, nondominated chest allocations for one shortage vector.
+
+    Dynamic programming is keyed by chest index and remaining resource amounts.
+    Therefore unrelated inventory combinations are never generated.
+    """
+    resources = tuple(sorted(str(resource) for resource in missing))
+    target = _remaining_key(resources, missing)
+    relevant_chests = [
+        chest
+        for chest in chests
+        if set((chest.get("options") or {})) & set(resources)
+    ]
+    chest_ids = tuple(str(chest["resource_id"]) for chest in relevant_chests)
+
+    @lru_cache(maxsize=None)
+    def solve(chest_index: int, remaining: tuple[float, ...]) -> tuple[dict[str, Any], ...]:
+        if all(amount <= EPSILON for amount in remaining):
+            return ({"chests": {}, "grants": {}, "option_counts": {}},)
+        if chest_index >= len(relevant_chests):
+            return ()
+        chest = relevant_chests[chest_index]
+        rows: list[dict[str, Any]] = []
+        for contribution in _per_chest_exact_contributions(chest, resources, remaining):
+            next_remaining = tuple(
+                _rounded(amount - _number(contribution["grants"].get(resource)))
+                for resource, amount in zip(resources, remaining)
+            )
+            if any(amount < -EPSILON for amount in next_remaining):
+                continue
+            for suffix in solve(chest_index + 1, next_remaining):
+                chest_id = str(chest["resource_id"])
+                used = int(contribution["used"])
                 row = {
-                    "chests": {**left["chests"], **right["chests"]},
-                    "grants": dict(left["grants"]),
-                    "option_counts": {**left["option_counts"], **right["option_counts"]},
+                    "chests": dict(suffix["chests"]),
+                    "grants": dict(suffix["grants"]),
+                    "option_counts": dict(suffix["option_counts"]),
                 }
-                for resource, amount in right["grants"].items():
-                    row["grants"][resource] = round(row["grants"].get(resource, 0.0) + amount, 9)
-                next_rows.append(row)
-        combined = next_rows
-    return combined
+                if used:
+                    row["chests"][chest_id] = used
+                    row["option_counts"][chest_id] = contribution["option_counts"]
+                for resource, amount in contribution["grants"].items():
+                    row["grants"][resource] = _rounded(row["grants"].get(resource, 0.0) + amount)
+                rows.append(row)
+        unique: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            unique.setdefault(canonical_json(row), row)
+        return tuple(unique.values())
 
-
-def _exactly_covers(grants: Mapping[str, float], missing: Mapping[str, float]) -> bool:
-    relevant = set(grants) | set(missing)
-    return all(abs(_number(grants.get(key)) - _number(missing.get(key))) <= 1e-9 for key in relevant)
+    exact = [row for row in solve(0, target) if _remaining_key(resources, row["grants"]) == target]
+    return sorted(
+        _pareto_allocations(exact, chest_ids),
+        key=lambda row: (
+            tuple(int(row["chests"].get(chest_id, 0)) for chest_id in chest_ids),
+            canonical_json(row["option_counts"]),
+        ),
+    )
 
 
 def expand_actions_with_choice_chests(
@@ -190,7 +297,6 @@ def expand_actions_with_choice_chests(
     chests = normalize_choice_chests(profile, available_resources)
     if not chests:
         return originals
-    all_allocations = _combine_chest_allocations(chests)
     result = list(originals)
     seen = {
         canonical_json(
@@ -210,24 +316,19 @@ def expand_actions_with_choice_chests(
         coverable = {resource for chest in chests for resource in chest["options"]}
         if set(missing) - coverable:
             continue
-        feasible = [row for row in all_allocations if _exactly_covers(row["grants"], missing)]
-        if not feasible:
-            continue
-        minimum_used = min(sum(row["chests"].values()) for row in feasible)
-        feasible = [row for row in feasible if sum(row["chests"].values()) == minimum_used]
-        for allocation in feasible:
+        for allocation in exact_cover_allocations(chests, missing):
             gross = {
                 str(resource): _number(amount)
                 for resource, amount in (action.get("consumed_items") or {}).items()
             }
             net = {
-                resource: round(max(0.0, amount - _number(allocation["grants"].get(resource))), 9)
+                resource: _rounded(max(0.0, amount - _number(allocation["grants"].get(resource))))
                 for resource, amount in gross.items()
             }
-            net = {resource: amount for resource, amount in net.items() if amount > 1e-9}
+            net = {resource: amount for resource, amount in net.items() if amount > EPSILON}
             for chest_id, count in allocation["chests"].items():
                 if count:
-                    net[chest_id] = net.get(chest_id, 0.0) + float(count)
+                    net[chest_id] = _rounded(net.get(chest_id, 0.0) + float(count))
             variant = deepcopy(action)
             suffix = "--".join(
                 f"{_slug(chest_id)}-{allocation_slug(option_counts)}"
@@ -252,6 +353,7 @@ def expand_actions_with_choice_chests(
                     "combination_search": True,
                     "permutation_search": False,
                     "exact_shortage_coverage": True,
+                    "allocation_policy": "exact_cover_pareto_by_chest_type",
                 }
             )
             variant["metadata"] = metadata
@@ -274,6 +376,7 @@ def expand_actions_with_choice_chests(
 
 
 __all__ = [
+    "exact_cover_allocations",
     "expand_actions_with_choice_chests",
     "normalize_choice_chests",
 ]
