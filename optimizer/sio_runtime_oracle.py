@@ -30,6 +30,12 @@ ORACLE_SCHEMA = "sio_ce_oracle_v2"
 SIO_FORMULA_ORDER = ("13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f")
 SIO_FORMULA_MODULES = (13024, 24804, 88426, 67727)
 SIO_ITEM_SLOTS = ("Weapon", "Armor", "Necklace", "Belt", "Gloves", "Boots")
+POST_24804_STAGES = {
+    "post_24804",
+    "sio_post_24804",
+    "post_24804_items",
+    "post_24804_account_and_items",
+}
 
 
 class SioRuntimeUnavailable(RuntimeError):
@@ -229,15 +235,20 @@ def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
     if "atkBase" not in attack or "atkFinal" not in attack:
         raise SioRuntimeInputError("Exact sIO scoring requires attack.atkBase and attack.atkFinal.")
 
+    stage = str(sio.get("stats_stage", profile.get("stats_stage", "unknown")))
+    skip_runtime_24804 = bool(sio.get("skipRuntime24804") or stage in POST_24804_STAGES)
     skills = _mapping(sio.get("skills") or profile.get("skills"))
     settings = _mapping(sio.get("settings") or profile.get("settings"))
     settings.setdefault("revives", [40, 70, 90])
     settings["calcMode"] = "damage"
     evolve = sio.get("evolvePassives", profile.get("evolvePassives", settings.get("evolvePassives")))
     if evolve not in (True, False):
-        raise SioRuntimeInputError(
-            "Exact evolved-passive scoring requires sio_ce.evolvePassives=true/false; it is not guessed."
-        )
+        if skip_runtime_24804:
+            evolve = False
+        else:
+            raise SioRuntimeInputError(
+                "Exact evolved-passive scoring requires sio_ce.evolvePassives=true/false; it is not guessed."
+            )
 
     techs = _exact_techs(profile)
     if techs is None and (sio.get("techs") or profile.get("techs") or profile.get("tech")):
@@ -256,25 +267,29 @@ def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
     active_survivor = _active_survivor(profile, sio)
     items = _item_state(profile, sio)
 
-    tech_input = {
-        "evolvePassives": bool(evolve),
-        "cooldownReduction": float(stats.get("cooldownReduction", 0) or 0),
-        "techs": deepcopy(dict(techs or {})),
-        "skills": deepcopy(skills),
-        "collectibles": deepcopy(collectibles),
-        "upgradedCollectibles": list(upgraded),
-        "settings": deepcopy(settings),
-        "gameMode": "ce",
-    }
+    tech_input: dict[str, Any] | None = None
+    if not skip_runtime_24804:
+        tech_input = {
+            "evolvePassives": bool(evolve),
+            "cooldownReduction": float(stats.get("cooldownReduction", 0) or 0),
+            "techs": deepcopy(dict(techs or {})),
+            "skills": deepcopy(skills),
+            "collectibles": deepcopy(collectibles),
+            "upgradedCollectibles": list(upgraded),
+            "settings": deepcopy(settings),
+            "gameMode": "ce",
+        }
     return {
         "stats": stats,
+        "statsStage": stage,
+        "skipRuntime24804": skip_runtime_24804,
         "attack": attack,
         "skills": skills,
         "direct_skill_factors": direct,
         "tech_input": tech_input,
-        "items": items,
-        "collectibles": collectibles,
-        "upgradedCollectibles": list(upgraded),
+        "items": items if not skip_runtime_24804 else {},
+        "collectibles": collectibles if not skip_runtime_24804 else {},
+        "upgradedCollectibles": list(upgraded) if not skip_runtime_24804 else [],
         "settings": settings,
         "activeSurvivor": active_survivor,
         "venato": active_survivor == "Venato",
@@ -358,8 +373,8 @@ class SioCeRuntimeOracle:
                     "formula_provenance": {
                         "source": "user-supplied sIO Tools runtime bundle",
                         "bundle_sha256": self._bundle_hash,
-                        "modules": list(SIO_FORMULA_MODULES),
-                        "order": list(SIO_FORMULA_ORDER),
+                        "modules": list(result.get("formula_modules") or SIO_FORMULA_MODULES),
+                        "order": list(result.get("formula_order") or SIO_FORMULA_ORDER),
                         "oracle": "tools/sio_runtime/sio_ce_oracle.js",
                         "schema": ORACLE_SCHEMA,
                     },
@@ -392,6 +407,7 @@ def score_profile_exact(profile: Mapping[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "ORACLE_SCHEMA",
+    "POST_24804_STAGES",
     "SioCeRuntimeOracle",
     "SioRuntimeInputError",
     "SioRuntimeUnavailable",
