@@ -2,7 +2,7 @@
 
 This file contains only work that cannot be completed honestly from the repository and the supplied offline sIO bundle. Completed work must not be re-added here. A blocked item stays unknown until its exact source, account data, or observation set is supplied.
 
-## Final verification still required
+## Release blockers
 
 - Run the focused exact Clan Expedition suite from the runnable CI snapshot with the source-locked user sIO bundle.
 - Confirm the final branch head passes the formula/uptime audit, combination/training-leakage audit, focused Python 3.11 and 3.12 suites, complete Python 3.12 suite, and champion-lineage smoke test.
@@ -93,7 +93,7 @@ The bot may independently enumerate exact states, but it must not claim parity w
 - Teamwork is an unordered combination. Main Survivor, Harmony left/right, Twinborn tech identity, and distinct Xeno support skill roles remain directional because changing those roles changes the state.
 - Mount placement geometry is deterministic solver output and never a learned feature. Only verified aggregate mount component stats may reach CE scoring or training labels.
 
-## Work that must not be added
+## Work that should not be added
 
 - Do not add Ender's Echo, chapters, Path of Trials, Lunar Mine Expedition, Zone Operation, Operation Retreat, or Survivor Showdown to this CE optimizer.
 - Do not enumerate permutations of identical Tetris pieces, selector-chest picks, interchangeable Teamwork members, identical Xeno support roles, item sets, or any other order-independent choice.
