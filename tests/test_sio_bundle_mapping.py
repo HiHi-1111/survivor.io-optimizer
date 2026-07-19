@@ -30,12 +30,15 @@ def test_worker_manifest_is_source_locked_and_keeps_all_omitted_workers_explicit
         assert row["bot_status"]
 
 
-def test_feature_registry_does_not_claim_missing_worker_parity() -> None:
+def test_feature_registry_discloses_independent_solver_without_worker_parity() -> None:
     registry = {
         row["id"]: row
         for row in json.loads((ROOT / "knowledge" / "sio_feature_registry.json").read_text(encoding="utf-8"))
     }
-    assert registry["mount_puzzle_optimizer"]["action_status"] == "not_yet_implemented"
+    mount_puzzle = registry["mount_puzzle_optimizer"]
+    assert mount_puzzle["action_status"] == "combination_solver_implemented_profile_bridge_missing"
+    assert "worker chunks are absent from the supplied offline bundle" in mount_puzzle["remaining"]
+    assert "piece inventory is a multiset combination, not a permutation" in mount_puzzle["known_contract"]
     assert registry["tech_optimizer"]["action_status"] == "partial"
     assert registry["survivor_optimizer"]["action_status"] == "partial"
     assert registry["collectible_optimizer"]["action_status"] == "partial"
