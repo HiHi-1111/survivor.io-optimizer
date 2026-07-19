@@ -36,13 +36,14 @@ def test_feature_registry_discloses_independent_solver_without_worker_parity() -
         for row in json.loads((ROOT / "knowledge" / "sio_feature_registry.json").read_text(encoding="utf-8"))
     }
     mount_puzzle = registry["mount_puzzle_optimizer"]
-    assert mount_puzzle["action_status"] == "combination_solver_implemented_profile_bridge_missing"
-    assert "worker chunks are absent from the supplied offline bundle" in mount_puzzle["remaining"]
-    assert "piece inventory is a multiset combination, not a permutation" in mount_puzzle["known_contract"]
+    assert mount_puzzle["action_status"] == "combination_solver_plus_verified_aggregate_stat_import"
+    assert "omitted tetris and mountPuzzles workers" in mount_puzzle["remaining_source_blocked"]
+    assert "multiset combinations" in mount_puzzle["implemented"]
+    assert "no identical-piece permutations" in mount_puzzle["implemented"]
     assert registry["tech_optimizer"]["action_status"] == "partial"
-    assert registry["survivor_optimizer"]["action_status"] == "partial"
+    assert registry["survivor_optimizer"]["action_status"] == "complete_main_harmony_teamwork_frontier_or_recommendation_withheld"
     assert registry["collectible_optimizer"]["action_status"] == "partial"
-    assert registry["xeno_pet_skills"]["action_status"] == "not_generated_without_exact_elixir_costs"
+    assert registry["xeno_pet_skills"]["action_status"] == "not_generated_without_exact_costs"
 
 
 def test_bundle_mapper_script_is_present_and_non_executing() -> None:
