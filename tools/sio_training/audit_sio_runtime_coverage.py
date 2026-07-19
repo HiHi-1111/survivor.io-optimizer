@@ -183,6 +183,8 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
     source_optimizer_py = _source("optimizer/source_pack_optimizer.py")
     labels_py = _source("optimizer/exact_training_labels.py")
     state_py = _source("optimizer/player_state.py")
+    tetris_py = _source("optimizer/sio_tetris.py")
+    unfinished_md = _source("docs/SIO_UNFINISHED_WORK.md")
 
     for token in EXACT_RUNTIME_BINDINGS:
         _check_contains(errors, oracle_js, token, "exact oracle")
@@ -204,6 +206,10 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
         _check_contains(errors, frontier_py, token, label)
     _check_contains(errors, source_optimizer_py, "generate_progression_frontiers", "frontier optimizer integration")
     _check_contains(errors, source_optimizer_py, "every legal exact after-state is batch-scored", "no-prune exact search")
+    _check_contains(errors, source_optimizer_py, "calculate_clan_expedition_damage_batch(formula_states)", "single flattened formula batch")
+    _check_contains(errors, source_optimizer_py, "states_scored_in_one_batch", "batch health metadata")
+    if "results = [_optimize_one(profile" in source_optimizer_py:
+        errors.append("source optimizer still starts one formula batch per profile")
     _check_contains(errors, frontier_py, '"cumulative_frontier": True', "frontier provenance")
     _check_contains(errors, tech_py, "math.inf, math.inf", "unpublished Overload gates remain unreachable")
 
@@ -222,6 +228,16 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
     _check_contains(errors, labels_py, '"raw_row": evidence', "training cleanup")
     _check_contains(errors, labels_py, 'path.open("a"', "append-only quarantine")
     _check_contains(errors, state_py, "PLAYER_STATE_LIST_ADAPTER", "batch input validation")
+
+    _check_contains(errors, tetris_py, "fixed_type_multiset_placement_combinations", "combination Tetris search")
+    _check_contains(errors, tetris_py, "inventory_combination_count", "Tetris multiset counting")
+    _check_contains(errors, tetris_py, '"Electric Scooter": (7, 8)', "Scooter board dimensions")
+    _check_contains(errors, tetris_py, '"Tech Hoverboard": (9, 8)', "Hoverboard board dimensions")
+    _check_contains(errors, tetris_py, '"Doomsteed": (12, 8)', "Doomsteed board dimensions")
+    if "permutations(" in tetris_py or "import permutations" in tetris_py:
+        errors.append("Tetris solver must use multiset combinations, not permutations")
+    _check_contains(errors, unfinished_md, "## Release blockers", "unfinished-work checklist")
+    _check_contains(errors, unfinished_md, "## Work that should not be added", "unnecessary-work guardrails")
 
     for field, expected in manifest["base_stats"].items():
         pattern = rf'["\']{re.escape(field)}["\']\s*:\s*{re.escape(str(expected))}(?:\.0)?'
