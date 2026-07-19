@@ -10,5 +10,65 @@
       "breakpoint_score": 0.0,
       "confidence_score": 0.0
     }
+  },
+  {
+    "id": "scenario_1",
+    "name": "Deprecated CE Short-Term Alias",
+    "description": "Migration metadata only. The public optimizer maps this old label to Clan Expedition exact damage.",
+    "weights": {"damage_score": 1.0, "long_term_score": 0.2, "resource_efficiency_score": 0.4, "breakpoint_score": 0.8, "confidence_score": 0.2}
+  },
+  {
+    "id": "scenario_2",
+    "name": "Deprecated CE Long-Term Alias",
+    "description": "Migration metadata only. It cannot change the exact Clan Expedition winner.",
+    "weights": {"damage_score": 0.6, "long_term_score": 1.0, "resource_efficiency_score": 0.8, "breakpoint_score": 1.0, "confidence_score": 0.2}
+  },
+  {
+    "id": "scenario_3",
+    "name": "Deprecated CE Balanced Alias",
+    "description": "Migration metadata only. It cannot change the exact Clan Expedition winner.",
+    "weights": {"damage_score": 0.8, "long_term_score": 0.7, "resource_efficiency_score": 0.7, "breakpoint_score": 0.9, "confidence_score": 0.2}
+  },
+  {
+    "id": "scenario_event_shop",
+    "name": "Retired Event Shop Scenario",
+    "description": "Retained only so old datasets can be audited. It is rejected by the CE-only public optimizer.",
+    "weights": {"damage_score": 0.7, "long_term_score": 0.8, "resource_efficiency_score": 1.0, "breakpoint_score": 1.0, "confidence_score": 0.3}
+  },
+  {
+    "id": "scenario_f2p_gems",
+    "name": "Retired F2P Gem Scenario",
+    "description": "Retained only so old datasets can be audited. It is rejected by the CE-only public optimizer.",
+    "weights": {"damage_score": 0.6, "long_term_score": 0.9, "resource_efficiency_score": 1.2, "breakpoint_score": 1.0, "confidence_score": 0.4}
+  },
+  {
+    "id": "scenario_chapter_push",
+    "name": "Retired Chapter Scenario",
+    "description": "Retained only so old datasets can be audited. Chapters are unsupported.",
+    "weights": {"damage_score": 1.0, "long_term_score": 0.4, "resource_efficiency_score": 0.5, "breakpoint_score": 0.8, "confidence_score": 0.3}
+  },
+  {
+    "id": "scenario_clan_shop",
+    "name": "Retired Clan Shop Scenario",
+    "description": "Retained only so old datasets can be audited. It is not a combat-scoring mode.",
+    "weights": {"damage_score": 0.7, "long_term_score": 0.9, "resource_efficiency_score": 1.0, "breakpoint_score": 1.0, "confidence_score": 0.4}
+  },
+  {
+    "id": "scenario_pet_xeno",
+    "name": "Retired Pet Scenario",
+    "description": "Retained only so old datasets can be audited. Pet actions must use exact CE before/after damage.",
+    "weights": {"damage_score": 0.6, "long_term_score": 1.1, "resource_efficiency_score": 0.7, "breakpoint_score": 1.2, "confidence_score": 0.3}
+  },
+  {
+    "id": "scenario_gear_ss",
+    "name": "Retired Gear Scenario",
+    "description": "Retained only so old datasets can be audited. Gear actions must use exact CE before/after damage.",
+    "weights": {"damage_score": 0.9, "long_term_score": 0.9, "resource_efficiency_score": 0.7, "breakpoint_score": 1.2, "confidence_score": 0.3}
+  },
+  {
+    "id": "scenario_collectibles",
+    "name": "Retired Collectible Scenario",
+    "description": "Retained only so old datasets can be audited. Collectible actions must use exact CE before/after damage.",
+    "weights": {"damage_score": 0.6, "long_term_score": 1.0, "resource_efficiency_score": 0.8, "breakpoint_score": 1.2, "confidence_score": 0.4}
   }
 ]
