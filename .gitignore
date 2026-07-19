@@ -26,3 +26,9 @@ build/
 
 # Local AI/editor config - may contain secrets
 .continue/
+
+# Wrangler local state and secrets
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+!.env.example

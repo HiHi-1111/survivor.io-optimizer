@@ -122,12 +122,16 @@ def test_online_ranker_learns_and_resumes(tmp_path: Path):
     assert resumed.weights == ranker.weights
 
 
-def test_scenarios_change_explainable_recommendation():
+def test_legacy_scenario_aliases_do_not_change_exact_ce_winner():
     state = {"inventory": {"core_selector_chests": 3}, "resources": {"astral_core": 0, "xeno_core": 0, "resonance_chip": 0, "relic_core": 0}}
-    boss = optimize({**state, "goal_scenario": "scenario_1"}, include_global_plan=False)
-    long_term = optimize({**state, "goal_scenario": "scenario_2"}, include_global_plan=False)
-    assert boss["best"]["action_id"] != long_term["best"]["action_id"]
-    assert boss["explanation"]["scenario_tradeoff"] != long_term["explanation"]["scenario_tradeoff"]
+    first = optimize({**state, "goal_scenario": "scenario_1"}, include_global_plan=False)
+    second = optimize({**state, "goal_scenario": "scenario_2"}, include_global_plan=False)
+    assert first["scenario_used"] == "clan_expedition"
+    assert second["scenario_used"] == "clan_expedition"
+    assert first["requested_scenario_alias"] == "scenario_1"
+    assert second["requested_scenario_alias"] == "scenario_2"
+    assert first["best"]["action_id"] == second["best"]["action_id"]
+    assert first["total_damage"] == second["total_damage"]
 
 
 def test_high_false_prune_rate_weakens_aggressive_mode():
@@ -191,4 +195,4 @@ def test_hard_pruning_waits_for_safe_audit_history():
     assert plan["reordering_applied"] is True
     assert plan["pruning_applied"] is False
     assert plan["pruned_systems"] == []
-    assert "100 safe full-search audits" in plan["hard_pruning_blocked_reason"]
+    assert "100 recent safe full-search audits" in plan["hard_pruning_blocked_reason"]

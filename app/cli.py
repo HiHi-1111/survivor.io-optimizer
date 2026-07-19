@@ -1,4 +1,4 @@
-"""Run a sample optimization from the command line."""
+"""Run a Clan Expedition sample optimization from the command line."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from optimizer.main import optimize
 
 def sample_player() -> dict:
     return {
+        "game_mode": "clan_expedition",
+        "goal_scenario": "clan_expedition",
         "build_stats": {
             "atk": 500000,
             "crit_rate": 0.75,
@@ -22,9 +24,13 @@ def sample_player() -> dict:
             "all_damage": 0,
             "final_damage": 0,
         },
+        "sio_ce": {
+            "stats_stage": "legacy_stat_snapshot",
+            "attack": {"atkBase": 500000, "atkFinal": 0},
+            "passive_multiplier": 1.0,
+        },
         "inventory": {"core_selector_chests": 3},
         "resources": {"astral_core": 1, "xeno_core": 0, "resonance_chip": 4},
-        "goal_scenario": "scenario_1",
     }
 
 

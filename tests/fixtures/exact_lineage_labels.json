@@ -1,0 +1,56 @@
+[
+  {
+    "example_id": "ce_lineage_01",
+    "candidates": [
+      {"action_id": "good_01", "action_type": "upgrade", "exact_damage_delta": 12.0, "features": {"synergy_score": 1.0, "resource_costs": 0.1}},
+      {"action_id": "bad_01", "action_type": "upgrade", "exact_damage_delta": -2.0, "features": {"synergy_score": -1.0, "resource_costs": 0.5}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_02",
+    "candidates": [
+      {"action_id": "good_02", "action_type": "upgrade", "exact_damage_delta": 8.0, "features": {"synergy_score": 0.8, "resource_costs": 0.2}},
+      {"action_id": "bad_02", "action_type": "upgrade", "exact_damage_delta": -1.0, "features": {"synergy_score": -0.7, "resource_costs": 0.6}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_03",
+    "candidates": [
+      {"action_id": "good_03", "action_type": "upgrade", "exact_damage_delta": 21.0, "features": {"synergy_score": 1.4, "resource_costs": 0.3}},
+      {"action_id": "bad_03", "action_type": "upgrade", "exact_damage_delta": -3.0, "features": {"synergy_score": -1.2, "resource_costs": 0.4}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_04",
+    "candidates": [
+      {"action_id": "good_04", "action_type": "upgrade", "exact_damage_delta": 5.0, "features": {"synergy_score": 0.5, "resource_costs": 0.1}},
+      {"action_id": "bad_04", "action_type": "upgrade", "exact_damage_delta": -4.0, "features": {"synergy_score": -0.9, "resource_costs": 0.8}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_05",
+    "candidates": [
+      {"action_id": "good_05", "action_type": "upgrade", "exact_damage_delta": 14.0, "features": {"synergy_score": 1.1, "resource_costs": 0.2}},
+      {"action_id": "bad_05", "action_type": "upgrade", "exact_damage_delta": -2.0, "features": {"synergy_score": -0.6, "resource_costs": 0.7}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_06",
+    "candidates": [
+      {"action_id": "good_06", "action_type": "upgrade", "exact_damage_delta": 9.0, "features": {"synergy_score": 0.9, "resource_costs": 0.2}},
+      {"action_id": "bad_06", "action_type": "upgrade", "exact_damage_delta": -1.0, "features": {"synergy_score": -0.8, "resource_costs": 0.9}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_noop_01",
+    "candidates": [
+      {"action_id": "bad_spend_01", "action_type": "upgrade", "exact_damage_delta": -2.0, "features": {"synergy_score": -1.0, "resource_costs": 1.0}}
+    ]
+  },
+  {
+    "example_id": "ce_lineage_noop_02",
+    "candidates": [
+      {"action_id": "bad_spend_02", "action_type": "upgrade", "exact_damage_delta": -6.0, "features": {"synergy_score": -1.4, "resource_costs": 1.2}}
+    ]
+  }
+]
