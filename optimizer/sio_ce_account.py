@@ -50,6 +50,28 @@ def _sio(profile: Mapping[str, Any]) -> Mapping[str, Any]:
     return profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
 
 
+def _normalize_explicit_tech_input(sio: dict[str, Any]) -> None:
+    """Flatten the optional oracle-native Tech payload into the canonical profile.
+
+    Older callers may store the complete module-13024 request under
+    ``sio_ce.tech_input``. The runtime bridge expects the canonical sibling
+    fields, so normalize it once instead of passing the wrapper as the Tech map.
+    """
+    explicit = sio.get("tech_input")
+    if not isinstance(explicit, Mapping):
+        return
+    if isinstance(explicit.get("techs"), Mapping):
+        sio["techs"] = deepcopy(dict(explicit["techs"]))
+    for key in ("evolvePassives", "skills", "collectibles", "upgradedCollectibles"):
+        if key in explicit:
+            sio[key] = deepcopy(explicit[key])
+    explicit_settings = explicit.get("settings")
+    if isinstance(explicit_settings, Mapping):
+        existing = sio.get("settings") if isinstance(sio.get("settings"), Mapping) else {}
+        sio["settings"] = {**dict(existing), **deepcopy(dict(explicit_settings))}
+    sio.pop("tech_input", None)
+
+
 def _has_mount_state(profile: Mapping[str, Any]) -> bool:
     sio = _sio(profile)
     mounts = sio.get("mounts") if isinstance(sio.get("mounts"), Mapping) else profile.get("mounts")
@@ -94,6 +116,7 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(sio, dict):
         sio = {}
         prepared["sio_ce"] = sio
+    _normalize_explicit_tech_input(sio)
     stage = str(sio.get("stats_stage", prepared.get("stats_stage", "unknown")))
     if stage in {"post_24804", "sio_post_24804", "post_24804_account_and_items"}:
         prepared["_sio_account_detail"] = {}
@@ -199,6 +222,7 @@ def _decorate_report(
     warnings = list(prepared.get("_sio_pipeline_warnings", []))
     if runtime_error:
         warnings.append(f"Exact sIO runtime oracle unavailable: {runtime_error}")
+        result["runtime_exact"] = False
     if runtime_error and _has_tech_state(original):
         result = {
             **result,
