@@ -3,16 +3,20 @@
 
 /* Exact offline Clan Expedition oracle for the user-supplied sIO bundle.
  *
- * This process loads the compiled webpack modules and executes the same CE order
- * used by sIO Tools: Tech/Twinborn -> item and uptime conditions -> direct damage
- * -> evolved-passive/final stat transforms -> final CE damage. A profile that is
- * explicitly marked post-24804 bypasses those transforms so they cannot be
- * applied twice. The oracle never uses the network or produces recommendations.
+ * Raw ownership profiles are assembled with the same pure webpack functions used
+ * by sIO Tools. The CE core then executes Tech/Twinborn -> item and uptime
+ * conditions -> direct damage -> final stat transforms -> final CE damage. A
+ * profile explicitly marked post-24804 bypasses transforms already applied.
  */
 
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+
+const ACCOUNT_ASSEMBLY_MODULES = [
+  37013, 63941, 5005, 42052, 41950, 57223, 89505, 42806, 70324,
+  30039, 40498, 80438, 51642, 94578, 92316, 30396, 13024, 19425,
+];
 
 function fixSyntax(code) {
   return code
@@ -137,9 +141,7 @@ function loadRuntime(root) {
     let current = (mode & 2) && value;
     while (typeof current === 'object' && current && !excluded.includes(current)) {
       for (const key of Object.getOwnPropertyNames(current)) {
-        if (!Object.prototype.hasOwnProperty.call(definitions, key)) {
-          definitions[key] = () => value[key];
-        }
+        if (!Object.prototype.hasOwnProperty.call(definitions, key)) definitions[key] = () => value[key];
       }
       current = Object.getPrototypeOf(current);
     }
@@ -203,24 +205,149 @@ function uptimeSnapshot(stats) {
   return result;
 }
 
+function normalizeMounts(runtime, rawMounts) {
+  const mounts = rawMounts && typeof rawMounts === 'object' ? rawMounts : {};
+  const sourceData = mounts.data && typeof mounts.data === 'object' ? mounts.data : {};
+  const data = {};
+  for (const name of runtime.req(32085).xp) data[name] = sourceData[name] || {};
+  return { active: mounts.active || '', data };
+}
+
+function assembleRuntimeAccount(runtime, rawInput) {
+  const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+  const merge = runtime.req(63941).x;
+  const upgradedCollectibles = new Set(input.upgradedCollectibles || []);
+  const gameMode = 'ce';
+  const settings = { calcMode: 'damage', revives: [40, 70, 90], ...(input.settings || {}) };
+  const heroes = input.heroes || {};
+  const items = input.items || {};
+  const collectibles = input.collectibles || {};
+  const skills = input.skills || {};
+  const pets = input.pets || {};
+  const petSkills = input.petSkills || {};
+  const mainHero = input.mainHero || 'None';
+  const synergy = input.synergy === true;
+  const evolvePassives = input.evolvePassives === true;
+
+  const baseStats = runtime.req(37013).c.baseStats;
+  const synergyStats = runtime.req(5005).Q({ synergy, synergyLevel: number(input.synergyLevel, 0) });
+  const itemStats = runtime.req(42052).vY({
+    items,
+    collectibles,
+    upgradedCollectibles,
+    maxGear: number(input.maxGear, 0),
+  });
+  const harmonyStats = runtime.req(41950).j(
+    synergy,
+    mainHero,
+    input.harmonyL || 'None',
+    input.harmonyR || 'None',
+    heroes
+  );
+  const itemCollectibleStats = runtime.req(57223).m({ collectibles, upgradedCollectibles });
+  const collectibleStats = runtime.req(89505).Y3({ collectibles });
+  const customSetStats = runtime.req(42806).x({ collectibles, customSets: input.customSets || {} });
+  const evoStats = runtime.req(70324).t({ evoTree: input.evoTree || {} });
+  const turfStats = runtime.req(30039).s({ turf: input.turf || {} });
+  const lmeStats = runtime.req(40498).N({
+    gameMode,
+    lmeTestaments: input.lmeTestaments || {},
+    lmeStatsOverrides: input.lmeStatsOverrides || {},
+  });
+  const eeStats = runtime.req(80438).b({ gameMode, eeSkills: input.eeSkills || {} });
+  const mountStats = runtime.req(51642).F({ mounts: normalizeMounts(runtime, input.mounts) });
+  const skillStats = runtime.req(94578).p({ skills });
+  const survivorStats = runtime.req(92316).xt({
+    beta: input.beta === true,
+    synergy,
+    heroes,
+    mainHero,
+    teamwork: input.teamwork || [],
+    clanLevel: number(input.clanLevel, 0),
+    skills,
+  });
+  const accountContext = runtime.req(30396).i({
+    withNotes: false,
+    mainHero,
+    synergy,
+    teamwork: input.teamwork || [],
+    heroes,
+    evoTree: input.evoTree || {},
+    skills,
+    pets,
+    petSkills,
+    evolvePassives,
+  });
+  const techResult = runtime.req(13024).T({
+    cooldownReduction: number(accountContext.cooldownReduction, 0),
+    evolvePassives,
+    techs: input.techs || {},
+    skills,
+    collectibles,
+    upgradedCollectibles,
+    settings,
+    gameMode,
+    eeSkills: input.eeSkills,
+    eeOmnipower: input.eeOmnipower,
+  });
+  const petStats = runtime.req(19425).a6({ pets, petSkills, collectibles, lmeStats });
+  const stats = merge([
+    baseStats,
+    survivorStats,
+    collectibleStats,
+    customSetStats,
+    synergyStats,
+    itemCollectibleStats,
+    harmonyStats,
+    itemStats,
+    evoStats,
+    turfStats,
+    petStats,
+    mountStats,
+    skillStats,
+    techResult.stats || {},
+    lmeStats,
+    eeStats,
+    { cooldownReduction: number(accountContext.cooldownReduction, 0) },
+    input.statsOverrides || {},
+  ]);
+  return {
+    stats,
+    techResult,
+    skills,
+    settings,
+    collectibles,
+    items,
+    mainHero,
+    evolvePassives,
+    accountContext: { cooldownReduction: number(accountContext.cooldownReduction, 0) },
+  };
+}
+
 function scoreOne(runtime, payload) {
   const skipRuntime24804 = payload.skipRuntime24804 === true;
-  const techFunction = skipRuntime24804 ? null : runtime.req(13024).T;
+  const accountInput = !skipRuntime24804 && payload.account_input && typeof payload.account_input === 'object'
+    ? payload.account_input
+    : null;
+  const techFunction = skipRuntime24804 || accountInput ? null : runtime.req(13024).T;
   const applyConditions = skipRuntime24804 ? null : runtime.req(24804).zP;
   const directFunction = runtime.req(88426).y;
   const finalizeStatsFunction = skipRuntime24804 ? null : runtime.req(24804).IE;
   const damageFunction = runtime.req(67727).f;
-  const stats = { ...(payload.stats || {}) };
+  let stats = { ...(payload.stats || {}) };
   const attack = { ...(payload.attack || {}) };
   const directSeed = { ...(payload.direct_skill_factors || payload.ceDamage || {}) };
-  const skills = { ...(payload.skills || {}) };
+  let skills = { ...(payload.skills || {}) };
   const techInput = payload.tech_input || payload.techInput || null;
-  const settings = { revives: [40, 70, 90], ...(payload.settings || {}) };
-  const collectibles = { ...(payload.collectibles || {}) };
-  const items = { ...(payload.items || {}) };
+  let settings = { revives: [40, 70, 90], ...(payload.settings || {}) };
+  let collectibles = { ...(payload.collectibles || {}) };
+  let items = { ...(payload.items || {}) };
   const gameMode = payload.gameMode || (techInput && techInput.gameMode) || 'ce';
-  const evolvePassives = payload.evolvePassives === true || (techInput && techInput.evolvePassives === true);
+  let activeSurvivor = payload.activeSurvivor || '';
+  let evolvePassives = payload.evolvePassives === true || (techInput && techInput.evolvePassives === true);
   let techResult = { stats: {}, ceDamage: {}, passivePools: new Float64Array(56).fill(1) };
+  let accountContext = {};
+  let accountAssemblyExact = false;
   let preFinalizeStats;
   let finalStats;
   let direct;
@@ -237,14 +364,27 @@ function scoreOne(runtime, payload) {
     formulaModules = [88426, 67727];
     formulaOrder = ['post_24804_snapshot', '88426.y', '67727.f'];
   } else {
-    if (techInput) {
+    if (accountInput) {
+      const assembled = assembleRuntimeAccount(runtime, accountInput);
+      stats = { ...assembled.stats };
+      techResult = assembled.techResult;
+      skills = { ...assembled.skills };
+      settings = { ...assembled.settings };
+      collectibles = { ...assembled.collectibles };
+      items = { ...assembled.items };
+      activeSurvivor = assembled.mainHero;
+      evolvePassives = assembled.evolvePassives;
+      accountContext = assembled.accountContext;
+      accountAssemblyExact = true;
+      Object.assign(directSeed, techResult.ceDamage || {});
+    } else if (techInput) {
       const normalized = {
         evolvePassives,
         cooldownReduction: number(techInput.cooldownReduction, number(stats.cooldownReduction, 0)),
         techs: techInput.techs || {},
         skills: techInput.skills || skills,
         collectibles: techInput.collectibles || collectibles,
-        upgradedCollectibles: techInput.upgradedCollectibles || payload.upgradedCollectibles || [],
+        upgradedCollectibles: new Set(techInput.upgradedCollectibles || payload.upgradedCollectibles || []),
         settings: { calcMode: 'damage', ...settings, ...(techInput.settings || {}) },
         gameMode,
         eeOmnipower: techInput.eeOmnipower,
@@ -258,7 +398,7 @@ function scoreOne(runtime, payload) {
     }
     const conditioned = applyConditions({
       withNotes: false,
-      venato: payload.venato === true || payload.activeSurvivor === 'Venato',
+      venato: activeSurvivor === 'Venato' || payload.venato === true,
       stats,
       collectibles,
       items,
@@ -269,12 +409,7 @@ function scoreOne(runtime, payload) {
     });
     preFinalizeStats = (conditioned && conditioned.stats) || stats;
     direct = directFunction(preFinalizeStats, directSeed);
-    finalStats = finalizeStatsFunction({
-      evolvePassives,
-      gameMode,
-      stats: preFinalizeStats,
-      settings,
-    });
+    finalStats = finalizeStatsFunction({ evolvePassives, gameMode, stats: preFinalizeStats, settings });
     formulaModules = [13024, 24804, 88426, 67727];
     formulaOrder = ['13024.T', '24804.zP', '88426.y', '24804.IE', '67727.f'];
   }
@@ -302,6 +437,9 @@ function scoreOne(runtime, payload) {
     passive_pools: Array.from(passivePools || []),
     formula_modules: formulaModules,
     formula_order: formulaOrder,
+    account_assembly_exact: accountAssemblyExact,
+    account_assembly_modules: accountAssemblyExact ? ACCOUNT_ASSEMBLY_MODULES : [],
+    account_context: clonePlain(accountContext),
     skipped_24804: skipRuntime24804,
     stats_stage: payload.statsStage || 'unknown',
     calc_mode: 'damage',
