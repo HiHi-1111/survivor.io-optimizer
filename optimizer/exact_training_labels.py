@@ -1,11 +1,46 @@
-"""Prepare exact sIO labels without leaking answers or deleting evidence."""
+"""Prepare exact sIO labels without leaking answers or deleting evidence.
+
+Mount-puzzle placement is deterministic search output, not a learned target. Raw
+placements remain in retained evidence for audits, but only their resulting exact
+mount stats and CE damage can influence proposal-training labels.
+"""
 from __future__ import annotations
+
 from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
+
 from optimizer.numeric_features import FEATURE_COLUMNS, action_features
+
+
+# These fields describe how a deterministic Tetris/mount-puzzle solver reached a
+# layout. They must not become model features. The exact aggregate mount stats
+# produced by the layout may still be represented through normal action metadata
+# such as attack/crit estimates or, preferably, exact before/after CE labels.
+LAYOUT_ONLY_KEYS = frozenset(
+    {
+        "placements",
+        "placement",
+        "board",
+        "board_mask",
+        "rotation",
+        "row",
+        "col",
+        "cell",
+        "cells",
+        "path",
+        "states_explored",
+        "search_model",
+        "worker_parity",
+        "tetris",
+        "mount_puzzle",
+        "mountPuzzle",
+        "puzzle_layout",
+        "layout",
+    }
+)
 
 
 def _stable(value: Any) -> str:
@@ -14,6 +49,24 @@ def _stable(value: Any) -> str:
 
 def _hash(value: Any) -> str:
     return hashlib.sha256(_stable(value).encode("utf-8")).hexdigest()
+
+
+def _strip_layout_only_data(value: Any) -> Any:
+    """Recursively remove placement geometry from a feature-extraction copy.
+
+    This never mutates or replaces the retained raw evidence.
+    """
+    if isinstance(value, Mapping):
+        return {
+            str(key): _strip_layout_only_data(item)
+            for key, item in value.items()
+            if str(key) not in LAYOUT_ONLY_KEYS
+        }
+    if isinstance(value, list):
+        return [_strip_layout_only_data(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_strip_layout_only_data(item) for item in value)
+    return value
 
 
 def _delta(candidate: Mapping[str, Any]) -> float:
@@ -29,8 +82,10 @@ def _delta(candidate: Mapping[str, Any]) -> float:
 def _proposal_features(candidate: Mapping[str, Any]) -> dict[str, float]:
     explicit = candidate.get("features")
     if isinstance(explicit, Mapping):
+        # FEATURE_COLUMNS is a strict allow-list. Geometry or arbitrary fields in
+        # an imported feature dictionary cannot enter the champion.
         return {name: float(explicit.get(name, 0.0) or 0.0) for name in FEATURE_COLUMNS}
-    sanitized = deepcopy(dict(candidate))
+    sanitized = _strip_layout_only_data(deepcopy(dict(candidate)))
     # Exact before/after damage is the teacher label, never an input available to
     # a proposal-ordering child before the oracle evaluates the action.
     for key in (
@@ -90,6 +145,8 @@ def prepare_exact_training_rows(
             )
             candidate["exact_damage_delta"] = _delta(candidate)
             candidate["features"] = _proposal_features(candidate)
+            if any(key in _stable(raw_candidate) for key in LAYOUT_ONLY_KEYS):
+                candidate["training_exclusions"] = ["mount_puzzle_layout_geometry"]
             prepared.append(candidate)
         if not prepared:
             quarantined.append(_quarantine(index, "no_valid_candidate_objects", original))
@@ -163,4 +220,8 @@ def append_quarantine_jsonl(path: Path, records: Iterable[Mapping[str, Any]]) ->
     return count
 
 
-__all__ = ["append_quarantine_jsonl", "prepare_exact_training_rows"]
+__all__ = [
+    "LAYOUT_ONLY_KEYS",
+    "append_quarantine_jsonl",
+    "prepare_exact_training_rows",
+]
