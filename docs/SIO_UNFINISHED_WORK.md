@@ -120,7 +120,7 @@ These cannot be completed from the supplied offline bundle and must not be fabri
 - Exact universal collectible shard/edition cost tables where the bundle supplies effects but not progression costs.
 - Real-account regression fixtures and repeated CE observations that require user account exports or observed runs.
 
-## Work that must not be added
+## Work that should not be added
 
 - Do not add Ender's Echo, chapters, Path of Trials, Lunar Mine Expedition, Zone Operation, Operation Retreat, or Survivor Showdown to this CE optimizer.
 - Do not enumerate permutations of identical Tetris pieces, selector-chest picks, item sets, or any order-independent inventory choice.
