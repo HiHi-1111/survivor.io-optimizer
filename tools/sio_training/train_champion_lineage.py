@@ -24,6 +24,7 @@ from optimizer.champion_lineage import (  # noqa: E402
     evaluate,
     train_child,
 )
+from optimizer.exact_training_labels import prepare_exact_training_rows  # noqa: E402
 from optimizer.source_pack_optimizer import optimize_source_pack_actions  # noqa: E402
 from optimizer.training_memory import atomic_write_json, utc_now  # noqa: E402
 
@@ -134,6 +135,8 @@ def _write_markdown(path: Path, report: Mapping[str, Any]) -> None:
         "- Available hall-of-fame champions were blended as secondary ancestors.",
         "- A child trained in its own checkpoint; the parent was never modified.",
         "- Promotion required exact holdout improvement, zero no-op failures, zero mandatory failures, and no regression on an example the parent got exactly right.",
+        "- Exact damage labels were removed from proposal features before training.",
+        "- Contradictory same-state labels were quarantined before any child saw them.",
         "- The learned champion orders proposals only. Exact sIO CE before/after damage still selects the optimizer winner.",
         "",
         "## Generations",
@@ -170,7 +173,9 @@ def main() -> int:
     args = parser.parse_args()
 
     raw_rows = _load_json_or_jsonl(args.dataset) if args.dataset else _examples_from_profiles(_load_json_or_jsonl(args.profiles))
-    examples, quarantined = audit_examples(raw_rows)
+    prepared_rows, label_quarantine = prepare_exact_training_rows(raw_rows)
+    examples, schema_quarantine = audit_examples(prepared_rows)
+    quarantined = [*label_quarantine, *schema_quarantine]
     if not examples:
         raise SystemExit("No exact, non-contradictory training examples were available. Nothing was invented.")
 
