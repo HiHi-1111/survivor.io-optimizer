@@ -334,7 +334,8 @@ function scoreOne(runtime, payload) {
   const directFunction = runtime.req(88426).y;
   const finalizeStatsFunction = skipRuntime24804 ? null : runtime.req(24804).IE;
   const damageFunction = runtime.req(67727).f;
-  let stats = { ...(payload.stats || {}) };
+  const baseStats = runtime.req(37013).c.baseStats || {};
+  let stats = { ...baseStats, ...(payload.stats || {}) };
   const attack = { ...(payload.attack || {}) };
   const directSeed = { ...(payload.direct_skill_factors || payload.ceDamage || {}) };
   let skills = { ...(payload.skills || {}) };
