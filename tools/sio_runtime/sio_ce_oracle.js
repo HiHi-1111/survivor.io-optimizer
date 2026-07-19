@@ -94,8 +94,15 @@ function loadRuntime(root) {
     if (!factory) throw new Error(`Missing webpack module ${id}`);
     const module = { exports: {} };
     cache[id] = module;
-    factory(module, module.exports, req);
-    return module.exports;
+    try {
+      factory.call(module.exports, module, module.exports, req);
+      return module.exports;
+    } catch (error) {
+      // Webpack removes a failed module from its cache. Keeping a partially
+      // initialized export caused later rows in the same batch to fail differently.
+      delete cache[id];
+      throw error;
+    }
   }
   req.d = (exports, definitions) => {
     for (const key in definitions) {
@@ -113,11 +120,56 @@ function loadRuntime(root) {
     req.d(getter, { a: getter });
     return getter;
   };
+  // Webpack's namespace helper is required by dependencies pulled in by 24804.
+  req.t = function(value, mode) {
+    if (mode & 1) value = this(value);
+    if (mode & 8) return value;
+    if (typeof value === 'object' && value) {
+      if ((mode & 4) && value.__esModule) return value;
+      if ((mode & 16) && typeof value.then === 'function') return value;
+    }
+    const namespace = Object.create(null);
+    req.r(namespace);
+    const definitions = {};
+    const excluded = [
+      null,
+      Object.getPrototypeOf({}),
+      Object.getPrototypeOf([]),
+      Object.getPrototypeOf(Object.getPrototypeOf({})),
+    ];
+    let current = (mode & 2) && value;
+    while (typeof current === 'object' && current && !excluded.includes(current)) {
+      for (const key of Object.getOwnPropertyNames(current)) {
+        if (!Object.prototype.hasOwnProperty.call(definitions, key)) {
+          definitions[key] = () => value[key];
+        }
+      }
+      current = Object.getPrototypeOf(current);
+    }
+    definitions.default = () => value;
+    req.d(namespace, definitions);
+    return namespace;
+  };
   req.o = (object, property) => Object.prototype.hasOwnProperty.call(object, property);
   req.p = '';
   req.u = (id) => `${id}.js`;
   req.e = async () => {};
   req.f = {};
+  req.g = context;
+  req.nmd = (module) => {
+    module.paths = [];
+    if (!module.children) module.children = [];
+    return module;
+  };
+  req.hmd = (module) => {
+    const wrapped = Object.create(module);
+    if (!wrapped.children) wrapped.children = [];
+    Object.defineProperty(wrapped, 'exports', {
+      enumerable: true,
+      set() { throw new Error('ES Modules may not assign module.exports'); },
+    });
+    return wrapped;
+  };
   req.m = modules;
   req.c = cache;
   return { req, modulesRegistered: Object.keys(modules).length, evalErrors };
