@@ -45,6 +45,7 @@ jobs:
           optimizer/exact_training_labels.py
           optimizer/sio_calibration.py
           tools/sio_training/audit_sio_runtime_coverage.py
+          tools/sio_training/audit_combinations_and_training.py
           tools/sio_training/extract_sio_bundle_map.py
           tools/sio_training/train_champion_lineage.py
       - name: Validate offline oracle JavaScript
@@ -56,6 +57,15 @@ jobs:
           python tools/sio_training/audit_sio_runtime_coverage.py \
             --output sio-runtime-audit-${{ matrix.python-version }}.json \
             2>&1 | tee sio-runtime-audit-${{ matrix.python-version }}.log
+          code=${PIPESTATUS[0]}
+          exit "$code"
+      - name: Audit combinations and training leakage
+        shell: bash
+        run: |
+          set +e
+          python tools/sio_training/audit_combinations_and_training.py \
+            --output sio-combination-audit-${{ matrix.python-version }}.json \
+            2>&1 | tee sio-combination-audit-${{ matrix.python-version }}.log
           code=${PIPESTATUS[0]}
           exit "$code"
       - name: Run focused exact CE and lineage suite
@@ -110,8 +120,10 @@ jobs:
           path: |
             *.log
             sio-runtime-audit-*.json
+            sio-combination-audit-*.json
             tools/sio_runtime/sio_ce_oracle.js
             tools/sio_training/audit_sio_runtime_coverage.py
+            tools/sio_training/audit_combinations_and_training.py
             tools/sio_training/extract_sio_bundle_map.py
             optimizer/sio_runtime_oracle.py
             optimizer/sio_ce_account.py
