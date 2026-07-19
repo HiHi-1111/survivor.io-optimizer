@@ -1,0 +1,175 @@
+[
+  {
+    "id": "clan_expedition_damage_contract",
+    "name": "Clan Expedition Damage Contract",
+    "category": "feature_registry",
+    "status": "implemented_core_formula",
+    "runtime_modules": [67727, 88426, 5834, 62994],
+    "optimizer_scope": "supported_only_mode",
+    "required_next": ["module_24804 complete rules bridge", "evolved-passive adjustment bridge"]
+  },
+  {
+    "id": "attack_stat_pipeline",
+    "name": "ATK Base/Equipment/Hero/Final Pipeline",
+    "category": "feature_registry",
+    "status": "implemented_core_formula",
+    "runtime_modules": [67727],
+    "required_fields": ["atkBase", "atkFinal", "atkEquip", "atkEquipPercent", "atkHero", "atkHeroPercent", "atkPercent", "finalFlatAtk"]
+  },
+  {
+    "id": "crit_expected_damage",
+    "name": "Crit Rate and Crit Damage",
+    "category": "feature_registry",
+    "status": "implemented_core_formula",
+    "runtime_modules": [67727],
+    "bible_sections": ["Crit_Rate_And_Damage"]
+  },
+  {
+    "id": "boss_debuff_uptime_stack",
+    "name": "Boss Debuffs and Uptime",
+    "category": "feature_registry",
+    "status": "implemented_formula_needs_source_assembly",
+    "runtime_modules": [67727, 24804],
+    "fields": ["vulnerability", "poisoned", "weakened", "chilled", "laceration", "divineFire", "exposedDamage"]
+  },
+  {
+    "id": "ss_equipment_evc_paths",
+    "name": "SS Equipment Eternal/Void/Chaos Paths",
+    "category": "feature_registry",
+    "status": "data_present_runtime_action_model_missing",
+    "runtime_modules": [24804, 37013],
+    "required_next": ["slot-specific legal transitions", "refund/rebuild ledger", "before/after CE scoring"]
+  },
+  {
+    "id": "chaos_fusion_power",
+    "name": "Chaos Fusion Power",
+    "category": "feature_registry",
+    "status": "formula_present_action_model_missing",
+    "runtime_modules": [24804],
+    "required_next": ["account-wide C-star threshold state", "3/6/9/... effects", "legal core and fodder costs"]
+  },
+  {
+    "id": "xeno_transmute",
+    "name": "Xeno Transmute",
+    "category": "feature_registry",
+    "status": "formula_and_trigger_data_present_action_model_missing",
+    "runtime_modules": [24804, 37013, 32085],
+    "required_next": ["per-slot X levels", "Transmute Core pool", "trigger conditions", "cooldowns", "legal exchange actions"]
+  },
+  {
+    "id": "normal_tech_resonance",
+    "name": "Normal Tech Resonance",
+    "category": "feature_registry",
+    "status": "data_present_generic_runtime_wrong",
+    "required_next": ["main/support restrictions", "resonance energy", "multiplier chips", "milestone effects", "CE direct coefficients"]
+  },
+  {
+    "id": "twinborn_tech_modes",
+    "name": "Twinborn Tech Modes",
+    "category": "feature_registry",
+    "status": "formula_data_present_runtime_action_model_missing",
+    "runtime_modules": [32085, 37013],
+    "modes": ["Drone Mode", "Forcefield Mode", "Drill Shot Mode", "Rocket Mode", "Soccer Mode", "Durian Mode", "Lightning Mode", "Boomerang Mode", "Guardian Mode", "Laser Mode", "Brick Mode", "Molotov Mode"]
+  },
+  {
+    "id": "resonance_overload",
+    "name": "Twinborn Resonance Overload",
+    "category": "feature_registry",
+    "status": "data_present_runtime_action_model_missing",
+    "required_next": ["energy gates", "chip activation costs", "overload levels", "disable effects if energy falls below gate"]
+  },
+  {
+    "id": "survivor_progression",
+    "name": "Survivor Levels, Stars and Awakening",
+    "category": "feature_registry",
+    "status": "bible_data_present_generic_runtime_wrong",
+    "required_next": ["per-survivor star effects", "awakening effects", "global vs active scopes", "shard/core costs"]
+  },
+  {
+    "id": "survivor_teamwork",
+    "name": "Teamwork Passives",
+    "category": "feature_registry",
+    "status": "bible_data_present_runtime_missing",
+    "required_next": ["slot unlocks", "equipped passive set", "survivor-specific scaling", "CE uptime"]
+  },
+  {
+    "id": "survivor_synergy_harmony",
+    "name": "Survivor Synergy and Combat Harmony",
+    "category": "feature_registry",
+    "status": "formula_data_present_partial_core_support",
+    "runtime_modules": [5005, 88426],
+    "required_next": ["level legality", "active survivor auto-level", "Harmony skills", "direct CE contribution assembly"]
+  },
+  {
+    "id": "xeno_pets",
+    "name": "Xeno Pets",
+    "category": "feature_registry",
+    "status": "formula_data_present_generic_runtime_wrong",
+    "required_next": ["unlock/dismiss rules", "star upgrades", "awakening power", "active and assist slots", "xenoDamage", "global R5 bonuses"]
+  },
+  {
+    "id": "xeno_pet_skills",
+    "name": "Xeno Pet Skills and Elixir Swaps",
+    "category": "feature_registry",
+    "status": "sio_optimizer_exists_runtime_missing",
+    "required_next": ["four skill slots", "eligible swaps", "elixir costs", "CE multiplier delta"]
+  },
+  {
+    "id": "normal_pet_progression",
+    "name": "Normal Pets, Awakening and Assist Skills",
+    "category": "feature_registry",
+    "status": "bible_data_present_generic_runtime_wrong",
+    "required_next": ["rarity/copy merging", "awakening crystals", "active-only effects", "assist skill scopes"]
+  },
+  {
+    "id": "collectibles",
+    "name": "Collectibles, Stars and Editions",
+    "category": "feature_registry",
+    "status": "bible_and_sio_data_present_action_model_incomplete",
+    "required_next": ["exact star shard costs", "edition pools", "global/equipment effects", "no guaranteed progress from random chest"]
+  },
+  {
+    "id": "custom_collection_sets",
+    "name": "Custom Collection Sets",
+    "category": "feature_registry",
+    "status": "sio_optimizer_exists_runtime_missing",
+    "required_next": ["four set layouts", "depth and level rules", "unique collectible constraint", "upgrade optimizer"]
+  },
+  {
+    "id": "collectible_deconstructor",
+    "name": "Legend Collectible Deconstructor",
+    "category": "feature_registry",
+    "status": "missing",
+    "required_next": ["eligible rarities", "returns", "legality and irreversible-action warnings"]
+  },
+  {
+    "id": "mounts",
+    "name": "Mounts",
+    "category": "feature_registry",
+    "status": "core_ce_formula_implemented",
+    "runtime_modules": [51642, 40514, 37013, 32085, 88426],
+    "implemented": ["active mount", "undeployed sync", "component stat transfer", "star line cap", "cumulative line effects", "direct CE mount damage"],
+    "required_next": ["component inventory shapes", "puzzle placement", "fusion", "refinement", "reroll costs", "unlock/upgrade actions"]
+  },
+  {
+    "id": "mount_puzzle_optimizer",
+    "name": "Mount Puzzle Placement",
+    "category": "feature_registry",
+    "status": "missing_from_main_runtime",
+    "required_next": ["8x7 Scooter", "8x9 Hoverboard", "8x12 Doomsteed", "rotation only", "no mirroring", "complete-row objective"]
+  },
+  {
+    "id": "resource_and_refund_ledger",
+    "name": "Legal Resource, Reset and Refund Ledger",
+    "category": "feature_registry",
+    "status": "partial",
+    "required_next": ["AF downgrade returns", "Xeno reset returns", "survivor reset/shard conversion", "embedded resources never treated as bag-free"]
+  },
+  {
+    "id": "source_calibration_samples",
+    "name": "sIO ID Damage Calibration Samples",
+    "category": "feature_registry",
+    "status": "training_bridge_incomplete",
+    "required_next": ["profile snapshot", "CE observed damage", "build fingerprint", "formula version", "residual analysis without overriding hard mechanics"]
+  }
+]
