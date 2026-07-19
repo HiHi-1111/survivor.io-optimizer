@@ -68,8 +68,8 @@ def _examples_from_profiles(profiles: Iterable[Mapping[str, Any]]) -> list[dict[
             "supported": True,
         })
         if len(candidates) == 1 and result.get("rejected_actions"):
-            # A no-op-only row is useful only when all spend actions were exactly
-            # evaluated and lost. Unsupported actions are not negative labels.
+            # Unsupported actions are not negative labels. A no-op-only row is
+            # accepted only when exact actions were evaluated and all lost.
             continue
         rows.append({
             "example_id": str(profile.get("profile_id") or profile.get("profile_name") or f"profile_{index}"),
@@ -100,6 +100,22 @@ def _legacy_paths(values: list[str]) -> list[Path]:
     return [Path(value) for value in values] + defaults
 
 
+def _exact_promotion_decision(lineage, child, champion_metrics, child_metrics, holdout_examples):
+    decision = lineage.promotion_decision(child, champion_metrics, child_metrics)
+    champion_predictions = champion_metrics.get("predictions", {}) or {}
+    child_predictions = child_metrics.get("predictions", {}) or {}
+    regressions = []
+    for example in holdout_examples:
+        champion_prediction = champion_predictions.get(example.example_id)
+        child_prediction = child_predictions.get(example.example_id)
+        if champion_prediction in example.exact_winner_ids and child_prediction not in example.exact_winner_ids:
+            regressions.append(example.example_id)
+    decision["regressed_example_ids"] = regressions
+    decision["gates"]["no_prediction_regression"] = not regressions
+    decision["promote"] = all(decision["gates"].values())
+    return decision
+
+
 def _write_markdown(path: Path, report: Mapping[str, Any]) -> None:
     champion = report.get("final_champion", {}) or {}
     lines = [
@@ -117,7 +133,7 @@ def _write_markdown(path: Path, report: Mapping[str, Any]) -> None:
         "- Every child inherited the current champion checkpoint.",
         "- Available hall-of-fame champions were blended as secondary ancestors.",
         "- A child trained in its own checkpoint; the parent was never modified.",
-        "- Promotion required exact holdout improvement, zero no-op failures, zero mandatory failures, and no exact-label regression.",
+        "- Promotion required exact holdout improvement, zero no-op failures, zero mandatory failures, and no regression on an example the parent got exactly right.",
         "- The learned champion orders proposals only. Exact sIO CE before/after damage still selects the optimizer winner.",
         "",
         "## Generations",
@@ -197,8 +213,9 @@ def main() -> int:
             child["train_metrics"] = evaluate(child["weights"], train_examples)
             child["holdout_metrics"] = evaluate(child["weights"], holdout_examples)
             child["dataset_hash"] = report["dataset_hash"]
-            decision = lineage.promotion_decision(child, champion_metrics, child["holdout_metrics"])
-            child["promotion_decision"] = decision
+            child["promotion_decision"] = _exact_promotion_decision(
+                lineage, child, champion_metrics, child["holdout_metrics"], holdout_examples
+            )
             children.append(child)
 
         children.sort(
