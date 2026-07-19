@@ -57,11 +57,13 @@ MULTIPLIER_EXTRA_PARTS = {
     60: 5, 66: 6, 72: 7, 78: 8, 84: 9, 90: 10,
 }
 
-# Exact module 32085.sm export. The supplied bundle provides legal resonance
-# gates through Overload 16. Levels without a published gate are not generated.
+# Exact module 32085.sm export. The supplied bundle publishes legal resonance
+# gates through Overload 16. Levels 17 and 18 have chip/part rows but no gate in
+# this bundle, so they are represented as unreachable rather than guessed.
 OVERLOAD_RESONANCE_THRESHOLDS = (
     0, 900, 1200, 1650, 2100, 2550, 3000, 3500, 4500,
     5000, 6000, 7500, 9000, 10500, 12000, 13500, 15000,
+    math.inf, math.inf,
 )
 
 
@@ -214,7 +216,9 @@ def generate_tech_progression_actions(profile: Mapping[str, Any]) -> list[dict[s
 
 __all__ = [
     "MULTIPLIER_CHIPS",
+    "MULTIPLIER_EXTRA_PARTS",
     "OVERLOAD_CHIPS",
+    "OVERLOAD_EXTRA_PARTS",
     "OVERLOAD_RESONANCE_THRESHOLDS",
     "TECH_TYPES",
     "exact_tech_state",
