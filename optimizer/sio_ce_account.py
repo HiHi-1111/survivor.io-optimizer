@@ -1,9 +1,11 @@
 """Full account-to-damage Clan Expedition pipeline built around sIO.
 
-Python assembles account systems in the same order as sIO. When the supplied
-runtime bundle is available, modules 13024, 88426 and 67727 are the final
-teacher/oracle, including Twinborn, Overload and evolved-passive timing.
+Python assembles source-backed account components. The supplied sIO runtime then
+executes Tech/Twinborn, module 24804 item and uptime conditions, direct damage,
+final evolved-passive transforms and the final CE formula in the original order.
+The Python 24804 port is retained only as an auditable fallback.
 """
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -15,21 +17,24 @@ from optimizer.sio_ce_damage import (
     calculate_clan_expedition_damage as calculate_ce_core,
     percent_bonus,
 )
-from optimizer.sio_collectibles import assemble_sio_collectible_stats, collectible_state
+from optimizer.sio_collectibles import assemble_sio_collectible_stats
 from optimizer.sio_item_pipeline import apply_sio_item_conditions, assemble_sio_item_base_stats
 from optimizer.sio_items import item_state_from_profile
 from optimizer.sio_mounts import aggregate_mount_stats
-from optimizer.sio_pets import assemble_sio_pet_stats, pet_state
+from optimizer.sio_pets import assemble_sio_pet_stats
 from optimizer.sio_runtime_oracle import (
     SioRuntimeInputError,
     SioRuntimeUnavailable,
     default_oracle,
 )
-from optimizer.sio_survivors import (
-    assemble_sio_skill_evo_stats,
-    assemble_sio_survivor_stats,
-    hero_state_from_profile,
-)
+from optimizer.sio_survivors import assemble_sio_skill_evo_stats, assemble_sio_survivor_stats
+
+POST_24804_STAGES = {
+    "post_24804",
+    "sio_post_24804",
+    "post_24804_items",
+    "post_24804_account_and_items",
+}
 
 
 def _number(value: Any, default: float = 0.0) -> float:
@@ -51,18 +56,20 @@ def _sio(profile: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def _normalize_explicit_tech_input(sio: dict[str, Any]) -> None:
-    """Flatten the optional oracle-native Tech payload into the canonical profile.
-
-    Older callers may store the complete module-13024 request under
-    ``sio_ce.tech_input``. The runtime bridge expects the canonical sibling
-    fields, so normalize it once instead of passing the wrapper as the Tech map.
-    """
+    """Flatten an oracle-native Tech payload without discarding extra fields."""
     explicit = sio.get("tech_input")
     if not isinstance(explicit, Mapping):
         return
     if isinstance(explicit.get("techs"), Mapping):
         sio["techs"] = deepcopy(dict(explicit["techs"]))
-    for key in ("evolvePassives", "skills", "collectibles", "upgradedCollectibles"):
+    for key in (
+        "evolvePassives",
+        "skills",
+        "collectibles",
+        "upgradedCollectibles",
+        "eeSkills",
+        "eeOmnipower",
+    ):
         if key in explicit:
             sio[key] = deepcopy(explicit[key])
     explicit_settings = explicit.get("settings")
@@ -70,21 +77,6 @@ def _normalize_explicit_tech_input(sio: dict[str, Any]) -> None:
         existing = sio.get("settings") if isinstance(sio.get("settings"), Mapping) else {}
         sio["settings"] = {**dict(existing), **deepcopy(dict(explicit_settings))}
     sio.pop("tech_input", None)
-
-
-def _has_mount_state(profile: Mapping[str, Any]) -> bool:
-    sio = _sio(profile)
-    mounts = sio.get("mounts") if isinstance(sio.get("mounts"), Mapping) else profile.get("mounts")
-    if not isinstance(mounts, Mapping):
-        return False
-    if mounts.get("active"):
-        return True
-    data = mounts.get("data") if isinstance(mounts.get("data"), Mapping) else mounts
-    return any(
-        isinstance(value, Mapping) and bool(value.get("enabled"))
-        for key, value in data.items()
-        if key != "active"
-    )
 
 
 def _has_tech_state(profile: Mapping[str, Any]) -> bool:
@@ -109,8 +101,17 @@ def _base_attack(stats: Mapping[str, Any], attack: Mapping[str, Any]) -> float:
     ) * percent_bonus(stats.get("atkPercent")) + _number(attack.get("atkFinal")) + _number(stats.get("atkFinal"))
 
 
-def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
-    """Build a post-24804 account profile without changing the caller's object."""
+def prepare_sio_ce_profile(
+    profile: Mapping[str, Any],
+    *,
+    defer_runtime_conditions: bool = False,
+) -> dict[str, Any]:
+    """Assemble account stats without mutating the caller.
+
+    When ``defer_runtime_conditions`` is true, module 24804 is deliberately not
+    approximated in Python. Raw items/settings remain on the profile so the exact
+    JavaScript runtime can apply ``24804.zP`` and ``24804.IE`` once, after Tech.
+    """
     prepared = deepcopy(dict(profile))
     sio = prepared.get("sio_ce")
     if not isinstance(sio, dict):
@@ -118,9 +119,10 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
         prepared["sio_ce"] = sio
     _normalize_explicit_tech_input(sio)
     stage = str(sio.get("stats_stage", prepared.get("stats_stage", "unknown")))
-    if stage in {"post_24804", "sio_post_24804", "post_24804_account_and_items"}:
+    if stage in POST_24804_STAGES:
         prepared["_sio_account_detail"] = {}
         prepared["_sio_pipeline_warnings"] = []
+        sio["skipRuntime24804"] = True
         return prepared
 
     stats = _explicit_stats(prepared)
@@ -143,18 +145,25 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     mount_result = aggregate_mount_stats(mounts if isinstance(mounts, Mapping) else None)
     _add(stats, mount_result.get("stats"))
 
-    if item_state_from_profile(prepared):
+    if defer_runtime_conditions:
+        final_item_detail = item_result.get("detail", {})
+        stats_stage = "pre_24804_runtime"
+        sio["skipRuntime24804"] = False
+    else:
         conditioned = apply_sio_item_conditions(prepared, stats, item_result.get("detail", {}))
         stats = dict(conditioned["stats"])
-        item_result["detail"] = conditioned["detail"]
+        final_item_detail = conditioned["detail"]
+        stats_stage = "post_24804"
+        sio["skipRuntime24804"] = True
 
     warnings = list(item_result.get("warnings", []))
     warnings.extend(pet_result.get("warnings", []))
     warnings.extend(mount_result.get("warnings", []))
     sio["stats"] = stats
-    sio["stats_stage"] = "post_24804"
-    # Mount effects are already inside stats. Hide raw mounts from the core
-    # calculator so they cannot be applied twice.
+    sio["stats_stage"] = stats_stage
+    # Mount effects are already inside the merged stat map. Hide raw mounts from
+    # the Python core so they cannot be counted twice. Exact 24804 still receives
+    # raw items and settings, which are intentionally preserved.
     sio.pop("mounts", None)
     prepared["mounts"] = {}
     prepared["sio_ce"] = sio
@@ -164,7 +173,7 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
         "skills_and_evo": skill_result.get("detail", {}),
         "pets": pet_result.get("detail", {}),
         "mounts": mount_result.get("detail", {}),
-        "items": item_result.get("detail", {}),
+        "items": final_item_detail,
     }
     prepared["_sio_pipeline_warnings"] = sorted(set(warnings))
     return prepared
@@ -179,8 +188,7 @@ def _report_from_exact(prepared: Mapping[str, Any], exact: Mapping[str, Any]) ->
         if isinstance(row, Mapping):
             attack.update(row)
     stats = dict(exact.get("stats") or {})
-    # Use the Python port only for human-readable multiplier buckets. The total
-    # below always comes from runtime module 67727.
+
     breakdown_profile = deepcopy(dict(prepared))
     breakdown_sio = dict(_sio(breakdown_profile))
     breakdown_sio["stats"] = stats
@@ -208,16 +216,23 @@ def _report_from_exact(prepared: Mapping[str, Any], exact: Mapping[str, Any]) ->
         "multiplier_breakdown": breakdown.get("multiplier_breakdown", {}),
         "ce_damage_components": exact.get("ce_damage", {}),
         "normalized_stats": stats,
+        "pre_finalize_stats": exact.get("pre_finalize_stats", {}),
+        "uptime_values": exact.get("uptime_values", {}),
         "tech_stats": exact.get("tech_stats", {}),
         "passive_pools": exact.get("passive_pools", []),
         "formula_provenance": exact.get("formula_provenance", {}),
+        "formula_order": exact.get("formula_order", []),
         "runtime_exact": True,
     }
 
 
 def _decorate_report(
-    original: Mapping[str, Any], prepared: Mapping[str, Any], result: dict[str, Any],
-    *, formula_pipeline: str, runtime_error: str | None = None,
+    original: Mapping[str, Any],
+    prepared: Mapping[str, Any],
+    result: dict[str, Any],
+    *,
+    formula_pipeline: str,
+    runtime_error: str | None = None,
 ) -> dict[str, Any]:
     warnings = list(prepared.get("_sio_pipeline_warnings", []))
     if runtime_error:
@@ -242,44 +257,47 @@ def _decorate_report(
     return result
 
 
+def _fallback_reports(
+    originals: list[dict[str, Any]],
+    message: str,
+) -> list[dict[str, Any]]:
+    fallback_profiles = [prepare_sio_ce_profile(profile, defer_runtime_conditions=False) for profile in originals]
+    return [
+        _decorate_report(
+            original,
+            ready,
+            calculate_ce_core(ready),
+            formula_pipeline="python_fallback_24804_67727_88426",
+            runtime_error=message,
+        )
+        for original, ready in zip(originals, fallback_profiles)
+    ]
+
+
 def calculate_clan_expedition_damage_batch(
     profiles: Iterable[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
-    originals = [dict(profile) for profile in profiles]
-    prepared = [prepare_sio_ce_profile(profile) for profile in originals]
+    originals = [deepcopy(dict(profile)) for profile in profiles]
+    prepared = [prepare_sio_ce_profile(profile, defer_runtime_conditions=True) for profile in originals]
     try:
         exact_rows = default_oracle().score_profiles(prepared)
     except (SioRuntimeUnavailable, SioRuntimeInputError, OSError, ValueError) as error:
-        message = str(error)
-        return [
-            _decorate_report(
-                original,
-                ready,
-                calculate_ce_core(ready),
-                formula_pipeline="partial_python_sio_account_assembly_then_24804_67727_88426",
-                runtime_error=message,
-            )
-            for original, ready in zip(originals, prepared)
-        ]
+        return _fallback_reports(originals, str(error))
 
     reports: list[dict[str, Any]] = []
     for original, ready, exact in zip(originals, prepared, exact_rows):
         try:
             report = _report_from_exact(ready, exact)
-            reports.append(_decorate_report(
-                original,
-                ready,
-                report,
-                formula_pipeline="sio_account_assembly_then_24804_then_runtime_13024_88426_67727",
-            ))
+            reports.append(
+                _decorate_report(
+                    original,
+                    ready,
+                    report,
+                    formula_pipeline="sio_account_then_runtime_13024_24804_88426_67727",
+                )
+            )
         except (SioRuntimeUnavailable, SioRuntimeInputError, OSError, ValueError) as error:
-            reports.append(_decorate_report(
-                original,
-                ready,
-                calculate_ce_core(ready),
-                formula_pipeline="partial_python_sio_account_assembly_then_24804_67727_88426",
-                runtime_error=str(error),
-            ))
+            reports.extend(_fallback_reports([original], str(error)))
     return reports
 
 
