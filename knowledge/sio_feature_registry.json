@@ -6,27 +6,27 @@
     "formula_status": "runtime_exact",
     "action_status": "exact_before_after_gate",
     "runtime_order": ["13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f"],
-    "notes": "No learned or rarity score may replace the exact before/after CE winner."
+    "notes": "No learned, rarity, breakpoint or community preference score may replace the exact CE before/after winner."
   },
   {
     "id": "attack_stat_pipeline",
     "name": "ATK Base, Equipment, Hero, Percent and Final ATK",
     "scope": "supported",
-    "formula_status": "runtime_exact",
-    "required_fields": ["atkBase", "atkFinal", "atkEquip", "atkEquipPercent", "atkHero", "atkHeroPercent", "atkPercent", "atkFinal"]
+    "formula_status": "runtime_exact_37013_42052_92316_67727",
+    "required_fields": ["atkBase", "atkFinal"]
   },
   {
     "id": "crit_expected_damage",
     "name": "Critical Rate and Critical Damage",
     "scope": "supported",
-    "formula_status": "runtime_exact",
-    "rules": ["critRate clamped to 0..100%", "critDamage has a 200% floor"]
+    "formula_status": "runtime_exact_67727",
+    "rules": ["critRate is clamped to 0..100%", "critDamage has the sIO 200% floor"]
   },
   {
     "id": "boss_debuff_uptime_stack",
     "name": "Boss Debuffs and Uptime",
     "scope": "supported",
-    "formula_status": "runtime_exact",
+    "formula_status": "runtime_exact_24804_67727",
     "fallback_status": "ported_and_tested",
     "fields": ["vulnerability", "poisoned", "weakened", "chilled", "laceration", "divineFire", "exposedDamage"],
     "uptimes": ["poisonedUptime", "weakenedUptime", "chilledUptime", "lacerationUptime", "divineFireUptime", "shieldDamageUptime", "voidNeckBoostUptime"]
@@ -35,40 +35,40 @@
     "id": "ss_equipment_evc_paths",
     "name": "SS Equipment Eternal, Void and Chaos Paths",
     "scope": "supported",
-    "formula_status": "source_data_and_24804_runtime_exact",
-    "action_status": "cumulative_cost_and_refund_actions_implemented",
-    "remaining": ["validate every item-specific irreversible warning against source UI"]
+    "formula_status": "runtime_exact_42052_24804",
+    "action_status": "exact_cumulative_paths_refunds_and_two_slot_reallocation",
+    "remaining": ["validate every irreversible warning against the current sIO UI text"]
   },
   {
     "id": "chaos_fusion_power",
     "name": "Chaos Fusion Power",
     "scope": "supported",
-    "formula_status": "source_data_and_24804_runtime_exact",
-    "action_status": "included_in_balanced_item_reconfiguration",
-    "remaining": ["add dedicated user-facing CFP explanation per threshold"]
+    "formula_status": "runtime_exact_42052_24804",
+    "action_status": "included_in_exact_item_path_frontiers",
+    "remaining": ["dedicated user-facing threshold explanation"]
   },
   {
     "id": "xeno_transmute",
     "name": "Xeno Transmute",
     "scope": "supported",
-    "formula_status": "source_data_and_24804_runtime_exact",
-    "action_status": "x_level_and_balanced_refund_rebuild_implemented",
-    "remaining": ["exact UI legality for effect and condition rerolls", "reroll cost when source data is supplied"]
+    "formula_status": "runtime_exact_42052_24804",
+    "action_status": "x_levels_and_balanced_refund_rebuild_implemented",
+    "remaining": ["exact effect-condition reroll legality", "reroll cost when present in source data"]
   },
   {
     "id": "normal_tech_resonance",
     "name": "Normal Tech Resonance",
     "scope": "supported",
     "formula_status": "runtime_exact_13024",
-    "action_status": "multiplier_progression_exact",
-    "remaining": ["automatic support-part reassignment actions", "type restriction certificates for every reassignment"]
+    "action_status": "all_exact_multiplier_frontiers",
+    "remaining": ["automatic support-part reassignment", "offense-defense restriction certificates"]
   },
   {
     "id": "twinborn_tech_modes",
     "name": "Twinborn Tech Modes",
     "scope": "supported",
     "formula_status": "runtime_exact_13024",
-    "action_status": "exact_profile_state_patches_supported",
+    "action_status": "exact_profile_state_and_all_multiplier_frontiers",
     "modes": ["Drone Mode", "Forcefield Mode", "Drill Shot Mode", "Rocket Mode", "Soccer Mode", "Durian Mode", "Lightning Mode", "Boomerang Mode", "Guardian Mode", "Laser Mode", "Brick Mode", "Molotov Mode"],
     "remaining": ["automatic legal mode-switch generation", "one-mode-per-pair validation message"]
   },
@@ -77,8 +77,9 @@
     "name": "Resonance Overload",
     "scope": "supported",
     "formula_status": "runtime_exact_13024",
-    "action_status": "exact_chip_energy_and_matching_part_progression",
-    "remaining": ["support downgrade and disabled-below-gate transition tests"]
+    "action_status": "all_published_exact_chip_energy_and_matching_part_frontiers",
+    "notes": "The supplied bundle publishes gates through Overload 16. Levels 17 and 18 retain cost rows but are not generated because their gates are unpublished.",
+    "remaining": ["support downgrade and below-gate transition tests"]
   },
   {
     "id": "tech_optimizer",
@@ -86,71 +87,87 @@
     "scope": "proposal_generation",
     "formula_status": "runtime_exact_when_state_is_supplied",
     "action_status": "partial",
-    "remaining": ["port optimizer search constraints", "reserved legends", "fodder policy", "skill-count strategy"]
+    "remaining": ["active-skill count search", "unique and retained Legend restrictions", "fodder strategies", "downgrade strategy", "Fast through Full search modes"]
   },
   {
     "id": "survivor_progression",
     "name": "Survivor Levels, Stars and Awakening",
     "scope": "supported",
-    "formula_status": "source_export_ported",
-    "action_status": "exact_cumulative_star_and_core_costs",
-    "remaining": ["replace remaining Python survivor assembly with direct sIO function parity tests"]
+    "formula_status": "runtime_exact_92316_30396",
+    "action_status": "all_exact_cumulative_star_and_core_frontiers",
+    "remaining": ["survivor level-resource costs when exact table is supplied"]
   },
   {
     "id": "survivor_teamwork",
     "name": "Teamwork Passives",
     "scope": "supported",
-    "formula_status": "source_export_ported",
+    "formula_status": "runtime_exact_92316_30396",
     "action_status": "state_reading_implemented",
-    "remaining": ["automatic legal slot assignment", "direct parity tests against sIO survivor context function"]
+    "remaining": ["automatic legal slot assignment"]
   },
   {
     "id": "survivor_synergy_harmony",
     "name": "Survivor Synergy and Combat Harmony",
     "scope": "supported",
-    "formula_status": "source_export_ported_and_direct_damage_runtime_exact",
-    "action_status": "synergy_level_costs_implemented",
-    "remaining": ["automatic Harmony left/right reassignment", "full parity against sIO modules 5005, 92316 and 30396"]
+    "formula_status": "runtime_exact_5005_41950_92316_30396_88426",
+    "action_status": "all_exact_synergy_level_frontiers",
+    "remaining": ["automatic Harmony left-right reassignment"]
+  },
+  {
+    "id": "survivor_optimizer",
+    "name": "sIO Survivor Allocation Optimizer",
+    "scope": "proposal_generation",
+    "formula_status": "runtime_exact_for_each_supplied_state",
+    "action_status": "partial",
+    "remaining": ["main survivor constraint", "Harmony-teamwork rest group", "per-survivor max star", "minimum core budget", "maximum Synergy", "Fast and Normal search"]
   },
   {
     "id": "normal_pet_progression",
     "name": "Normal Pets, Awakening and Assist Skills",
     "scope": "supported",
-    "formula_status": "source_export_ported",
-    "action_status": "awakening_cost_actions_implemented",
-    "remaining": ["rarity merge graph", "assist-skill optimizer", "direct parity against sIO pet assembly"]
+    "formula_status": "runtime_exact_19425_30396",
+    "action_status": "all_exact_cumulative_awakening_frontiers",
+    "remaining": ["rarity merge graph", "assist-skill optimizer"]
   },
   {
     "id": "xeno_pets",
     "name": "Xeno Pets",
     "scope": "supported",
-    "formula_status": "source_export_ported_and_direct_damage_runtime_exact",
-    "action_status": "star_and_core_progression_implemented",
-    "remaining": ["dismiss and exchange loss certificate", "active/support optimizer", "awakening-power allocation"]
+    "formula_status": "runtime_exact_19425_30396_88426",
+    "action_status": "all_exact_cumulative_star_and_core_frontiers",
+    "remaining": ["dismiss-exchange loss certificate", "active-support optimizer", "awakening-power allocation"]
   },
   {
     "id": "xeno_pet_skills",
     "name": "Xeno Pet Skills and Elixir Swaps",
     "scope": "proposal_generation",
-    "formula_status": "state_fields_mapped",
+    "formula_status": "runtime_exact_when_skill_state_is_supplied",
     "action_status": "not_generated_without_exact_elixir_costs",
-    "remaining": ["four-slot eligibility", "swap cost table", "elixir inventory", "sIO optimizer parity"]
+    "remaining": ["four-slot eligibility", "empty-slot option", "skill swap costs", "Elixir inventory", "sIO optimizer parity"]
   },
   {
     "id": "collectibles",
     "name": "Collectibles, Stars, Editions and Item Effects",
     "scope": "supported",
-    "formula_status": "source_export_ported_and_runtime_context_supplied",
+    "formula_status": "runtime_exact_57223_89505_42052_24804",
     "action_status": "exact_when_profile_supplies_next_star_cost",
-    "remaining": ["complete universal shard-cost table", "edition upgrade actions", "random chest expected-value model kept separate from guaranteed progress"]
+    "remaining": ["complete universal shard-cost table", "edition upgrades", "guaranteed progress separated from random chest expected value"]
   },
   {
     "id": "custom_collection_sets",
     "name": "Custom Collection Sets",
-    "scope": "proposal_generation",
-    "formula_status": "data_mapped_partial",
+    "scope": "supported_state",
+    "formula_status": "runtime_exact_42806",
     "action_status": "not_yet_automatic",
     "remaining": ["four layouts", "unique collectible constraint", "depth and level legality", "upgrade and reassignment optimizer"]
+  },
+  {
+    "id": "collectible_optimizer",
+    "name": "sIO Collectible Stars Optimizer",
+    "scope": "proposal_generation",
+    "formula_status": "runtime_exact_for_each_supplied_state",
+    "action_status": "partial",
+    "remaining": ["Legend eligibility", "Shards and Chests budgets", "Deconstructor reset candidates", "Custom Set rearrangement"]
   },
   {
     "id": "collectible_deconstructor",
@@ -164,8 +181,8 @@
     "id": "mounts",
     "name": "Mounts",
     "scope": "supported",
-    "formula_status": "source_export_ported_and_direct_damage_runtime_exact",
-    "action_status": "star_upgrade_costs_implemented",
+    "formula_status": "runtime_exact_51642_88426",
+    "action_status": "all_exact_cumulative_star_frontiers",
     "implemented": ["active mount", "inactive sync transfer", "component stats", "line caps", "cumulative line effects", "direct CE mount damage"],
     "remaining": ["fusion", "refinement", "reroll costs"]
   },
@@ -173,9 +190,10 @@
     "id": "mount_puzzle_optimizer",
     "name": "Mount Puzzle Placement",
     "scope": "inventory_optimizer",
-    "formula_status": "board_dimensions_and_objective_mapped",
+    "formula_status": "sio_ui_and_worker_contract_mapped",
     "action_status": "not_yet_implemented",
-    "remaining": ["8x7 Scooter", "8x9 Hoverboard", "8x12 Doomsteed", "rotation only", "no mirroring", "complete-row objective", "image-to-piece parser"]
+    "known_contract": ["mount-specific slots", "puzzle rarity", "sync rate", "beam search", "best distinct multipliers"],
+    "remaining": ["worker chunk is absent from the supplied offline bundle", "exact puzzle shapes and rotations", "image-to-piece parser"]
   },
   {
     "id": "resource_and_refund_ledger",
@@ -183,8 +201,8 @@
     "scope": "all_actions",
     "formula_status": "not_applicable",
     "action_status": "balanced_certificate_required",
-    "implemented": ["item cumulative costs", "item downgrade refunds", "two-slot refund and rebuild", "survivor stars", "pet stars", "mount stars", "Tech chips and matching parts"],
-    "remaining": ["Xeno skill reset", "survivor reset and shard conversion", "collectible deconstruction"]
+    "implemented": ["item cumulative costs", "item downgrade refunds", "two-slot refund and rebuild", "all Survivor star frontiers", "all Pet star frontiers", "all Mount star frontiers", "all published Tech multiplier and Overload frontiers"],
+    "remaining": ["Xeno skill reset", "Survivor reset and shard conversion", "collectible deconstruction"]
   },
   {
     "id": "source_calibration_samples",
@@ -200,7 +218,15 @@
     "scope": "input",
     "formula_status": "not_applicable",
     "action_status": "implemented",
-    "implemented": ["extra fields retained", "snake/camel aliases", "typed sIO sections", "reused Pydantic batch adapter"]
+    "implemented": ["unknown fields retained", "snake-camel aliases", "typed sIO sections", "reused Pydantic single and batch TypeAdapters", "raw and post-24804 stage contracts"]
+  },
+  {
+    "id": "exact_runtime_account_assembly",
+    "name": "Original sIO Raw Account Assembly",
+    "scope": "supported",
+    "formula_status": "runtime_exact",
+    "action_status": "used_for_every_raw_before_and_after_state",
+    "functions": ["37013.c.baseStats", "63941.x", "5005.Q", "42052.vY", "41950.j", "57223.m", "89505.Y3", "42806.x", "70324.t", "30039.s", "40498.N", "80438.b", "51642.F", "94578.p", "92316.xt", "30396.i", "13024.T", "19425.a6"]
   },
   {
     "id": "training_evidence_cleanup",
@@ -208,7 +234,7 @@
     "scope": "training",
     "formula_status": "not_applicable",
     "action_status": "append_only_quarantine_implemented",
-    "implemented": ["contradictions excluded", "full raw row retained", "stable SHA", "no parent mutation", "no deletion during cleanup"]
+    "implemented": ["contradictions excluded", "duplicate evidence excluded", "full raw row retained", "stable SHA", "no input mutation", "no deletion during cleanup", "derived cache explicitly separated from evidence"]
   },
   {
     "id": "champion_lineage",
