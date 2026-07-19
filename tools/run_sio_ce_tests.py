@@ -9,6 +9,7 @@ import sys
 TESTS = [
     "tests/test_sio_ce_damage.py",
     "tests/test_sio_items.py",
+    "tests/test_sio_item_reallocations.py",
     "tests/test_sio_account_systems.py",
     "tests/test_sio_runtime_account_assembly.py",
     "tests/test_sio_exact_actions.py",
