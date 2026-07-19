@@ -46,7 +46,7 @@
       "expected_path": "_next/static/chunks/9771.7b56a58a4d7b7867.js",
       "listed_in_service_worker": true,
       "present_in_bundle": false,
-      "bot_status": "mount stat scoring is exact; puzzle placement remains unimplemented"
+      "bot_status": "independent multiset-combination placement solver is implemented from the sIO UI contract; profile/stat integration and worker parity remain unclaimed"
     },
     {
       "name": "petsCores",
@@ -91,7 +91,7 @@
       "expected_path": "_next/static/chunks/2864.6acb5d41359e6651.js",
       "listed_in_service_worker": true,
       "present_in_bundle": false,
-      "bot_status": "generic tetris worker is not claimed or reconstructed"
+      "bot_status": "independent fixed-type multiset placement-combination solver is implemented; factorial piece permutations and worker-parity claims are forbidden"
     }
   ],
   "rules": [
