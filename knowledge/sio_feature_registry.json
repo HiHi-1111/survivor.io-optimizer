@@ -2,174 +2,228 @@
   {
     "id": "clan_expedition_damage_contract",
     "name": "Clan Expedition Damage Contract",
-    "category": "feature_registry",
-    "status": "implemented_core_formula",
-    "runtime_modules": [67727, 88426, 5834, 62994],
-    "optimizer_scope": "supported_only_mode",
-    "required_next": ["module_24804 complete rules bridge", "evolved-passive adjustment bridge"]
+    "scope": "supported",
+    "formula_status": "runtime_exact",
+    "action_status": "exact_before_after_gate",
+    "runtime_order": ["13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f"],
+    "notes": "No learned or rarity score may replace the exact before/after CE winner."
   },
   {
     "id": "attack_stat_pipeline",
-    "name": "ATK Base/Equipment/Hero/Final Pipeline",
-    "category": "feature_registry",
-    "status": "implemented_core_formula",
-    "runtime_modules": [67727],
-    "required_fields": ["atkBase", "atkFinal", "atkEquip", "atkEquipPercent", "atkHero", "atkHeroPercent", "atkPercent", "finalFlatAtk"]
+    "name": "ATK Base, Equipment, Hero, Percent and Final ATK",
+    "scope": "supported",
+    "formula_status": "runtime_exact",
+    "required_fields": ["atkBase", "atkFinal", "atkEquip", "atkEquipPercent", "atkHero", "atkHeroPercent", "atkPercent", "atkFinal"]
   },
   {
     "id": "crit_expected_damage",
-    "name": "Crit Rate and Crit Damage",
-    "category": "feature_registry",
-    "status": "implemented_core_formula",
-    "runtime_modules": [67727],
-    "bible_sections": ["Crit_Rate_And_Damage"]
+    "name": "Critical Rate and Critical Damage",
+    "scope": "supported",
+    "formula_status": "runtime_exact",
+    "rules": ["critRate clamped to 0..100%", "critDamage has a 200% floor"]
   },
   {
     "id": "boss_debuff_uptime_stack",
     "name": "Boss Debuffs and Uptime",
-    "category": "feature_registry",
-    "status": "implemented_formula_needs_source_assembly",
-    "runtime_modules": [67727, 24804],
-    "fields": ["vulnerability", "poisoned", "weakened", "chilled", "laceration", "divineFire", "exposedDamage"]
+    "scope": "supported",
+    "formula_status": "runtime_exact",
+    "fallback_status": "ported_and_tested",
+    "fields": ["vulnerability", "poisoned", "weakened", "chilled", "laceration", "divineFire", "exposedDamage"],
+    "uptimes": ["poisonedUptime", "weakenedUptime", "chilledUptime", "lacerationUptime", "divineFireUptime", "shieldDamageUptime", "voidNeckBoostUptime"]
   },
   {
     "id": "ss_equipment_evc_paths",
-    "name": "SS Equipment Eternal/Void/Chaos Paths",
-    "category": "feature_registry",
-    "status": "data_present_runtime_action_model_missing",
-    "runtime_modules": [24804, 37013],
-    "required_next": ["slot-specific legal transitions", "refund/rebuild ledger", "before/after CE scoring"]
+    "name": "SS Equipment Eternal, Void and Chaos Paths",
+    "scope": "supported",
+    "formula_status": "source_data_and_24804_runtime_exact",
+    "action_status": "cumulative_cost_and_refund_actions_implemented",
+    "remaining": ["validate every item-specific irreversible warning against source UI"]
   },
   {
     "id": "chaos_fusion_power",
     "name": "Chaos Fusion Power",
-    "category": "feature_registry",
-    "status": "formula_present_action_model_missing",
-    "runtime_modules": [24804],
-    "required_next": ["account-wide C-star threshold state", "3/6/9/... effects", "legal core and fodder costs"]
+    "scope": "supported",
+    "formula_status": "source_data_and_24804_runtime_exact",
+    "action_status": "included_in_balanced_item_reconfiguration",
+    "remaining": ["add dedicated user-facing CFP explanation per threshold"]
   },
   {
     "id": "xeno_transmute",
     "name": "Xeno Transmute",
-    "category": "feature_registry",
-    "status": "formula_and_trigger_data_present_action_model_missing",
-    "runtime_modules": [24804, 37013, 32085],
-    "required_next": ["per-slot X levels", "Transmute Core pool", "trigger conditions", "cooldowns", "legal exchange actions"]
+    "scope": "supported",
+    "formula_status": "source_data_and_24804_runtime_exact",
+    "action_status": "x_level_and_balanced_refund_rebuild_implemented",
+    "remaining": ["exact UI legality for effect and condition rerolls", "reroll cost when source data is supplied"]
   },
   {
     "id": "normal_tech_resonance",
     "name": "Normal Tech Resonance",
-    "category": "feature_registry",
-    "status": "data_present_generic_runtime_wrong",
-    "required_next": ["main/support restrictions", "resonance energy", "multiplier chips", "milestone effects", "CE direct coefficients"]
+    "scope": "supported",
+    "formula_status": "runtime_exact_13024",
+    "action_status": "multiplier_progression_exact",
+    "remaining": ["automatic support-part reassignment actions", "type restriction certificates for every reassignment"]
   },
   {
     "id": "twinborn_tech_modes",
     "name": "Twinborn Tech Modes",
-    "category": "feature_registry",
-    "status": "formula_data_present_runtime_action_model_missing",
-    "runtime_modules": [32085, 37013],
-    "modes": ["Drone Mode", "Forcefield Mode", "Drill Shot Mode", "Rocket Mode", "Soccer Mode", "Durian Mode", "Lightning Mode", "Boomerang Mode", "Guardian Mode", "Laser Mode", "Brick Mode", "Molotov Mode"]
+    "scope": "supported",
+    "formula_status": "runtime_exact_13024",
+    "action_status": "exact_profile_state_patches_supported",
+    "modes": ["Drone Mode", "Forcefield Mode", "Drill Shot Mode", "Rocket Mode", "Soccer Mode", "Durian Mode", "Lightning Mode", "Boomerang Mode", "Guardian Mode", "Laser Mode", "Brick Mode", "Molotov Mode"],
+    "remaining": ["automatic legal mode-switch generation", "one-mode-per-pair validation message"]
   },
   {
     "id": "resonance_overload",
-    "name": "Twinborn Resonance Overload",
-    "category": "feature_registry",
-    "status": "data_present_runtime_action_model_missing",
-    "required_next": ["energy gates", "chip activation costs", "overload levels", "disable effects if energy falls below gate"]
+    "name": "Resonance Overload",
+    "scope": "supported",
+    "formula_status": "runtime_exact_13024",
+    "action_status": "exact_chip_energy_and_matching_part_progression",
+    "remaining": ["support downgrade and disabled-below-gate transition tests"]
+  },
+  {
+    "id": "tech_optimizer",
+    "name": "sIO Tech Optimizer, Skills and Fodder Settings",
+    "scope": "proposal_generation",
+    "formula_status": "runtime_exact_when_state_is_supplied",
+    "action_status": "partial",
+    "remaining": ["port optimizer search constraints", "reserved legends", "fodder policy", "skill-count strategy"]
   },
   {
     "id": "survivor_progression",
     "name": "Survivor Levels, Stars and Awakening",
-    "category": "feature_registry",
-    "status": "bible_data_present_generic_runtime_wrong",
-    "required_next": ["per-survivor star effects", "awakening effects", "global vs active scopes", "shard/core costs"]
+    "scope": "supported",
+    "formula_status": "source_export_ported",
+    "action_status": "exact_cumulative_star_and_core_costs",
+    "remaining": ["replace remaining Python survivor assembly with direct sIO function parity tests"]
   },
   {
     "id": "survivor_teamwork",
     "name": "Teamwork Passives",
-    "category": "feature_registry",
-    "status": "bible_data_present_runtime_missing",
-    "required_next": ["slot unlocks", "equipped passive set", "survivor-specific scaling", "CE uptime"]
+    "scope": "supported",
+    "formula_status": "source_export_ported",
+    "action_status": "state_reading_implemented",
+    "remaining": ["automatic legal slot assignment", "direct parity tests against sIO survivor context function"]
   },
   {
     "id": "survivor_synergy_harmony",
     "name": "Survivor Synergy and Combat Harmony",
-    "category": "feature_registry",
-    "status": "formula_data_present_partial_core_support",
-    "runtime_modules": [5005, 88426],
-    "required_next": ["level legality", "active survivor auto-level", "Harmony skills", "direct CE contribution assembly"]
-  },
-  {
-    "id": "xeno_pets",
-    "name": "Xeno Pets",
-    "category": "feature_registry",
-    "status": "formula_data_present_generic_runtime_wrong",
-    "required_next": ["unlock/dismiss rules", "star upgrades", "awakening power", "active and assist slots", "xenoDamage", "global R5 bonuses"]
-  },
-  {
-    "id": "xeno_pet_skills",
-    "name": "Xeno Pet Skills and Elixir Swaps",
-    "category": "feature_registry",
-    "status": "sio_optimizer_exists_runtime_missing",
-    "required_next": ["four skill slots", "eligible swaps", "elixir costs", "CE multiplier delta"]
+    "scope": "supported",
+    "formula_status": "source_export_ported_and_direct_damage_runtime_exact",
+    "action_status": "synergy_level_costs_implemented",
+    "remaining": ["automatic Harmony left/right reassignment", "full parity against sIO modules 5005, 92316 and 30396"]
   },
   {
     "id": "normal_pet_progression",
     "name": "Normal Pets, Awakening and Assist Skills",
-    "category": "feature_registry",
-    "status": "bible_data_present_generic_runtime_wrong",
-    "required_next": ["rarity/copy merging", "awakening crystals", "active-only effects", "assist skill scopes"]
+    "scope": "supported",
+    "formula_status": "source_export_ported",
+    "action_status": "awakening_cost_actions_implemented",
+    "remaining": ["rarity merge graph", "assist-skill optimizer", "direct parity against sIO pet assembly"]
+  },
+  {
+    "id": "xeno_pets",
+    "name": "Xeno Pets",
+    "scope": "supported",
+    "formula_status": "source_export_ported_and_direct_damage_runtime_exact",
+    "action_status": "star_and_core_progression_implemented",
+    "remaining": ["dismiss and exchange loss certificate", "active/support optimizer", "awakening-power allocation"]
+  },
+  {
+    "id": "xeno_pet_skills",
+    "name": "Xeno Pet Skills and Elixir Swaps",
+    "scope": "proposal_generation",
+    "formula_status": "state_fields_mapped",
+    "action_status": "not_generated_without_exact_elixir_costs",
+    "remaining": ["four-slot eligibility", "swap cost table", "elixir inventory", "sIO optimizer parity"]
   },
   {
     "id": "collectibles",
-    "name": "Collectibles, Stars and Editions",
-    "category": "feature_registry",
-    "status": "bible_and_sio_data_present_action_model_incomplete",
-    "required_next": ["exact star shard costs", "edition pools", "global/equipment effects", "no guaranteed progress from random chest"]
+    "name": "Collectibles, Stars, Editions and Item Effects",
+    "scope": "supported",
+    "formula_status": "source_export_ported_and_runtime_context_supplied",
+    "action_status": "exact_when_profile_supplies_next_star_cost",
+    "remaining": ["complete universal shard-cost table", "edition upgrade actions", "random chest expected-value model kept separate from guaranteed progress"]
   },
   {
     "id": "custom_collection_sets",
     "name": "Custom Collection Sets",
-    "category": "feature_registry",
-    "status": "sio_optimizer_exists_runtime_missing",
-    "required_next": ["four set layouts", "depth and level rules", "unique collectible constraint", "upgrade optimizer"]
+    "scope": "proposal_generation",
+    "formula_status": "data_mapped_partial",
+    "action_status": "not_yet_automatic",
+    "remaining": ["four layouts", "unique collectible constraint", "depth and level legality", "upgrade and reassignment optimizer"]
   },
   {
     "id": "collectible_deconstructor",
     "name": "Legend Collectible Deconstructor",
-    "category": "feature_registry",
-    "status": "missing",
-    "required_next": ["eligible rarities", "returns", "legality and irreversible-action warnings"]
+    "scope": "irreversible_action",
+    "formula_status": "not_damage_formula",
+    "action_status": "unknown_until_exact_return_table_is_supplied",
+    "remaining": ["eligible rarities", "returns", "confirmation and irreversible warning"]
   },
   {
     "id": "mounts",
     "name": "Mounts",
-    "category": "feature_registry",
-    "status": "core_ce_formula_implemented",
-    "runtime_modules": [51642, 40514, 37013, 32085, 88426],
-    "implemented": ["active mount", "undeployed sync", "component stat transfer", "star line cap", "cumulative line effects", "direct CE mount damage"],
-    "required_next": ["component inventory shapes", "puzzle placement", "fusion", "refinement", "reroll costs", "unlock/upgrade actions"]
+    "scope": "supported",
+    "formula_status": "source_export_ported_and_direct_damage_runtime_exact",
+    "action_status": "star_upgrade_costs_implemented",
+    "implemented": ["active mount", "inactive sync transfer", "component stats", "line caps", "cumulative line effects", "direct CE mount damage"],
+    "remaining": ["fusion", "refinement", "reroll costs"]
   },
   {
     "id": "mount_puzzle_optimizer",
     "name": "Mount Puzzle Placement",
-    "category": "feature_registry",
-    "status": "missing_from_main_runtime",
-    "required_next": ["8x7 Scooter", "8x9 Hoverboard", "8x12 Doomsteed", "rotation only", "no mirroring", "complete-row objective"]
+    "scope": "inventory_optimizer",
+    "formula_status": "board_dimensions_and_objective_mapped",
+    "action_status": "not_yet_implemented",
+    "remaining": ["8x7 Scooter", "8x9 Hoverboard", "8x12 Doomsteed", "rotation only", "no mirroring", "complete-row objective", "image-to-piece parser"]
   },
   {
     "id": "resource_and_refund_ledger",
     "name": "Legal Resource, Reset and Refund Ledger",
-    "category": "feature_registry",
-    "status": "partial",
-    "required_next": ["AF downgrade returns", "Xeno reset returns", "survivor reset/shard conversion", "embedded resources never treated as bag-free"]
+    "scope": "all_actions",
+    "formula_status": "not_applicable",
+    "action_status": "balanced_certificate_required",
+    "implemented": ["item cumulative costs", "item downgrade refunds", "two-slot refund and rebuild", "survivor stars", "pet stars", "mount stars", "Tech chips and matching parts"],
+    "remaining": ["Xeno skill reset", "survivor reset and shard conversion", "collectible deconstruction"]
   },
   {
     "id": "source_calibration_samples",
-    "name": "sIO ID Damage Calibration Samples",
-    "category": "feature_registry",
-    "status": "training_bridge_incomplete",
-    "required_next": ["profile snapshot", "CE observed damage", "build fingerprint", "formula version", "residual analysis without overriding hard mechanics"]
+    "name": "Observed CE Calibration Samples",
+    "scope": "formula_review_only",
+    "formula_status": "append_only_recording_implemented",
+    "action_status": "cannot_override_hard_mechanics",
+    "remaining": ["larger repeated-run sample set", "residual grouping by build fingerprint"]
+  },
+  {
+    "id": "input_schema_and_aliases",
+    "name": "Lossless Profile Reading and Aliases",
+    "scope": "input",
+    "formula_status": "not_applicable",
+    "action_status": "implemented",
+    "implemented": ["extra fields retained", "snake/camel aliases", "typed sIO sections", "reused Pydantic batch adapter"]
+  },
+  {
+    "id": "training_evidence_cleanup",
+    "name": "Training Cleanup and Quarantine",
+    "scope": "training",
+    "formula_status": "not_applicable",
+    "action_status": "append_only_quarantine_implemented",
+    "implemented": ["contradictions excluded", "full raw row retained", "stable SHA", "no parent mutation", "no deletion during cleanup"]
+  },
+  {
+    "id": "champion_lineage",
+    "name": "Inherited Champion Training",
+    "scope": "training",
+    "formula_status": "exact_labels_only",
+    "action_status": "implemented",
+    "implemented": ["nonzero parent inheritance", "immutable champions", "child checkpoints", "holdout promotion gates", "mandatory no-op gate", "contradiction quarantine"]
+  },
+  {
+    "id": "unsupported_modes",
+    "name": "Other Survivor.io Combat Modes",
+    "scope": "mapped_but_not_scored",
+    "formula_status": "unsupported",
+    "modes": ["Ender's Echo", "Path of Trials", "Zone Operation", "Lunar Mine Expedition", "Operation Retreat", "Survivor Showdown", "chapters"],
+    "notes": "Their source data is retained for future mode-specific contracts but cannot contaminate Clan Expedition scoring."
   }
 ]
