@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail CI on permutation search, hidden item caps, or layout-training leakage."""
+"""Fail CI on permutation search, hidden caps, or layout-training leakage."""
 from __future__ import annotations
 
 import argparse
@@ -44,6 +44,9 @@ def audit() -> dict:
     combinations = _source("optimizer/sio_combinations.py")
     choice_chests = _source("optimizer/sio_choice_chests.py")
     item_reallocations = _source("optimizer/sio_item_reallocations.py")
+    survivor_configurations = _source("optimizer/sio_survivor_configurations.py")
+    tech_configurations = _source("optimizer/sio_tech_configurations.py")
+    mount_bridge = _source("optimizer/sio_mount_puzzle_bridge.py")
     optimizer = _source("optimizer/source_pack_optimizer.py")
     labels = _source("optimizer/exact_training_labels.py")
     tetris = _source("optimizer/sio_tetris.py")
@@ -57,7 +60,14 @@ def audit() -> dict:
         "complete directional item frontier": (item_reallocations, "directional_reallocation_pairs"),
         "complete item frontier integration": (optimizer, "generate_exhaustive_item_reallocations"),
         "structural state deduplication report": (optimizer, '"deduplicated_count"'),
+        "Twinborn role assignment product": (tech_configurations, "generate_twinborn_mode_actions"),
+        "Twinborn one-mode certificate": (tech_configurations, '"one_mode_per_twinborn_pair": True'),
+        "Survivor complete-state planner": (survivor_configurations, "plan_survivor_configurations"),
+        "Teamwork subset combinations": (survivor_configurations, "for subset in combinations"),
+        "Survivor incomplete-search withholding": (optimizer, '"recommendation_withheld"'),
         "Tetris fixed multiset search": (tetris, "fixed_type_multiset_placement_combinations"),
+        "verified mount stat bridge": (mount_bridge, "apply_verified_mount_puzzle_stats"),
+        "mount layout excluded from scoring": (mount_bridge, '"layout_used_for_scoring": False'),
         "layout training exclusion": (labels, "LAYOUT_ONLY_KEYS"),
         "layout structural detector": (labels, "_contains_layout_only_data"),
         "layout recursive sanitizer": (labels, "_strip_layout_only_data"),
@@ -68,6 +78,10 @@ def audit() -> dict:
 
     if "[:4]" in item_reallocations or "[:10]" in item_reallocations:
         errors.append("complete item reallocation frontier contains a nearest-frontier slice")
+    if "permutations(" in survivor_configurations:
+        errors.append("Survivor Teamwork configuration must not use permutations")
+    if "sio_tetris" in mount_bridge:
+        errors.append("mount stat bridge must not execute or import the Tetris solver")
 
     training_layout_imports: list[str] = []
     for relative in TRAINING_FILES:
@@ -79,7 +93,7 @@ def audit() -> dict:
             errors.append(f"training code reads layout geometry as a feature: {relative}")
 
     return {
-        "schema": "sio_combination_training_audit_v2",
+        "schema": "sio_combination_training_audit_v3",
         "ok": not errors,
         "permutation_hits": permutation_hits,
         "allowed_directional_permutations": sorted(ALLOWED_DIRECTIONAL_PERMUTATION),
@@ -89,8 +103,11 @@ def audit() -> dict:
             "choice allocations are generated only for the exact action shortage vector",
             "directional source-to-target transitions may remain ordered when reversal changes the state",
             "every exact directional item frontier is generated before structural state deduplication",
+            "Teamwork is an unordered subset while Main and Harmony positions remain role-specific",
+            "Twinborn mode assignments are per-tech complete states, not inventory permutations",
             "Tetris placement geometry is deterministic runtime output and is excluded from learned features",
-            "only resulting exact mount stats and exact CE damage may affect training",
+            "only verified resulting mount stats and exact CE damage may affect scoring or training",
+            "incomplete exact configuration frontiers withhold the global recommendation",
         ],
         "errors": errors,
     }
