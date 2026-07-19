@@ -2,13 +2,13 @@
 
 The supplied sIO Pets UI exposes Active Pet as a free selection. For Xeno pets,
 module 19425 consumes support row 0 as the active pet's own skills and rows 1+
-as named support pets. Each support row's skill list defines its role.
+as named support pets. Each support row's normalized skill list defines its role.
 
-Rows with identical normalized skill lists are interchangeable, so pet names are
-chosen as combinations within that role group. Different skill lists are genuine
-roles and may receive different pets because their stars scale different effects.
-No pet can occupy the active role and a support role at the same time, and support
-pet names are unique.
+Rows with identical skill lists are interchangeable, so pet names are selected as
+combinations within that role group. Different skill lists are genuine roles and
+may receive different pets because stars scale their effects differently. No pet
+can occupy the active role and a support role at the same time, and support names
+are unique.
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from itertools import combinations
 import re
 from typing import Any, Iterable, Mapping
 
+from optimizer.sio_pet_data import SIO_PET_DATA
 from optimizer.sio_pets import XENO_NAMES, pet_state
 
 NONE = "None"
@@ -39,10 +40,12 @@ def _stars(pets: Mapping[str, Any]) -> dict[str, float]:
 
 
 def owned_pet_candidates(profile: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return every owned pet known to the source-locked pet catalog."""
     pets = pet_state(profile)
     stars = _stars(pets)
     current = str(pets.get("active") or pets.get("main_pet") or NONE)
-    known = ["Rex", "Croaky", *XENO_NAMES]
+    catalog = SIO_PET_DATA.get("pets", {})
+    known = tuple(str(name) for name in catalog) if isinstance(catalog, Mapping) else tuple(XENO_NAMES)
     result = [name for name in known if stars.get(name, 0.0) > 0]
     if current != NONE and current not in result:
         result.append(current)
@@ -62,6 +65,26 @@ def _support_groups(support: list[Any]) -> tuple[tuple[tuple[str, ...], tuple[in
     return tuple(
         (signature, tuple(indices))
         for signature, indices in sorted(by_signature.items(), key=lambda item: (item[0], item[1]))
+    )
+
+
+def _semantic_support_key(
+    support: list[Any],
+    groups: tuple[tuple[tuple[str, ...], tuple[int, ...]], ...],
+) -> tuple[tuple[tuple[str, ...], tuple[str, ...]], ...]:
+    """Canonical identity that ignores swaps inside identical skill-role rows."""
+    return tuple(
+        (
+            signature,
+            tuple(
+                sorted(
+                    str(support[index].get("name") or NONE)
+                    for index in indices
+                    if index < len(support) and isinstance(support[index], Mapping)
+                )
+            ),
+        )
+        for signature, indices in groups
     )
 
 
@@ -101,11 +124,7 @@ def generate_pet_configuration_actions(profile: Mapping[str, Any]) -> list[dict[
     support = deepcopy(pets.get("support")) if isinstance(pets.get("support"), list) else []
     groups = _support_groups(support)
     stars = _stars(pets)
-    current_support = tuple(
-        str(row.get("name") or NONE)
-        for row in support[1:]
-        if isinstance(row, Mapping)
-    )
+    current_support_key = _semantic_support_key(support, groups)
     actions: list[dict[str, Any]] = []
 
     for active in candidates:
@@ -131,14 +150,14 @@ def generate_pet_configuration_actions(profile: Mapping[str, Any]) -> list[dict[
                 if isinstance(patched_support[0], Mapping):
                     patched_support[0] = {**dict(patched_support[0]), "name": active}
                 for index, name in assignment.items():
+                    if index >= len(patched_support) or not isinstance(patched_support[index], Mapping):
+                        raise ValueError(f"invalid Xeno support row index: {index}")
                     patched_support[index] = {**dict(patched_support[index]), "name": name}
                 patched["support"] = patched_support
-            target_support = tuple(
-                str(row.get("name") or NONE)
-                for row in patched_support[1:]
-                if isinstance(row, Mapping)
-            ) if active in XENO_NAMES else current_support
-            if active == current_active and target_support == current_support:
+                target_support_key = _semantic_support_key(patched_support, groups)
+            else:
+                target_support_key = current_support_key
+            if active == current_active and target_support_key == current_support_key:
                 continue
             suffix = f"active-{_slug(active)}"
             if assignment:
@@ -163,6 +182,10 @@ def generate_pet_configuration_actions(profile: Mapping[str, Any]) -> list[dict[
                         "configuration_frontier": True,
                         "active_pet": active,
                         "support_assignment": {str(index): name for index, name in sorted(assignment.items())},
+                        "support_role_signatures": [
+                            {"skills": list(signature), "rows": list(indices)}
+                            for signature, indices in groups
+                        ],
                         "identical_skill_roles_use_combinations": True,
                         "role_specific_assignment": True,
                         "order_independent_permutation_search": False,
