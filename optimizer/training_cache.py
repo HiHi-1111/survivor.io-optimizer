@@ -1,23 +1,43 @@
-"""Small persistent JSONL caches for optimizer training."""
+"""Small persistent JSONL caches for derived optimizer results.
 
+These files are disposable acceleration artifacts, not source evidence. Cache
+compaction may discard old derived rows because every row can be regenerated.
+Training labels, source records and quarantined bad evidence use separate
+append-only stores and must never be sent through this class.
+"""
 from __future__ import annotations
-
 import hashlib
 import json
 from collections import deque
 from pathlib import Path
 from typing import Any
 
+JSON_KWARGS = {
+    "ensure_ascii": False,
+    "sort_keys": True,
+    "default": str,
+    "separators": (",", ":"),
+}
+
 
 def stable_hash(value: Any) -> str:
-    payload = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    payload = json.dumps(value, **JSON_KWARGS)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class JsonlCache:
+    """In-memory indexed JSONL cache with bounded, regenerable disk history."""
+
+    evidence_safe = False
+
     def __init__(
-        self, path: Path, flush_every: int = 1, load_existing: bool = True, *,
-        max_file_bytes: int | None = None, retain_entries: int = 50000,
+        self,
+        path: Path,
+        flush_every: int = 1,
+        load_existing: bool = True,
+        *,
+        max_file_bytes: int | None = None,
+        retain_entries: int = 50000,
     ) -> None:
         self.path = path
         self.rows: dict[str, dict[str, Any]] = {}
@@ -66,7 +86,7 @@ class JsonlCache:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
             for row in self._pending:
-                handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+                handle.write(json.dumps(row, **JSON_KWARGS) + "\n")
         self._pending.clear()
 
     def close(self) -> None:
@@ -89,8 +109,12 @@ class JsonlCache:
 
     def summary(self) -> dict[str, Any]:
         return {
-            "path": str(self.path), "entries": len(self.rows), "hits": self.hits,
-            "misses": self.misses, "pending_writes": len(self._pending),
+            "path": str(self.path),
+            "entries": len(self.rows),
+            "hits": self.hits,
+            "misses": self.misses,
+            "pending_writes": len(self._pending),
             "file_bytes": self.path.stat().st_size if self.path.exists() else 0,
             "compactions": self.compactions,
+            "evidence_safe": self.evidence_safe,
         }
