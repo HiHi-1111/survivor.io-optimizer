@@ -2,14 +2,15 @@
 
 The final winner is always the largest before/after sIO CE damage delta. Learned
 models may order evaluation elsewhere, but they cannot alter this module's
-winner. All scoreable after-states are sent to the sIO runtime in one batch.
+winner. Every profile baseline and legal after-state is flattened into one sIO
+runtime batch so a multi-profile request starts at most one uncached Node process.
 """
 
 from __future__ import annotations
 
 from copy import deepcopy
-import json
 from functools import lru_cache
+import json
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -54,10 +55,22 @@ def clear_source_pack_cache() -> None:
     load_source_pack_actions.cache_clear()
 
 
+def _plain(value: Any) -> Any:
+    """Recursively remove Pydantic/model wrappers without dropping extra fields."""
+    if hasattr(value, "model_dump") and callable(value.model_dump):
+        value = value.model_dump()
+    if isinstance(value, Mapping):
+        return {str(key): _plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(item) for item in value]
+    return deepcopy(value)
+
+
 def _profile_data(profile: PlayerState | Mapping[str, Any]) -> dict[str, Any]:
-    if isinstance(profile, PlayerState):
-        return profile.model_dump()
-    return deepcopy(dict(profile))
+    normalized = _plain(profile)
+    if not isinstance(normalized, dict):
+        raise TypeError("player state must normalize to a mapping")
+    return normalized
 
 
 def _mount_container(profile: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -208,7 +221,8 @@ def _candidate(
     after: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, str | None]:
     if not before.get("supported") or not after.get("supported"):
-        return None, f"before_or_after_state_not_scoreable:{before.get('reason') or after.get('reason') or 'unknown'}"
+        reason = before.get("reason") or after.get("reason") or "unknown"
+        return None, f"before_or_after_state_not_scoreable:{reason}"
     old = float(before["total_damage"])
     new = float(after["total_damage"])
     delta = new - old
@@ -234,7 +248,7 @@ def _candidate(
     }, None
 
 
-def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) -> dict[str, Any]:
+def _prepare_profile(profile_input: PlayerState | Mapping[str, Any]) -> dict[str, Any]:
     profile = _profile_data(profile_input)
     actions = _all_actions(profile)
     transitions: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
@@ -245,12 +259,31 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
             rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
         else:
             transitions.append((action, after, certificate))
+    return {
+        "profile": profile,
+        "actions": actions,
+        "transitions": transitions,
+        "rejected": rejected,
+    }
 
-    reports = calculate_clan_expedition_damage_batch([profile, *[row[1] for row in transitions]])
+
+def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str, Any]], top_k: int) -> dict[str, Any]:
+    actions = list(prepared["actions"])
+    transitions = list(prepared["transitions"])
+    rejected = [dict(row) for row in prepared["rejected"]]
+    if not reports:
+        reports = [{"supported": False, "reason": "missing_baseline_formula_report"}]
     before = reports[0]
+    after_reports = reports[1:]
     ranked_all: list[dict[str, Any]] = []
-    for (action, _after_profile, certificate), after_report in zip(transitions, reports[1:]):
-        candidate, reason = _candidate(action, certificate, before, after_report)
+    for index, (action, _after_profile, certificate) in enumerate(transitions):
+        if index >= len(after_reports):
+            rejected.append({
+                "action_id": str(action.get("action_id")),
+                "reason": "missing_after_state_formula_report",
+            })
+            continue
+        candidate, reason = _candidate(action, certificate, before, after_reports[index])
         if candidate is None:
             rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
         else:
@@ -303,13 +336,33 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
     }
 
 
+def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) -> dict[str, Any]:
+    prepared = _prepare_profile(profile_input)
+    formula_states = [prepared["profile"], *[row[1] for row in prepared["transitions"]]]
+    reports = calculate_clan_expedition_damage_batch(formula_states)
+    return _result_from_reports(prepared, reports, top_k)
+
+
 def optimize_source_pack_batch(
     player_states: list[PlayerState | Mapping[str, Any]],
     *,
     top_k: int = 10,
     device: str = "auto",
 ) -> dict[str, Any]:
-    results = [_optimize_one(profile, top_k) for profile in player_states]
+    prepared_profiles = [_prepare_profile(profile) for profile in player_states]
+    formula_states: list[dict[str, Any]] = []
+    slices: list[tuple[int, int]] = []
+    for prepared in prepared_profiles:
+        start = len(formula_states)
+        formula_states.append(prepared["profile"])
+        formula_states.extend(row[1] for row in prepared["transitions"])
+        slices.append((start, len(formula_states)))
+
+    all_reports = calculate_clan_expedition_damage_batch(formula_states) if formula_states else []
+    results = [
+        _result_from_reports(prepared, all_reports[start:end], top_k)
+        for prepared, (start, end) in zip(prepared_profiles, slices)
+    ]
     return {
         "profiles": results,
         "numeric_backend": {
@@ -318,6 +371,9 @@ def optimize_source_pack_batch(
             "requested_device": device,
             "learned_or_gpu_ranking_used": False,
             "final_winner_source": "exact_before_after_damage_only",
+            "profiles_batched": len(prepared_profiles),
+            "states_scored_in_one_batch": len(formula_states),
+            "runtime_processes_per_uncached_batch": 1 if formula_states else 0,
         },
         "profile_feature_matrix_shape": [0, 0],
         "inventory_feature_matrix_shape": [0, 0],
