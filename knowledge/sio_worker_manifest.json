@@ -1,0 +1,102 @@
+{
+  "schema": "sio_worker_manifest_v1",
+  "bundle_sha256": "7665a1d4ad479f799b9360347dad98ffdca8125d35c6fb0072c68343708c847d",
+  "source": "registrations and chunk hashes in the user-supplied sIO bundle",
+  "workers": [
+    {
+      "name": "collectiblesStars",
+      "chunk_id": 5011,
+      "hash": "ef7a157d54de9371",
+      "expected_path": "_next/static/chunks/5011.ef7a157d54de9371.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "exact damage state is supported; specialized sIO search algorithm is not claimed"
+    },
+    {
+      "name": "customSets",
+      "chunk_id": 9445,
+      "hash": "6401b17a58df23ca",
+      "expected_path": "_next/static/chunks/9445.6401b17a58df23ca.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "exact set damage state is supported; specialized sIO arrangement search is not claimed"
+    },
+    {
+      "name": "items",
+      "chunk_id": 2033,
+      "hash": "e9ce7bca8d91dd45",
+      "expected_path": "_next/static/chunks/2033.e9ce7bca8d91dd45.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "bot uses its own exhaustive exact legal item frontiers and never claims worker parity"
+    },
+    {
+      "name": "lmeDebuffs",
+      "chunk_id": 2438,
+      "hash": "9fd2fecd16a743c3",
+      "expected_path": "_next/static/chunks/2438.9fd2fecd16a743c3.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "LME is retained but unsupported by the CE contract"
+    },
+    {
+      "name": "mountPuzzles",
+      "chunk_id": 9771,
+      "hash": "7b56a58a4d7b7867",
+      "expected_path": "_next/static/chunks/9771.7b56a58a4d7b7867.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "mount stat scoring is exact; puzzle placement remains unimplemented"
+    },
+    {
+      "name": "petsCores",
+      "chunk_id": 2352,
+      "hash": "536d17ddde8512be",
+      "expected_path": "_next/static/chunks/2352.536d17ddde8512be.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "all exact cumulative Pet star frontiers are scored; specialized sIO allocation heuristics are not claimed"
+    },
+    {
+      "name": "petsSkills",
+      "chunk_id": 2698,
+      "hash": "46e25c680639bebe",
+      "expected_path": "_next/static/chunks/2698.46e25c680639bebe.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "Xeno skill and Elixir optimization remains unimplemented without exact worker and cost data"
+    },
+    {
+      "name": "resonance",
+      "chunk_id": 386,
+      "hash": "5ea74bbdfa06bbf8",
+      "expected_path": "_next/static/chunks/386.5ea74bbdfa06bbf8.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "all exact multiplier and published Overload frontiers are scored; support-fodder search parity is not claimed"
+    },
+    {
+      "name": "skills",
+      "chunk_id": 4973,
+      "hash": "da7759c6fbf1fbf7",
+      "expected_path": "_next/static/chunks/4973.da7759c6fbf1fbf7.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "skill state is read by exact runtime; specialized active-skill search remains unimplemented"
+    },
+    {
+      "name": "tetris",
+      "chunk_id": 2864,
+      "hash": "6acb5d41359e6651",
+      "expected_path": "_next/static/chunks/2864.6acb5d41359e6651.js",
+      "listed_in_service_worker": true,
+      "present_in_bundle": false,
+      "bot_status": "generic tetris worker is not claimed or reconstructed"
+    }
+  ],
+  "rules": [
+    "A worker registration proves a feature exists but does not reveal the omitted search implementation.",
+    "The bot may use independently verified exact before/after enumeration, but must not label it sIO worker parity.",
+    "Missing workers are preserved as explicit gaps rather than filled with invented algorithms."
+  ]
+}
