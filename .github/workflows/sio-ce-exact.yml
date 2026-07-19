@@ -37,6 +37,7 @@ jobs:
           optimizer/sio_exact_actions.py
           optimizer/sio_tech_progression.py
           optimizer/sio_progression_frontiers.py
+          optimizer/sio_tetris.py
           optimizer/source_pack_optimizer.py
           optimizer/champion_lineage.py
           optimizer/exact_training_labels.py
@@ -115,10 +116,12 @@ jobs:
             optimizer/sio_item_pipeline.py
             optimizer/sio_tech_progression.py
             optimizer/sio_progression_frontiers.py
+            optimizer/sio_tetris.py
             optimizer/source_pack_optimizer.py
             knowledge/sio_runtime_manifest.json
             knowledge/sio_feature_registry.json
             knowledge/sio_worker_manifest.json
+            docs/SIO_UNFINISHED_WORK.md
           if-no-files-found: error
           retention-days: 7
       - name: Verify lineage CLI
