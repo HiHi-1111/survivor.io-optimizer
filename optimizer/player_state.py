@@ -76,6 +76,7 @@ class PlayerInventory(FlexibleStateModel):
     selector_chests: dict[str, int] = Field(default_factory=dict)
     items: dict[str, Any] = Field(default_factory=dict)
     resources: dict[str, Any] = Field(default_factory=dict)
+    choice_chests: dict[str, Any] = Field(default_factory=dict)
 
 
 class PlayerMountSetup(FlexibleStateModel):
@@ -105,6 +106,9 @@ class PlayerSioCE(FlexibleStateModel):
     mounts: dict[str, Any] = Field(default_factory=dict)
     upgradedCollectibles: list[str] = Field(default_factory=list)
     exact_actions: list[dict[str, Any]] = Field(default_factory=list)
+    choice_chests: dict[str, Any] = Field(default_factory=dict)
+    configuration_constraints: dict[str, Any] = Field(default_factory=dict)
+    mount_puzzles: dict[str, Any] = Field(default_factory=dict)
     evolvePassives: bool | None = None
     activeSurvivor: str | None = None
 
@@ -124,6 +128,9 @@ class PlayerSioCE(FlexibleStateModel):
             "evolvePassives": ("evolve_passives",),
             "activeSurvivor": ("active_survivor",),
             "exact_actions": ("exactActions",),
+            "choice_chests": ("choiceChests", "selector_chests", "selectorChests"),
+            "configuration_constraints": ("configurationConstraints", "optimizer_constraints", "optimizerConstraints"),
+            "mount_puzzles": ("mountPuzzles", "puzzle_results", "puzzleResults"),
         }
         for canonical, alternatives in aliases.items():
             if canonical in data:
