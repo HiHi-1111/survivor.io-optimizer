@@ -1,0 +1,89 @@
+{
+  "schema": "sio_runtime_manifest_v1",
+  "bundle_sha256": "7665a1d4ad479f799b9360347dad98ffdca8125d35c6fb0072c68343708c847d",
+  "source": "user-supplied sio_tools.exp0.dev bundle",
+  "ce_formula_order": [
+    "13024.T",
+    "24804.zP",
+    "88426.y",
+    "24804.IE",
+    "67727.f"
+  ],
+  "required_modules": [13024, 24804, 88426, 67727, 32085, 37013, 42052, 51642, 57223, 89505, 92316, 30396, 19425],
+  "base_stats": {
+    "critDamage": 200,
+    "poisonedUptime": 0,
+    "weakenedUptime": 0,
+    "chilledUptime": 0,
+    "lacerationUptime": 0,
+    "divineFireUptime": 0,
+    "shieldDamageUptime": 1,
+    "voidNeckBoostUptime": 1
+  },
+  "default_settings": {
+    "calcMode": "damage",
+    "revives": [40, 70, 90]
+  },
+  "uptime_fields": [
+    "lacerationUptime",
+    "divineFireUptime",
+    "poisonedUptime",
+    "weakenedUptime",
+    "chilledUptime",
+    "shieldDamageUptime",
+    "voidNeckBoostUptime"
+  ],
+  "final_transform_fields": [
+    "eternalSuitBoost",
+    "voidNeckBoost",
+    "voidBootsBoost",
+    "minEnergyFlux",
+    "maxEnergyFlux",
+    "hpBulletBoost",
+    "adrenaline",
+    "metaliaPoisoned",
+    "metaliaChilled",
+    "joeyWeakSpot"
+  ],
+  "direct_damage_fields": [
+    "ssMiscPath",
+    "cooldownReduction",
+    "taloxaBeam",
+    "crimsonBat",
+    "harmonyTaloxa",
+    "harmonyJoey",
+    "harmonyMetalia",
+    "harmonyYang",
+    "harmonyKing",
+    "harmonyCommon",
+    "xenoDamage",
+    "mountDamage"
+  ],
+  "account_assembly_order": [
+    "base_stats",
+    "survivor_synergy",
+    "items_and_af_base",
+    "survivors_and_teamwork",
+    "item_linked_collectibles",
+    "global_collectibles",
+    "custom_collection_sets",
+    "evolution_tree",
+    "mounts",
+    "skill_stats",
+    "survivor_skill_context",
+    "tech_and_twinborn",
+    "pets",
+    "item_and_uptime_conditions",
+    "direct_damage",
+    "final_stat_transforms",
+    "ce_damage"
+  ],
+  "sio_feature_groups": {
+    "items": ["base", "eternal", "void", "chaos", "xeno_transmute", "preview", "refund_rebuild"],
+    "techs": ["normal_resonance", "support_parts", "twinborn_modes", "overload", "skills_optimizer", "fodder_optimizer"],
+    "pets": ["normal_awaken", "assist_skills", "xeno_stars", "xeno_core_optimizer", "xeno_skill_optimizer", "elixirs"],
+    "survivors": ["levels", "stars", "awakening", "teamwork", "synergy", "harmony"],
+    "collectibles": ["stars", "editions", "item_sets", "custom_sets", "upgrade_optimizer", "deconstructor"],
+    "mounts": ["active_mount", "sync", "stars", "line_effects", "puzzle_shapes", "puzzle_optimizer", "fusion", "refinement", "reroll"]
+  }
+}
