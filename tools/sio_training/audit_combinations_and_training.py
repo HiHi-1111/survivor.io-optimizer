@@ -41,10 +41,11 @@ def audit() -> dict:
                 if expected is None or line.strip() != expected:
                     errors.append(f"order-independent permutation search found: {relative}:{line_number}: {line.strip()}")
 
-    combinations = _source("optimizer/sio_combinations.py")
+    combinations_source = _source("optimizer/sio_combinations.py")
     choice_chests = _source("optimizer/sio_choice_chests.py")
     item_reallocations = _source("optimizer/sio_item_reallocations.py")
     survivor_configurations = _source("optimizer/sio_survivor_configurations.py")
+    pet_configurations = _source("optimizer/sio_pet_configurations.py")
     tech_configurations = _source("optimizer/sio_tech_configurations.py")
     mount_bridge = _source("optimizer/sio_mount_puzzle_bridge.py")
     optimizer = _source("optimizer/source_pack_optimizer.py")
@@ -52,7 +53,7 @@ def audit() -> dict:
     tetris = _source("optimizer/sio_tetris.py")
 
     required = {
-        "multiset count-vector generator": (combinations, "bounded_multiset_allocations"),
+        "multiset count-vector generator": (combinations_source, "bounded_multiset_allocations"),
         "selector chest exact-cover integration": (optimizer, "expand_actions_with_choice_chests"),
         "selector chest shortage-pruned DP": (choice_chests, "exact_cover_allocations"),
         "selector chest Pareto preservation": (choice_chests, "_pareto_allocations"),
@@ -65,6 +66,10 @@ def audit() -> dict:
         "Survivor complete-state planner": (survivor_configurations, "plan_survivor_configurations"),
         "Teamwork subset combinations": (survivor_configurations, "for subset in combinations"),
         "Survivor incomplete-search withholding": (optimizer, '"recommendation_withheld"'),
+        "pet catalog-derived candidates": (pet_configurations, 'SIO_PET_DATA.get("pets"'),
+        "pet identical-role combinations": (pet_configurations, "for selected in combinations"),
+        "pet semantic support dedup": (pet_configurations, "_semantic_support_key"),
+        "pet configuration integration": (optimizer, "generate_pet_configuration_actions"),
         "Tetris fixed multiset search": (tetris, "fixed_type_multiset_placement_combinations"),
         "verified mount stat bridge": (mount_bridge, "apply_verified_mount_puzzle_stats"),
         "mount layout excluded from scoring": (mount_bridge, '"layout_used_for_scoring": False'),
@@ -80,6 +85,8 @@ def audit() -> dict:
         errors.append("complete item reallocation frontier contains a nearest-frontier slice")
     if "permutations(" in survivor_configurations:
         errors.append("Survivor Teamwork configuration must not use permutations")
+    if "permutations(" in pet_configurations:
+        errors.append("interchangeable Xeno support roles must not use permutations")
     if "sio_tetris" in mount_bridge:
         errors.append("mount stat bridge must not execute or import the Tetris solver")
 
@@ -93,7 +100,7 @@ def audit() -> dict:
             errors.append(f"training code reads layout geometry as a feature: {relative}")
 
     return {
-        "schema": "sio_combination_training_audit_v3",
+        "schema": "sio_combination_training_audit_v4",
         "ok": not errors,
         "permutation_hits": permutation_hits,
         "allowed_directional_permutations": sorted(ALLOWED_DIRECTIONAL_PERMUTATION),
@@ -105,6 +112,7 @@ def audit() -> dict:
             "every exact directional item frontier is generated before structural state deduplication",
             "Teamwork is an unordered subset while Main and Harmony positions remain role-specific",
             "Twinborn mode assignments are per-tech complete states, not inventory permutations",
+            "Xeno support rows with identical skill signatures use combinations; distinct signatures remain roles",
             "Tetris placement geometry is deterministic runtime output and is excluded from learned features",
             "only verified resulting mount stats and exact CE damage may affect scoring or training",
             "incomplete exact configuration frontiers withhold the global recommendation",
