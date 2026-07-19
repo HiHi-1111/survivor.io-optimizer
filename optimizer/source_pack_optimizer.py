@@ -21,6 +21,7 @@ from optimizer.sio_exact_actions import (
     generate_exact_actions,
     resource_counts,
 )
+from optimizer.sio_progression_frontiers import generate_progression_frontiers
 from optimizer.sio_tech_progression import generate_tech_progression_actions
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -152,7 +153,7 @@ def _transition(
 
 
 def _public_action_id(action: Mapping[str, Any]) -> str:
-    if action.get("system") == "mounts" and action.get("action_type") == "upgrade_mount":
+    if action.get("system") == "mounts" and str(action.get("action_type", "")).startswith("upgrade_mount"):
         metadata = action.get("metadata") if isinstance(action.get("metadata"), Mapping) else {}
         name = metadata.get("mount")
         target = metadata.get("target_stars")
@@ -181,6 +182,7 @@ def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
     combined = [
         *generate_exact_actions(profile),
         *generate_tech_progression_actions(profile),
+        *generate_progression_frontiers(profile),
         *load_source_pack_actions(),
     ]
     seen_keys: set[str] = set()
@@ -200,8 +202,10 @@ def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _candidate(
-    action: Mapping[str, Any], certificate: Mapping[str, Any],
-    before: Mapping[str, Any], after: Mapping[str, Any],
+    action: Mapping[str, Any],
+    certificate: Mapping[str, Any],
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, str | None]:
     if not before.get("supported") or not after.get("supported"):
         return None, f"before_or_after_state_not_scoreable:{before.get('reason') or after.get('reason') or 'unknown'}"
@@ -252,11 +256,13 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
         else:
             ranked_all.append(candidate)
 
-    ranked_all.sort(key=lambda row: (
-        -float(row["expected_dps_gain"]),
-        float(row["total_cost_units"]),
-        str(row["action_id"]),
-    ))
+    ranked_all.sort(
+        key=lambda row: (
+            -float(row["expected_dps_gain"]),
+            float(row["total_cost_units"]),
+            str(row["action_id"]),
+        )
+    )
     ranked = ranked_all[: max(0, top_k)]
     best_spend = ranked_all[0] if ranked_all and float(ranked_all[0]["expected_dps_gain"]) > 0 else None
     baseline = {
@@ -286,17 +292,22 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
         "pruning_policy": "none; every legal exact after-state is batch-scored",
         "warnings": [
             "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
+            "Every exact cumulative progression frontier is evaluated, not only the next level.",
             "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
         ],
         "explanation": (
             f"{best_spend['action_id']} has the largest exact sIO Clan Expedition damage gain."
-            if best_spend else "No legal action beat the mandatory zero-cost no-op baseline."
+            if best_spend
+            else "No legal action beat the mandatory zero-cost no-op baseline."
         ),
     }
 
 
 def optimize_source_pack_batch(
-    player_states: list[PlayerState | Mapping[str, Any]], *, top_k: int = 10, device: str = "auto"
+    player_states: list[PlayerState | Mapping[str, Any]],
+    *,
+    top_k: int = 10,
+    device: str = "auto",
 ) -> dict[str, Any]:
     results = [_optimize_one(profile, top_k) for profile in player_states]
     return {
@@ -314,7 +325,10 @@ def optimize_source_pack_batch(
 
 
 def optimize_source_pack_actions(
-    player_state: PlayerState | Mapping[str, Any], *, top_k: int = 10, device: str = "auto"
+    player_state: PlayerState | Mapping[str, Any],
+    *,
+    top_k: int = 10,
+    device: str = "auto",
 ) -> dict[str, Any]:
     batch = optimize_source_pack_batch([player_state], top_k=top_k, device=device)
     result = batch["profiles"][0]
