@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail CI on accidental permutation search or mount-layout training leakage."""
+"""Fail CI on permutation search, hidden item caps, or layout-training leakage."""
 from __future__ import annotations
 
 import argparse
@@ -9,9 +9,10 @@ import re
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# This is directional: source is downgraded/refunded and target is upgraded.
-# Reversing the pair changes the after-state, so it is not an order-equivalent
-# inventory permutation.
+# This legacy occurrence is directional: source is downgraded/refunded and target
+# is upgraded. Reversing the pair changes the after-state, so it is not an
+# order-equivalent inventory permutation. The complete frontier uses nested role
+# loops in sio_item_reallocations.py and is checked separately below.
 ALLOWED_DIRECTIONAL_PERMUTATION = {
     "optimizer/sio_exact_actions.py": "for source_slot, target_slot in itertools.permutations(SLOTS, 2):",
 }
@@ -42,21 +43,31 @@ def audit() -> dict:
 
     combinations = _source("optimizer/sio_combinations.py")
     choice_chests = _source("optimizer/sio_choice_chests.py")
+    item_reallocations = _source("optimizer/sio_item_reallocations.py")
     optimizer = _source("optimizer/source_pack_optimizer.py")
     labels = _source("optimizer/exact_training_labels.py")
     tetris = _source("optimizer/sio_tetris.py")
 
     required = {
         "multiset count-vector generator": (combinations, "bounded_multiset_allocations"),
-        "selector chest combination integration": (optimizer, "expand_actions_with_choice_chests"),
+        "selector chest exact-cover integration": (optimizer, "expand_actions_with_choice_chests"),
+        "selector chest shortage-pruned DP": (choice_chests, "exact_cover_allocations"),
+        "selector chest Pareto preservation": (choice_chests, "_pareto_allocations"),
         "selector chest no-permutation marker": (choice_chests, '"permutation_search": False'),
+        "complete directional item frontier": (item_reallocations, "directional_reallocation_pairs"),
+        "complete item frontier integration": (optimizer, "generate_exhaustive_item_reallocations"),
+        "structural state deduplication report": (optimizer, '"deduplicated_count"'),
         "Tetris fixed multiset search": (tetris, "fixed_type_multiset_placement_combinations"),
         "layout training exclusion": (labels, "LAYOUT_ONLY_KEYS"),
+        "layout structural detector": (labels, "_contains_layout_only_data"),
         "layout recursive sanitizer": (labels, "_strip_layout_only_data"),
     }
     for label, (source, token) in required.items():
         if token not in source:
             errors.append(f"{label}: missing {token!r}")
+
+    if "[:4]" in item_reallocations or "[:10]" in item_reallocations:
+        errors.append("complete item reallocation frontier contains a nearest-frontier slice")
 
     training_layout_imports: list[str] = []
     for relative in TRAINING_FILES:
@@ -68,14 +79,16 @@ def audit() -> dict:
             errors.append(f"training code reads layout geometry as a feature: {relative}")
 
     return {
-        "schema": "sio_combination_training_audit_v1",
+        "schema": "sio_combination_training_audit_v2",
         "ok": not errors,
         "permutation_hits": permutation_hits,
         "allowed_directional_permutations": sorted(ALLOWED_DIRECTIONAL_PERMUTATION),
         "training_layout_imports": training_layout_imports,
         "rules": [
             "choice chests and identical inventory choices use multiset count combinations",
+            "choice allocations are generated only for the exact action shortage vector",
             "directional source-to-target transitions may remain ordered when reversal changes the state",
+            "every exact directional item frontier is generated before structural state deduplication",
             "Tetris placement geometry is deterministic runtime output and is excluded from learned features",
             "only resulting exact mount stats and exact CE damage may affect training",
         ],
