@@ -1,9 +1,8 @@
 """Exact legal after-state ranking for Clan Expedition actions.
 
 The final winner is always the largest before/after sIO CE damage delta. Learned
-models may order future evaluation work elsewhere, but they cannot alter this
-module's winner. Unsupported or unaffordable actions are returned with an
-explicit rejection reason.
+models may order evaluation elsewhere, but they cannot alter this module's
+winner. All scoreable after-states are sent to the sIO runtime in one batch.
 """
 
 from __future__ import annotations
@@ -15,7 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from optimizer.player_state import PlayerState
-from optimizer.sio_ce_account import compare_clan_expedition_profiles
+from optimizer.sio_ce_account import calculate_clan_expedition_damage_batch
 from optimizer.sio_exact_actions import (
     affordability_certificate,
     apply_exact_action,
@@ -66,11 +65,6 @@ def _mount_container(profile: dict[str, Any]) -> tuple[dict[str, Any], dict[str,
     return mounts, data
 
 
-def _target_star(action: Mapping[str, Any]) -> int | None:
-    label = str(action.get("unlock_target", ""))
-    return STAR_LABELS.index(label) if label in STAR_LABELS else None
-
-
 def _simulate_legacy_mount_action(
     action: Mapping[str, Any], profile: dict[str, Any]
 ) -> tuple[dict[str, Any] | None, str | None]:
@@ -82,9 +76,10 @@ def _simulate_legacy_mount_action(
     state = data.get(name)
     if not isinstance(state, dict) or not bool(state.get("enabled", False)):
         return None, f"mount_not_owned:{target_id}"
-    target = _target_star(action)
+    label = str(action.get("unlock_target", ""))
+    target = STAR_LABELS.index(label) if label in STAR_LABELS else None
     if target is None:
-        return None, f"unknown_mount_target:{action.get('unlock_target')}"
+        return None, f"unknown_mount_target:{label}"
     current = state.get("stars")
     if current is None:
         rarity = str(state.get("rarity", "Base"))
@@ -122,60 +117,32 @@ def _legacy_cost_certificate(profile: Mapping[str, Any], action: Mapping[str, An
     }
 
 
-def _score_after_state(
-    action: Mapping[str, Any], profile: dict[str, Any], after: dict[str, Any], certificate: Mapping[str, Any]
-) -> tuple[dict[str, Any] | None, str | None]:
-    if not certificate.get("balanced"):
-        return None, "unbalanced_or_negative_resource_ledger"
-    if not certificate.get("legal"):
-        missing = certificate.get("missing") or {}
-        return None, "insufficient_resources:" + ",".join(f"{key}={value:g}" for key, value in sorted(missing.items()))
-    comparison = compare_clan_expedition_profiles(profile, after)
-    if not comparison.get("supported"):
-        before_reason = comparison.get("before", {}).get("reason")
-        after_reason = comparison.get("after", {}).get("reason")
-        return None, f"before_or_after_state_not_scoreable:{before_reason or after_reason or 'unknown'}"
-    delta = float(comparison["delta"])
-    percent = comparison.get("percent_gain")
-    consumed = dict(certificate.get("consumed") or {})
-    refunded = dict(certificate.get("refunded") or {})
-    total_cost = sum(float(value) for value in consumed.values())
-    return {
-        **dict(action),
-        "consumed_items": consumed,
-        "required_items": consumed,
-        "refunded_items": refunded,
-        "legality_certificate": dict(certificate),
-        "expected_dps_gain": delta,
-        "estimated_dps_value": delta,
-        "percent_damage_gain": percent,
-        "score": delta,
-        "total_cost_units": total_cost,
-        "resource_cost_penalty": 0.0,
-        "before_damage": comparison["before"]["total_damage"],
-        "after_damage": comparison["after"]["total_damage"],
-        "damage_formula_provenance": comparison["after"].get("formula_provenance", {}),
-        "runtime_exact": bool(comparison["after"].get("runtime_exact")),
-        "legality": "balanced_resource_and_state_gates_passed",
-    }, None
-
-
-def _score_action(action: Mapping[str, Any], profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+def _transition(
+    action: Mapping[str, Any], profile: dict[str, Any]
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, str | None]:
     if isinstance(action.get("state_patch"), Mapping):
         certificate = affordability_certificate(profile, action)
         try:
             after = apply_exact_action(profile, action)
         except (TypeError, ValueError) as error:
-            return None, f"invalid_state_patch:{error}"
-        return _score_after_state(action, profile, after, certificate)
-
-    if action.get("system") == "mounts" and action.get("action_type") == "upgrade_mount":
+            return None, None, f"invalid_state_patch:{error}"
+    elif action.get("system") == "mounts" and action.get("action_type") == "upgrade_mount":
         certificate = _legacy_cost_certificate(profile, action)
         after, reason = _simulate_legacy_mount_action(action, deepcopy(profile))
         if reason or after is None:
-            return None, reason
-        return _score_after_state(action, profile, after, certificate)
-    return None, f"missing_exact_after_state_bridge:{action.get('system')}:{action.get('action_type')}"
+            return None, None, reason
+    else:
+        return None, None, f"missing_exact_after_state_bridge:{action.get('system')}:{action.get('action_type')}"
+
+    if not certificate.get("balanced"):
+        return None, None, "unbalanced_or_negative_resource_ledger"
+    if not certificate.get("legal"):
+        missing = certificate.get("missing") or {}
+        reason = "insufficient_resources:" + ",".join(
+            f"{key}={value:g}" for key, value in sorted(missing.items())
+        )
+        return None, None, reason
+    return after, dict(certificate), None
 
 
 def _action_key(action: Mapping[str, Any]) -> str:
@@ -193,8 +160,6 @@ def _action_key(action: Mapping[str, Any]) -> str:
 
 
 def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
-    # Generated exact actions are authoritative. Legacy templates remain only
-    # for backward-compatible IDs while old callers migrate.
     combined = [*generate_exact_actions(profile), *load_source_pack_actions()]
     seen: set[str] = set()
     result: list[dict[str, Any]] = []
@@ -207,24 +172,64 @@ def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
+def _candidate(
+    action: Mapping[str, Any], certificate: Mapping[str, Any],
+    before: Mapping[str, Any], after: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    if not before.get("supported") or not after.get("supported"):
+        return None, f"before_or_after_state_not_scoreable:{before.get('reason') or after.get('reason') or 'unknown'}"
+    old = float(before["total_damage"])
+    new = float(after["total_damage"])
+    delta = new - old
+    consumed = dict(certificate.get("consumed") or {})
+    refunded = dict(certificate.get("refunded") or {})
+    return {
+        **dict(action),
+        "consumed_items": consumed,
+        "required_items": consumed,
+        "refunded_items": refunded,
+        "legality_certificate": dict(certificate),
+        "expected_dps_gain": delta,
+        "estimated_dps_value": delta,
+        "percent_damage_gain": delta / old * 100.0 if old else None,
+        "score": delta,
+        "total_cost_units": sum(float(value) for value in consumed.values()),
+        "resource_cost_penalty": 0.0,
+        "before_damage": old,
+        "after_damage": new,
+        "damage_formula_provenance": after.get("formula_provenance", {}),
+        "runtime_exact": bool(after.get("runtime_exact")),
+        "legality": "balanced_resource_and_state_gates_passed",
+    }, None
+
+
 def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) -> dict[str, Any]:
     profile = _profile_data(profile_input)
     actions = _all_actions(profile)
-    ranked_all: list[dict[str, Any]] = []
+    transitions: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
     rejected: list[dict[str, str]] = []
     for action in actions:
-        candidate, reason = _score_action(action, profile)
+        after, certificate, reason = _transition(action, profile)
+        if reason or after is None or certificate is None:
+            rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
+        else:
+            transitions.append((action, after, certificate))
+
+    reports = calculate_clan_expedition_damage_batch([profile, *[row[1] for row in transitions]])
+    before = reports[0]
+    ranked_all: list[dict[str, Any]] = []
+    for (action, _after_profile, certificate), after_report in zip(transitions, reports[1:]):
+        candidate, reason = _candidate(action, certificate, before, after_report)
         if candidate is None:
             rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
         else:
             ranked_all.append(candidate)
-    ranked_all.sort(
-        key=lambda row: (
-            -float(row["expected_dps_gain"]),
-            float(row["total_cost_units"]),
-            str(row["action_id"]),
-        )
-    )
+
+    ranked_all.sort(key=lambda row: (
+        -float(row["expected_dps_gain"]),
+        float(row["total_cost_units"]),
+        str(row["action_id"]),
+    ))
     ranked = ranked_all[: max(0, top_k)]
     best_spend = ranked_all[0] if ranked_all and float(ranked_all[0]["expected_dps_gain"]) > 0 else None
     baseline = {
@@ -251,10 +256,10 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
         "rejected_actions": rejected,
         "deduplicated_actions": [],
         "false_prunes": [],
-        "pruning_policy": "none; every generated legal exact after-state is scored",
+        "pruning_policy": "none; every legal exact after-state is batch-scored",
         "warnings": [
             "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
-            "A runtime_exact=false row used the auditable Python sIO port because the supplied runtime bundle was unavailable.",
+            "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
         ],
         "explanation": (
             f"{best_spend['action_id']} has the largest exact sIO Clan Expedition damage gain."
@@ -270,7 +275,7 @@ def optimize_source_pack_batch(
     return {
         "profiles": results,
         "numeric_backend": {
-            "backend": "deterministic_exact_sio_ce",
+            "backend": "deterministic_exact_sio_ce_batch",
             "requested_device": device,
             "learned_or_gpu_ranking_used": False,
             "final_winner_source": "exact_before_after_damage_only",
