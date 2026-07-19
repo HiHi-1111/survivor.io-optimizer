@@ -68,6 +68,7 @@ def test_build_oracle_request_preserves_exact_tech_and_uptime_context() -> None:
     assert request["activeSurvivor"] == "Venato"
     assert request["venato"] is True
     assert request["settings"]["revives"] == [40, 70, 90]
+    assert request["skipRuntime24804"] is False
 
 
 def test_known_snake_case_aliases_are_preserved() -> None:
@@ -77,6 +78,35 @@ def test_known_snake_case_aliases_are_preserved() -> None:
     request = build_oracle_request(profile)
     assert request["upgradedCollectibles"] == ["Lucky Charm"]
     assert request["activeSurvivor"] == "King"
+
+
+def test_post_24804_request_drops_raw_upgrade_context_and_needs_no_evolve_choice() -> None:
+    profile = {
+        "game_mode": "clan_expedition",
+        "sio_ce": {
+            "stats_stage": "post_24804_account_and_items",
+            "stats": {
+                "critDamage": 200,
+                "hpBulletBoost": 1.6,
+                "adrenaline": 12,
+                "poisonedUptime": 1,
+                "weakenedUptime": 0,
+                "shieldDamageUptime": 1,
+                "voidNeckBoostUptime": 1,
+            },
+            "attack": {"atkBase": 1000, "atkFinal": 0},
+            "techs": {"Energy Guidance System": {"deployed": True}},
+            "items": {"Armor": {"name": "Eternal Suit", "e": 1}},
+            "collectibles": {"Lucky Charm": {"stars": 8}},
+        },
+    }
+    request = build_oracle_request(profile)
+    assert request["skipRuntime24804"] is True
+    assert request["statsStage"] == "post_24804_account_and_items"
+    assert request["tech_input"] is None
+    assert request["items"] == {}
+    assert request["collectibles"] == {}
+    assert request["stats"]["hpBulletBoost"] == 1.6
 
 
 def test_missing_evolved_passive_choice_is_unknown_not_guessed() -> None:
@@ -117,10 +147,11 @@ def test_exact_runtime_runs_24804_before_final_ce_damage(tmp_path: Path) -> None
     )
     result = oracle.score_profile(_tech_profile())
     assert result["supported"] is True
-    assert result["total_damage"] > 0
+    assert result["total_damage"] == pytest.approx(147297659.83909208, rel=1e-12)
     assert result["formula_provenance"]["schema"] == ORACLE_SCHEMA
     assert result["formula_provenance"]["modules"] == [13024, 24804, 88426, 67727]
     assert result["formula_order"] == ["13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f"]
+    assert result["skipped_24804"] is False
     assert all(0 <= value <= 1 for value in result["uptime_values"].values())
     oracle.close()
 
@@ -169,4 +200,45 @@ def test_exact_runtime_applies_evolved_passive_final_transforms(tmp_path: Path) 
     assert result["uptime_values"]["poisonedUptime"] == 1
     assert result["uptime_values"]["weakenedUptime"] == 0
     assert result["uptime_values"]["chilledUptime"] == pytest.approx(0.5)
+    oracle.close()
+
+
+@pytest.mark.skipif(
+    not os.environ.get("SIO_TOOLS_BUNDLE") or shutil.which("node") is None,
+    reason="Exact supplied sIO bundle and Node are required for runtime integration.",
+)
+def test_post_24804_snapshot_is_not_transformed_a_second_time(tmp_path: Path) -> None:
+    profile = {
+        "game_mode": "clan_expedition",
+        "sio_ce": {
+            "stats_stage": "post_24804_account_and_items",
+            "stats": {
+                "critDamage": 200,
+                "hpBulletBoost": 1.6,
+                "adrenaline": 12,
+                "poisoned": 75,
+                "chilled": 45,
+                "poisonedUptime": 1,
+                "weakenedUptime": 0,
+                "chilledUptime": 0.5,
+                "shieldDamageUptime": 1,
+                "voidNeckBoostUptime": 1,
+            },
+            "attack": {"atkBase": 1000, "atkFinal": 0},
+            "techs": {"Energy Guidance System": {"deployed": True}},
+        },
+    }
+    oracle = SioCeRuntimeOracle(
+        bundle_path=Path(os.environ["SIO_TOOLS_BUNDLE"]),
+        cache_path=tmp_path / "oracle.jsonl",
+    )
+    result = oracle.score_profile(profile)
+    assert result["supported"] is True
+    assert result["skipped_24804"] is True
+    assert result["stats"]["hpBulletBoost"] == pytest.approx(1.6)
+    assert result["stats"]["adrenaline"] == pytest.approx(12)
+    assert result["stats"]["poisoned"] == pytest.approx(75)
+    assert result["stats"]["chilled"] == pytest.approx(45)
+    assert result["formula_modules"] == [88426, 67727]
+    assert result["formula_order"] == ["post_24804_snapshot", "88426.y", "67727.f"]
     oracle.close()
