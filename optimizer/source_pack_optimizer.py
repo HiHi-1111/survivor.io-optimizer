@@ -25,6 +25,7 @@ from optimizer.sio_exact_actions import (
 )
 from optimizer.sio_item_reallocations import generate_exhaustive_item_reallocations
 from optimizer.sio_mount_puzzle_bridge import apply_verified_mount_puzzle_stats
+from optimizer.sio_pet_configurations import generate_pet_configuration_actions
 from optimizer.sio_progression_frontiers import generate_progression_frontiers
 from optimizer.sio_survivor_configurations import plan_survivor_configurations
 from optimizer.sio_tech_configurations import generate_twinborn_mode_actions
@@ -208,20 +209,30 @@ def _all_actions(
     profile: Mapping[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]], dict[str, Any]]:
     survivor_plan = plan_survivor_configurations(profile)
-    survivor_summary = {
-        "complete": survivor_plan.complete,
-        "total_states": survivor_plan.total_states,
-        "max_states": survivor_plan.max_states,
-        "reason": survivor_plan.reason,
-        "main_candidates": list(survivor_plan.main_candidates),
-        "actions_generated": len(survivor_plan.actions),
-        "teamwork_search": "unordered_combinations",
+    pet_actions = generate_pet_configuration_actions(profile)
+    configuration_searches = {
+        "survivor_configurations": {
+            "complete": survivor_plan.complete,
+            "total_states": survivor_plan.total_states,
+            "max_states": survivor_plan.max_states,
+            "reason": survivor_plan.reason,
+            "main_candidates": list(survivor_plan.main_candidates),
+            "actions_generated": len(survivor_plan.actions),
+            "teamwork_search": "unordered_combinations",
+        },
+        "pet_configurations": {
+            "complete": True,
+            "actions_generated": len(pet_actions),
+            "identical_skill_roles": "unordered_combinations",
+            "distinct_skill_roles": "role_specific_assignments",
+        },
     }
     base_actions = [
         *generate_exact_actions(profile),
         *generate_exhaustive_item_reallocations(profile),
         *generate_twinborn_mode_actions(profile),
         *([deepcopy(action) for action in survivor_plan.actions] if survivor_plan.complete else []),
+        *pet_actions,
         *generate_tech_progression_actions(profile),
         *generate_progression_frontiers(profile),
         *load_source_pack_actions(),
@@ -262,7 +273,7 @@ def _all_actions(
         seen_keys[key] = action_id
         seen_ids.add(action_id)
         result.append(action)
-    return result, deduplicated, {"survivor_configurations": survivor_summary}
+    return result, deduplicated, configuration_searches
 
 
 def _candidate(
@@ -380,6 +391,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "Every exact directional two-slot item reallocation frontier is evaluated before structural deduplication.",
         "Twinborn modes are evaluated as complete per-tech assignments, never item permutations.",
         "Teamwork members are evaluated as unordered combinations; Main and Harmony remain role-specific.",
+        "Xeno support pets use combinations only inside identical skill-role groups; distinct skill roles remain directional.",
         "Choice chests use canonical multiset allocations, never pick-order permutations.",
         "Tetris layout geometry is excluded; only verified aggregate mount component stats are scored.",
         "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
