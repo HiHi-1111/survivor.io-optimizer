@@ -35,6 +35,8 @@ jobs:
           optimizer/sio_runtime_oracle.py
           optimizer/sio_item_pipeline.py
           optimizer/sio_exact_actions.py
+          optimizer/sio_combinations.py
+          optimizer/sio_choice_chests.py
           optimizer/sio_tech_progression.py
           optimizer/sio_progression_frontiers.py
           optimizer/sio_tetris.py
@@ -114,10 +116,13 @@ jobs:
             optimizer/sio_runtime_oracle.py
             optimizer/sio_ce_account.py
             optimizer/sio_item_pipeline.py
+            optimizer/sio_combinations.py
+            optimizer/sio_choice_chests.py
             optimizer/sio_tech_progression.py
             optimizer/sio_progression_frontiers.py
             optimizer/sio_tetris.py
             optimizer/source_pack_optimizer.py
+            optimizer/exact_training_labels.py
             knowledge/sio_runtime_manifest.json
             knowledge/sio_feature_registry.json
             knowledge/sio_worker_manifest.json
