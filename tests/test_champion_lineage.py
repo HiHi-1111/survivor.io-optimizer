@@ -11,6 +11,7 @@ from optimizer.champion_lineage import (
     train_child,
 )
 from optimizer.exact_training_labels import prepare_exact_training_rows
+from optimizer.learned_ranker import OnlineLinearRanker
 from optimizer.numeric_features import FEATURE_COLUMNS
 
 
@@ -67,6 +68,26 @@ def test_legacy_checkpoint_becomes_generation_zero_parent(tmp_path: Path) -> Non
     assert champion["bootstrap_source"] == "migrated_past_champion"
     assert champion["migrated_from"] == str(legacy)
     assert champion["weights"] == weights
+
+
+def test_online_ranker_always_inherits_nonzero_champion(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "learned_ranker.json"
+    ranker = OnlineLinearRanker(checkpoint)
+    assert ranker.inherited is True
+    assert ranker.parent_champion_id
+    assert any(abs(value) > 1e-12 for value in ranker.weights)
+    ranker.save()
+    payload = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert payload["can_replace_champion_directly"] is False
+    assert payload["role"] == "proposal_ordering_child_only"
+
+
+def test_zero_legacy_checkpoint_cannot_become_a_child_parent(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "learned_ranker.json"
+    checkpoint.write_text(json.dumps({"weights": [0.0] * len(FEATURE_COLUMNS)}), encoding="utf-8")
+    ranker = OnlineLinearRanker(checkpoint)
+    assert any(abs(value) > 1e-12 for value in ranker.weights)
+    assert ranker.parent_champion_id
 
 
 def test_exact_labels_are_removed_from_proposal_features() -> None:
