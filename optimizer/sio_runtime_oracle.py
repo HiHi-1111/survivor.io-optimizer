@@ -27,6 +27,7 @@ ORACLE_SCRIPT = ROOT / "tools" / "sio_runtime" / "sio_ce_oracle.js"
 DEFAULT_CACHE_ROOT = ROOT / ".cache" / "sio_runtime"
 DEFAULT_RESULT_CACHE = ROOT / ".cache" / "sio_runtime" / "ce_oracle_results.jsonl"
 ORACLE_SCHEMA = "sio_ce_oracle_v2"
+ORACLE_CACHE_SCHEMA = "sio_ce_oracle_cache_v3"
 SIO_FORMULA_ORDER = ("13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f")
 SIO_FORMULA_MODULES = (13024, 24804, 88426, 67727)
 SIO_ITEM_SLOTS = ("Weapon", "Armor", "Necklace", "Belt", "Gloves", "Boots")
@@ -326,6 +327,7 @@ class SioCeRuntimeOracle:
         self._runtime_root: Path | None = None
         self._bundle_hash: str | None = None
         self._node: str | None = None
+        self._oracle_source_hash: str | None = None
         self._cache = JsonlCache(self.cache_path, flush_every=25, max_file_bytes=256 * 1024 * 1024)
 
     def _prepare(self) -> None:
@@ -333,17 +335,27 @@ class SioCeRuntimeOracle:
             return
         if not ORACLE_SCRIPT.is_file():
             raise SioRuntimeUnavailable(f"Missing oracle script: {ORACLE_SCRIPT}")
+        self._oracle_source_hash = _sha256(ORACLE_SCRIPT)
         self._runtime_root, self._bundle_hash = ensure_extracted_bundle(self.bundle_path)
         self._node = find_node()
 
     def score_profiles(self, profiles: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
         requests = [build_oracle_request(profile) for profile in profiles]
+        if not ORACLE_SCRIPT.is_file():
+            raise SioRuntimeUnavailable(f"Missing oracle script: {ORACLE_SCRIPT}")
+        oracle_source_hash = _sha256(ORACLE_SCRIPT)
         results: list[dict[str, Any] | None] = [None] * len(requests)
         missing_requests: list[dict[str, Any]] = []
         missing_indices: list[int] = []
         missing_keys: list[str] = []
         for index, request in enumerate(requests):
-            key = stable_hash({"schema": ORACLE_SCHEMA, "request": request, "bundle": SIO_BUNDLE_SHA256})
+            key = stable_hash({
+                "cache_schema": ORACLE_CACHE_SCHEMA,
+                "oracle_schema": ORACLE_SCHEMA,
+                "oracle_source_sha256": oracle_source_hash,
+                "request": request,
+                "bundle": SIO_BUNDLE_SHA256,
+            })
             cached = self._cache.get(key)
             if cached is not None and isinstance(cached.get("result"), Mapping):
                 results[index] = deepcopy(dict(cached["result"]))
@@ -390,6 +402,7 @@ class SioCeRuntimeOracle:
                         "account_modules": list(result.get("account_assembly_modules") or []),
                         "oracle": "tools/sio_runtime/sio_ce_oracle.js",
                         "schema": ORACLE_SCHEMA,
+                        "oracle_source_sha256": oracle_source_hash,
                     },
                 }
                 results[index] = enriched
