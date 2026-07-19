@@ -3,8 +3,9 @@
 
 This is intentionally static and deterministic. It does not trust comments or a
 single status flag: it checks the source-locked manifest, feature registry, exact
-JavaScript oracle and Python fallback. When the supplied bundle is available it
-also verifies its SHA and required webpack module/token presence.
+JavaScript oracle, exact action frontiers and Python fallback. When the supplied
+bundle is available it also verifies its SHA and required webpack module/token
+presence.
 """
 from __future__ import annotations
 
@@ -33,19 +34,27 @@ REQUIRED_REGISTRY_IDS = {
     "normal_tech_resonance",
     "twinborn_tech_modes",
     "resonance_overload",
+    "tech_optimizer",
     "survivor_progression",
     "survivor_teamwork",
     "survivor_synergy_harmony",
+    "survivor_optimizer",
     "normal_pet_progression",
     "xeno_pets",
     "xeno_pet_skills",
     "collectibles",
     "custom_collection_sets",
+    "collectible_optimizer",
     "collectible_deconstructor",
     "mounts",
     "mount_puzzle_optimizer",
     "resource_and_refund_ledger",
     "source_calibration_samples",
+    "input_schema_and_aliases",
+    "exact_runtime_account_assembly",
+    "training_evidence_cleanup",
+    "champion_lineage",
+    "unsupported_modes",
 }
 EXACT_RUNTIME_BINDINGS = (
     "runtime.req(13024).T",
@@ -73,6 +82,13 @@ EXACT_ACCOUNT_BINDINGS = {
     "30396.i": "runtime.req(30396).i",
     "13024.T": "runtime.req(13024).T",
     "19425.a6": "runtime.req(19425).a6",
+}
+FRONTIER_BINDINGS = {
+    "Survivor frontiers": "generate_survivor_frontiers",
+    "Pet frontiers": "generate_pet_frontiers",
+    "Mount frontiers": "generate_mount_frontiers",
+    "Tech frontiers": "generate_tech_frontiers",
+    "combined progression frontiers": "generate_progression_frontiers",
 }
 
 
@@ -162,6 +178,9 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
     account_py = _source("optimizer/sio_ce_account.py")
     item_pipeline_py = _source("optimizer/sio_item_pipeline.py")
     constants_py = _source("optimizer/sio_ce_constants.py")
+    tech_py = _source("optimizer/sio_tech_progression.py")
+    frontier_py = _source("optimizer/sio_progression_frontiers.py")
+    source_optimizer_py = _source("optimizer/source_pack_optimizer.py")
     labels_py = _source("optimizer/exact_training_labels.py")
     state_py = _source("optimizer/player_state.py")
 
@@ -180,6 +199,13 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
         errors.append(f"manifest missing exact account functions: {missing_manifest_functions}")
     for function_name, token in EXACT_ACCOUNT_BINDINGS.items():
         _check_contains(errors, oracle_js, token, f"exact account function {function_name}")
+
+    for label, token in FRONTIER_BINDINGS.items():
+        _check_contains(errors, frontier_py, token, label)
+    _check_contains(errors, source_optimizer_py, "generate_progression_frontiers", "frontier optimizer integration")
+    _check_contains(errors, source_optimizer_py, "every legal exact after-state is batch-scored", "no-prune exact search")
+    _check_contains(errors, frontier_py, '"cumulative_frontier": True', "frontier provenance")
+    _check_contains(errors, tech_py, "math.inf, math.inf", "unpublished Overload gates remain unreachable")
 
     _check_contains(errors, oracle_py, 'ORACLE_SCHEMA = "sio_ce_oracle_v2"', "runtime bridge")
     _check_contains(errors, oracle_py, 'separators=(",", ":")', "runtime bridge compact JSON")
@@ -214,23 +240,24 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
     else:
         warnings.append("sIO bundle not present; static manifest/source audit only")
 
-    stale_claims = []
+    unknown_or_partial = []
     for row in registry:
         if not isinstance(row, dict):
             continue
-        status = str(row.get("status", ""))
-        if "generic_runtime_wrong" in status or "action_model_missing" in status:
-            stale_claims.append(str(row.get("id")))
-    if stale_claims:
-        warnings.append(f"registry has implementation statuses requiring review: {sorted(stale_claims)}")
+        status = str(row.get("action_status", ""))
+        if status in {"partial", "not_yet_automatic", "not_yet_implemented", "unknown_until_exact_return_table_is_supplied"}:
+            unknown_or_partial.append(str(row.get("id")))
+    if unknown_or_partial:
+        warnings.append(f"honest remaining action gaps: {sorted(unknown_or_partial)}")
 
     return {
-        "schema": "sio_runtime_coverage_audit_v1",
+        "schema": "sio_runtime_coverage_audit_v2",
         "ok": not errors,
         "manifest": str(MANIFEST_PATH.relative_to(ROOT)),
         "registry_entries": len(registry),
         "missing_registry_ids": missing_registry,
         "account_functions_checked": len(EXACT_ACCOUNT_BINDINGS),
+        "progression_frontiers_checked": sorted(FRONTIER_BINDINGS),
         "bundle": bundle_report,
         "errors": errors,
         "warnings": warnings,
