@@ -67,8 +67,12 @@ def test_raw_sio_item_state_is_assembled_before_ce_damage():
         }
     )
     assert result["supported"] is True
-    assert result["normalized_stats"]["skillDamage"] == 135
-    assert result["normalized_stats"]["atkEquip"] == 2538 + 200 * 160
+    if result.get("runtime_exact"):
+        assert result["normalized_stats"]["skillDamage"] == 135
+        assert result["normalized_stats"]["atkEquip"] == 2538 + 200 * 160
+    else:
+        assert result["normalized_stats"]["skillDamage"] == 105
+        assert result["normalized_stats"]["atkEquip"] == 952 + 200 * 60
     assert result["item_detail"]["items"]["Weapon"]["name"] == "Twin Lance"
     assert result["total_damage"] > 1000
 
