@@ -1,8 +1,9 @@
-"""Exact after-state ranking for source-pack actions.
+"""Exact legal after-state ranking for Clan Expedition actions.
 
-Only actions with a complete legal state transition and a scoreable sIO Clan
-Expedition after-state are ranked. Unsupported systems are returned with an
-explicit rejection reason instead of receiving heuristic points.
+The final winner is always the largest before/after sIO CE damage delta. Learned
+models may order future evaluation work elsewhere, but they cannot alter this
+module's winner. Unsupported or unaffordable actions are returned with an
+explicit rejection reason.
 """
 
 from __future__ import annotations
@@ -15,6 +16,12 @@ from typing import Any, Mapping
 
 from optimizer.player_state import PlayerState
 from optimizer.sio_ce_account import compare_clan_expedition_profiles
+from optimizer.sio_exact_actions import (
+    affordability_certificate,
+    apply_exact_action,
+    generate_exact_actions,
+    resource_counts,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PACK_DIR = ROOT / "knowledge" / "source_pack"
@@ -47,36 +54,6 @@ def _profile_data(profile: PlayerState | Mapping[str, Any]) -> dict[str, Any]:
     return deepcopy(dict(profile))
 
 
-def _resource_counts(profile: Mapping[str, Any]) -> dict[str, float]:
-    counts: dict[str, float] = {}
-    sections = [profile.get("resources", {})]
-    inventory = profile.get("inventory", {})
-    if isinstance(inventory, Mapping):
-        sections.append(inventory.get("items", {}))
-    for section in sections:
-        if not isinstance(section, Mapping):
-            continue
-        for key, value in section.items():
-            amount = value
-            if isinstance(value, Mapping):
-                amount = value.get("count", value.get("quantity", 0))
-            if isinstance(amount, (int, float)):
-                counts[str(key)] = counts.get(str(key), 0.0) + float(amount)
-    return counts
-
-
-def _cost_gate(action: Mapping[str, Any], resources: Mapping[str, float]) -> str | None:
-    for cost in action.get("costs", []) or []:
-        resource_id = str(cost.get("resource_id"))
-        required = float(cost.get("amount", 0) or 0)
-        available = float(resources.get(resource_id, 0) or 0)
-        if required < 0:
-            return f"invalid_negative_cost:{resource_id}"
-        if available < required:
-            return f"insufficient_{resource_id}:requires_{required:g}:has_{available:g}"
-    return None
-
-
 def _mount_container(profile: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     mounts = profile.setdefault("mounts", {})
     if not isinstance(mounts, dict):
@@ -89,21 +66,14 @@ def _mount_container(profile: dict[str, Any]) -> tuple[dict[str, Any], dict[str,
     return mounts, data
 
 
-def _mount_state(profile: dict[str, Any], mount_id: str) -> dict[str, Any] | None:
-    _mounts, data = _mount_container(profile)
-    name = MOUNT_IDS.get(mount_id, mount_id)
-    state = data.get(name)
-    if isinstance(state, str):
-        return {"enabled": True, "rarity": state, "stars": STAR_LABELS.index(state) if state in STAR_LABELS else 0}
-    return state if isinstance(state, dict) else None
-
-
 def _target_star(action: Mapping[str, Any]) -> int | None:
     label = str(action.get("unlock_target", ""))
     return STAR_LABELS.index(label) if label in STAR_LABELS else None
 
 
-def _simulate_mount_action(action: Mapping[str, Any], profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+def _simulate_legacy_mount_action(
+    action: Mapping[str, Any], profile: dict[str, Any]
+) -> tuple[dict[str, Any] | None, str | None]:
     target_id = str(action.get("target_id", ""))
     name = MOUNT_IDS.get(target_id)
     if not name:
@@ -122,7 +92,8 @@ def _simulate_mount_action(action: Mapping[str, Any], profile: dict[str, Any]) -
     current = int(current)
     if current != target - 1:
         required = STAR_LABELS[target - 1] if target > 0 else "unowned"
-        return None, f"star_gate:requires_{required}:has_{STAR_LABELS[current] if 0 <= current < len(STAR_LABELS) else current}"
+        actual = STAR_LABELS[current] if 0 <= current < len(STAR_LABELS) else current
+        return None, f"star_gate:requires_{required}:has_{actual}"
     state["stars"] = target
     state["rarity"] = STAR_LABELS[target]
     data[name] = state
@@ -130,23 +101,51 @@ def _simulate_mount_action(action: Mapping[str, Any], profile: dict[str, Any]) -
     return profile, None
 
 
-def _score_action(action: dict[str, Any], profile: dict[str, Any], resources: Mapping[str, float]) -> tuple[dict[str, Any] | None, str | None]:
-    cost_reason = _cost_gate(action, resources)
-    if cost_reason:
-        return None, cost_reason
-    if action.get("system") != "mounts" or action.get("action_type") != "upgrade_mount":
-        return None, f"missing_exact_after_state_bridge:{action.get('system')}:{action.get('action_type')}"
-    after, reason = _simulate_mount_action(action, deepcopy(profile))
-    if reason or after is None:
-        return None, reason
+def _legacy_cost_certificate(profile: Mapping[str, Any], action: Mapping[str, Any]) -> dict[str, Any]:
+    available = resource_counts(profile)
+    consumed = {
+        str(cost.get("resource_id")): float(cost.get("amount", 0) or 0)
+        for cost in action.get("costs", []) or []
+    }
+    missing = {
+        key: amount - available.get(key, 0.0)
+        for key, amount in consumed.items()
+        if amount < 0 or available.get(key, 0.0) + 1e-9 < amount
+    }
+    return {
+        "legal": not missing,
+        "available": available,
+        "consumed": consumed,
+        "refunded": {},
+        "missing": missing,
+        "balanced": all(value >= 0 for value in consumed.values()),
+    }
+
+
+def _score_after_state(
+    action: Mapping[str, Any], profile: dict[str, Any], after: dict[str, Any], certificate: Mapping[str, Any]
+) -> tuple[dict[str, Any] | None, str | None]:
+    if not certificate.get("balanced"):
+        return None, "unbalanced_or_negative_resource_ledger"
+    if not certificate.get("legal"):
+        missing = certificate.get("missing") or {}
+        return None, "insufficient_resources:" + ",".join(f"{key}={value:g}" for key, value in sorted(missing.items()))
     comparison = compare_clan_expedition_profiles(profile, after)
     if not comparison.get("supported"):
-        return None, "before_or_after_state_not_scoreable"
+        before_reason = comparison.get("before", {}).get("reason")
+        after_reason = comparison.get("after", {}).get("reason")
+        return None, f"before_or_after_state_not_scoreable:{before_reason or after_reason or 'unknown'}"
     delta = float(comparison["delta"])
     percent = comparison.get("percent_gain")
-    total_cost = sum(float(cost.get("amount", 0) or 0) for cost in action.get("costs", []) or [])
+    consumed = dict(certificate.get("consumed") or {})
+    refunded = dict(certificate.get("refunded") or {})
+    total_cost = sum(float(value) for value in consumed.values())
     return {
-        **action,
+        **dict(action),
+        "consumed_items": consumed,
+        "required_items": consumed,
+        "refunded_items": refunded,
+        "legality_certificate": dict(certificate),
         "expected_dps_gain": delta,
         "estimated_dps_value": delta,
         "percent_damage_gain": percent,
@@ -155,25 +154,79 @@ def _score_action(action: dict[str, Any], profile: dict[str, Any], resources: Ma
         "resource_cost_penalty": 0.0,
         "before_damage": comparison["before"]["total_damage"],
         "after_damage": comparison["after"]["total_damage"],
-        "damage_formula_provenance": comparison["after"]["formula_provenance"],
-        "legality": "resource_and_state_gates_passed",
+        "damage_formula_provenance": comparison["after"].get("formula_provenance", {}),
+        "runtime_exact": bool(comparison["after"].get("runtime_exact")),
+        "legality": "balanced_resource_and_state_gates_passed",
     }, None
+
+
+def _score_action(action: Mapping[str, Any], profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    if isinstance(action.get("state_patch"), Mapping):
+        certificate = affordability_certificate(profile, action)
+        try:
+            after = apply_exact_action(profile, action)
+        except (TypeError, ValueError) as error:
+            return None, f"invalid_state_patch:{error}"
+        return _score_after_state(action, profile, after, certificate)
+
+    if action.get("system") == "mounts" and action.get("action_type") == "upgrade_mount":
+        certificate = _legacy_cost_certificate(profile, action)
+        after, reason = _simulate_legacy_mount_action(action, deepcopy(profile))
+        if reason or after is None:
+            return None, reason
+        return _score_after_state(action, profile, after, certificate)
+    return None, f"missing_exact_after_state_bridge:{action.get('system')}:{action.get('action_type')}"
+
+
+def _action_key(action: Mapping[str, Any]) -> str:
+    if isinstance(action.get("state_patch"), Mapping):
+        return json.dumps(
+            {
+                "patch": action.get("state_patch"),
+                "consumed": action.get("consumed_items"),
+                "refunded": action.get("refunded_items"),
+            },
+            sort_keys=True,
+            default=str,
+        )
+    return str(action.get("action_id"))
+
+
+def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
+    # Generated exact actions are authoritative. Legacy templates remain only
+    # for backward-compatible IDs while old callers migrate.
+    combined = [*generate_exact_actions(profile), *load_source_pack_actions()]
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for action in combined:
+        key = _action_key(action)
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(dict(action))
+    return result
 
 
 def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) -> dict[str, Any]:
     profile = _profile_data(profile_input)
-    resources = _resource_counts(profile)
-    ranked: list[dict[str, Any]] = []
+    actions = _all_actions(profile)
+    ranked_all: list[dict[str, Any]] = []
     rejected: list[dict[str, str]] = []
-    for action in load_source_pack_actions():
-        candidate, reason = _score_action(action, profile, resources)
+    for action in actions:
+        candidate, reason = _score_action(action, profile)
         if candidate is None:
             rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
         else:
-            ranked.append(candidate)
-    ranked.sort(key=lambda row: (-float(row["expected_dps_gain"]), float(row["total_cost_units"]), str(row["action_id"])))
-    ranked = ranked[: max(0, top_k)]
-    best_spend = ranked[0] if ranked and float(ranked[0]["expected_dps_gain"]) > 0 else None
+            ranked_all.append(candidate)
+    ranked_all.sort(
+        key=lambda row: (
+            -float(row["expected_dps_gain"]),
+            float(row["total_cost_units"]),
+            str(row["action_id"]),
+        )
+    )
+    ranked = ranked_all[: max(0, top_k)]
+    best_spend = ranked_all[0] if ranked_all and float(ranked_all[0]["expected_dps_gain"]) > 0 else None
     baseline = {
         "action_id": "save_hold_no_op",
         "system": "baseline",
@@ -181,6 +234,9 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
         "expected_dps_gain": 0.0,
         "score": 0.0,
         "costs": [],
+        "consumed_items": {},
+        "refunded_items": {},
+        "legality_certificate": {"legal": True, "balanced": True, "missing": {}},
     }
     return {
         "best": best_spend,
@@ -189,19 +245,20 @@ def _optimize_one(profile_input: PlayerState | Mapping[str, Any], top_k: int) ->
         "no_action_recommended": best_spend is None,
         "ranked_actions": ranked,
         "ranked_alternatives": ranked[1:] if best_spend else ranked,
-        "templates_considered": len(load_source_pack_actions()),
-        "actionable_count": len(ranked),
+        "templates_considered": len(actions),
+        "actionable_count": len(ranked_all),
         "rejected_count": len(rejected),
         "rejected_actions": rejected,
         "deduplicated_actions": [],
         "false_prunes": [],
-        "pruning_policy": "none; exact legal after-states only",
+        "pruning_policy": "none; every generated legal exact after-state is scored",
         "warnings": [
-            "Only exact mount upgrade after-states are bridged today; all other systems remain unknown rather than heuristically ranked."
+            "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
+            "A runtime_exact=false row used the auditable Python sIO port because the supplied runtime bundle was unavailable.",
         ],
         "explanation": (
             f"{best_spend['action_id']} has the largest exact sIO Clan Expedition damage gain."
-            if best_spend else "No legal source-pack action produced positive exact Clan Expedition damage."
+            if best_spend else "No legal action beat the mandatory zero-cost no-op baseline."
         ),
     }
 
@@ -213,9 +270,10 @@ def optimize_source_pack_batch(
     return {
         "profiles": results,
         "numeric_backend": {
-            "backend": "deterministic_cpu_exact_sio_ce",
+            "backend": "deterministic_exact_sio_ce",
             "requested_device": device,
             "learned_or_gpu_ranking_used": False,
+            "final_winner_source": "exact_before_after_damage_only",
         },
         "profile_feature_matrix_shape": [0, 0],
         "inventory_feature_matrix_shape": [0, 0],
