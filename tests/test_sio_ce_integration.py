@@ -50,6 +50,28 @@ def test_damage_engine_delegates_to_sio_ce_formula():
     assert result["total_damage"] == pytest.approx(1320)
 
 
+def test_raw_sio_item_state_is_assembled_before_ce_damage():
+    result = estimate_damage_totals(
+        {
+            "game_mode": "clan_expedition",
+            "sio_ce": {
+                "stats_stage": "raw_profile",
+                "max_gear": 200,
+                "items": {
+                    "Weapon": {"name": "Twin Lance", "e": 5, "v": 0, "c": 0, "x": 0}
+                },
+                "attack": {"atkBase": 1000, "atkFinal": 0},
+                "passive_multiplier": 1.0,
+            },
+        }
+    )
+    assert result["supported"] is True
+    assert result["normalized_stats"]["skillDamage"] == 105
+    assert result["normalized_stats"]["atkEquip"] == 952 + 200 * 60
+    assert result["item_detail"]["items"]["Weapon"]["name"] == "Twin Lance"
+    assert result["total_damage"] > 1000
+
+
 def test_legacy_stat_helper_uses_expected_crit_formula():
     assert estimate_damage_score({"atk": 1000, "crit_rate": 0.5, "crit_damage": 3.0}) == 2000
 
