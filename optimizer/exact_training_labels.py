@@ -51,6 +51,18 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(_stable(value).encode("utf-8")).hexdigest()
 
 
+def _contains_layout_only_data(value: Any) -> bool:
+    """Detect exact layout keys without substring false positives."""
+    if isinstance(value, Mapping):
+        return any(
+            str(key) in LAYOUT_ONLY_KEYS or _contains_layout_only_data(item)
+            for key, item in value.items()
+        )
+    if isinstance(value, (list, tuple)):
+        return any(_contains_layout_only_data(item) for item in value)
+    return False
+
+
 def _strip_layout_only_data(value: Any) -> Any:
     """Recursively remove placement geometry from a feature-extraction copy.
 
@@ -145,7 +157,7 @@ def prepare_exact_training_rows(
             )
             candidate["exact_damage_delta"] = _delta(candidate)
             candidate["features"] = _proposal_features(candidate)
-            if any(key in _stable(raw_candidate) for key in LAYOUT_ONLY_KEYS):
+            if _contains_layout_only_data(raw_candidate):
                 candidate["training_exclusions"] = ["mount_puzzle_layout_geometry"]
             prepared.append(candidate)
         if not prepared:
