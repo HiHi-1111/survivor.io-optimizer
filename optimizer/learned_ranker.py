@@ -2,8 +2,8 @@
 
 Exact sIO CE damage always chooses the final optimizer winner. Every enabled
 ranker inherits the immutable lineage champion before it can observe a sample;
-there is no zero-weight birth path. Legacy checkpoints may seed generation zero
-only when they contain a finite non-zero model.
+there is no zero-weight birth path. A saved working child may resume only while
+its recorded parent is still the current champion.
 """
 
 from __future__ import annotations
@@ -45,8 +45,8 @@ class OnlineLinearRanker:
 
         from optimizer.champion_lineage import ChampionLineage
 
-        legacy_paths: list[Path] = []
-        legacy_payload: dict[str, Any] | None = None
+        working_payload: dict[str, Any] | None = None
+        working_weights: list[float] | None = None
         if checkpoint_path.is_file():
             try:
                 payload = json.loads(checkpoint_path.read_text(encoding="utf-8"))
@@ -54,21 +54,47 @@ class OnlineLinearRanker:
                 if len(stored) == len(FEATURE_COLUMNS):
                     values = [float(value) for value in stored]
                     if all(math.isfinite(value) for value in values) and any(abs(value) > 1e-12 for value in values):
-                        legacy_paths.append(checkpoint_path)
-                        legacy_payload = payload
+                        working_payload = payload
+                        working_weights = values
             except (OSError, ValueError, TypeError):
-                legacy_payload = None
+                working_payload = None
+                working_weights = None
 
-        champion = ChampionLineage(self.lineage_root).ensure_genesis(legacy_paths)
-        self.weights = [float(value) for value in champion["weights"]]
-        if not any(abs(value) > 1e-12 for value in self.weights):
+        # A pre-lineage non-zero checkpoint may seed generation zero once. A
+        # zero checkpoint is ignored and replaced with the safe non-zero prior.
+        legacy_paths = []
+        if working_payload is not None and not working_payload.get("parent_champion_id"):
+            legacy_paths.append(checkpoint_path)
+        lineage = ChampionLineage(self.lineage_root)
+        champion = lineage.ensure_genesis(legacy_paths)
+        champion_id = str(champion["champion_id"])
+        champion_weights = [float(value) for value in champion["weights"]]
+        if not any(abs(value) > 1e-12 for value in champion_weights):
             raise RuntimeError("A proposal ranker cannot inherit a zero checkpoint.")
-        self.parent_champion_id = str(champion["champion_id"])
+
+        can_resume_child = (
+            working_payload is not None
+            and working_weights is not None
+            and str(working_payload.get("parent_champion_id") or "") == champion_id
+            and bool(working_payload.get("inherited_from_champion"))
+            and working_payload.get("can_replace_champion_directly") is False
+        )
+        if can_resume_child:
+            self.weights = working_weights
+            self.samples = int(working_payload.get("samples", 0))
+            self.updates = int(working_payload.get("updates", 0))
+            self.loaded = True
+        else:
+            self.weights = champion_weights
+            self.loaded = bool(
+                champion.get("bootstrap_source") == "migrated_past_champion"
+                or champion.get("generation", 0) > 0
+            )
+            if working_payload is not None and champion.get("migrated_from") == str(checkpoint_path):
+                self.samples = int(working_payload.get("samples", 0))
+                self.updates = int(working_payload.get("updates", 0))
+        self.parent_champion_id = champion_id
         self.inherited = True
-        self.loaded = bool(champion.get("bootstrap_source") == "migrated_past_champion" or champion.get("generation", 0) > 0)
-        if legacy_payload is not None and champion.get("migrated_from") == str(checkpoint_path):
-            self.samples = int(legacy_payload.get("samples", 0))
-            self.updates = int(legacy_payload.get("updates", 0))
 
     def observe(self, rows: list[dict[str, Any]], winner_ids: set[str]) -> bool:
         if not self.enabled or not rows or not winner_ids:
