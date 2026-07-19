@@ -1,7 +1,7 @@
 """Clan Expedition damage entry points backed by the supplied sIO formula.
 
 This module intentionally exposes the legacy public names, but all whole-profile
-scoring is delegated to :mod:`optimizer.sio_ce_damage`. Other combat modes are
+scoring is delegated to :mod:`optimizer.sio_ce_account`. Other combat modes are
 not supported and no generic breakpoint or rarity score is substituted.
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping
 
-from optimizer.sio_ce_damage import (
+from optimizer.sio_ce_account import (
     UnsupportedGameModeError,
     calculate_clan_expedition_damage,
 )
