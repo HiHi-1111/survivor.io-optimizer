@@ -12,6 +12,7 @@ class FlexibleStateModel(BaseModel):
 
 
 class PlayerBuildStats(FlexibleStateModel):
+    # Legacy/simple input remains accepted, while extra sIO fields are retained.
     atk: float = 0
     crit_rate: float = 0
     crit_damage: float = 0
@@ -71,6 +72,23 @@ class PlayerInventory(FlexibleStateModel):
     items: dict[str, Any] = Field(default_factory=dict)
 
 
+class PlayerMountSetup(FlexibleStateModel):
+    """sIO-compatible mount state: active mount plus per-mount board data."""
+
+    active: str | None = None
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+class PlayerSioCE(FlexibleStateModel):
+    """Inputs for the exact sIO Clan Expedition formula."""
+
+    stats_stage: str = "unknown"
+    stats: dict[str, Any] = Field(default_factory=dict)
+    attack: dict[str, Any] = Field(default_factory=dict)
+    direct_skill_factors: dict[str, Any] = Field(default_factory=dict)
+    passive_multiplier: float | None = None
+
+
 class PlayerState(FlexibleStateModel):
     build_stats: PlayerBuildStats = Field(default_factory=PlayerBuildStats)
     gear: PlayerGear = Field(default_factory=PlayerGear)
@@ -78,10 +96,13 @@ class PlayerState(FlexibleStateModel):
     pets: PlayerPetSetup = Field(default_factory=PlayerPetSetup)
     tech_parts: PlayerTechSetup = Field(default_factory=PlayerTechSetup)
     collectibles: PlayerCollectibles = Field(default_factory=PlayerCollectibles)
+    mounts: PlayerMountSetup = Field(default_factory=PlayerMountSetup)
+    sio_ce: PlayerSioCE = Field(default_factory=PlayerSioCE)
     resources: PlayerResources = Field(default_factory=PlayerResources)
     inventory: PlayerInventory = Field(default_factory=PlayerInventory)
     owned_items: list[str] = Field(default_factory=list)
-    goal_scenario: str = "scenario_1"
+    game_mode: str = "clan_expedition"
+    goal_scenario: str = "clan_expedition"
     notes: str = ""
 
 
