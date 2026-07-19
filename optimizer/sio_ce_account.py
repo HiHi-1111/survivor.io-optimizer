@@ -7,7 +7,7 @@ teacher/oracle, including Twinborn, Overload and evolved-passive timing.
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from optimizer.sio_ce_constants import SIO_BASE_STATS
 from optimizer.sio_ce_damage import (
@@ -23,7 +23,7 @@ from optimizer.sio_pets import assemble_sio_pet_stats, pet_state
 from optimizer.sio_runtime_oracle import (
     SioRuntimeInputError,
     SioRuntimeUnavailable,
-    score_profile_exact,
+    default_oracle,
 )
 from optimizer.sio_survivors import (
     assemble_sio_skill_evo_stats,
@@ -34,10 +34,9 @@ from optimizer.sio_survivors import (
 
 def _number(value: Any, default: float = 0.0) -> float:
     try:
-        result = float(value)
+        return float(value)
     except (TypeError, ValueError):
         return default
-    return result
 
 
 def _add(target: dict[str, Any], source: Mapping[str, Any] | None) -> None:
@@ -69,24 +68,6 @@ def _has_mount_state(profile: Mapping[str, Any]) -> bool:
 def _has_tech_state(profile: Mapping[str, Any]) -> bool:
     sio = _sio(profile)
     return bool(sio.get("tech_input") or sio.get("techs") or profile.get("techs") or profile.get("tech"))
-
-
-def _raw_systems_present(profile: Mapping[str, Any]) -> bool:
-    sio = _sio(profile)
-    pet = pet_state(profile)
-    return bool(
-        item_state_from_profile(profile)
-        or hero_state_from_profile(profile)
-        or collectible_state(profile)
-        or pet.get("active")
-        or pet.get("main_pet")
-        or profile.get("skills")
-        or profile.get("evoTree")
-        or sio.get("skills")
-        or sio.get("evoTree")
-        or _has_mount_state(profile)
-        or _has_tech_state(profile)
-    )
 
 
 def _explicit_stats(profile: Mapping[str, Any]) -> dict[str, Any]:
@@ -149,9 +130,8 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     warnings.extend(mount_result.get("warnings", []))
     sio["stats"] = stats
     sio["stats_stage"] = "post_24804"
-    # Mount effects are now inside stats, so raw mounts are hidden from the core
-    # Python calculator to avoid a second aggregation. Account detail preserves
-    # the original board result.
+    # Mount effects are already inside stats. Hide raw mounts from the core
+    # calculator so they cannot be applied twice.
     sio.pop("mounts", None)
     prepared["mounts"] = {}
     prepared["sio_ce"] = sio
@@ -167,8 +147,7 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     return prepared
 
 
-def _runtime_result(prepared: Mapping[str, Any]) -> dict[str, Any]:
-    exact = score_profile_exact(prepared)
+def _report_from_exact(prepared: Mapping[str, Any], exact: Mapping[str, Any]) -> dict[str, Any]:
     if not exact.get("supported"):
         raise SioRuntimeUnavailable(str(exact.get("error") or "sIO runtime returned unsupported"))
     sio = _sio(prepared)
@@ -177,9 +156,8 @@ def _runtime_result(prepared: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(row, Mapping):
             attack.update(row)
     stats = dict(exact.get("stats") or {})
-    # Reuse the Python core only to expose the stat multiplier buckets. Its
-    # total is deliberately discarded because the runtime total includes the
-    # evolved-passive direct-damage correction from module 67727.
+    # Use the Python port only for human-readable multiplier buckets. The total
+    # below always comes from runtime module 67727.
     breakdown_profile = deepcopy(dict(prepared))
     breakdown_sio = dict(_sio(breakdown_profile))
     breakdown_sio["stats"] = stats
@@ -214,27 +192,21 @@ def _runtime_result(prepared: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def calculate_clan_expedition_damage(profile: Mapping[str, Any]) -> dict[str, Any]:
-    prepared = prepare_sio_ce_profile(profile)
-    pipeline_warnings = list(prepared.get("_sio_pipeline_warnings", []))
-    runtime_error: str | None = None
-    try:
-        result = _runtime_result(prepared)
-        formula_pipeline = "sio_account_assembly_then_24804_then_runtime_13024_88426_67727"
-    except (SioRuntimeUnavailable, SioRuntimeInputError, OSError, ValueError) as error:
-        runtime_error = str(error)
-        result = calculate_ce_core(prepared)
-        formula_pipeline = "partial_python_sio_account_assembly_then_24804_67727_88426"
-        pipeline_warnings.append(f"Exact sIO runtime oracle unavailable: {runtime_error}")
-        if _has_tech_state(profile):
-            result = {
-                **result,
-                "supported": False,
-                "reason": "exact_sio_runtime_required_for_tech_twinborn_overload",
-                "required_fields": ["valid sIO bundle", "Node.js", "exact sIO tech schema", "evolvePassives"],
-            }
-
-    result["warnings"] = sorted(set(list(result.get("warnings", [])) + pipeline_warnings))
+def _decorate_report(
+    original: Mapping[str, Any], prepared: Mapping[str, Any], result: dict[str, Any],
+    *, formula_pipeline: str, runtime_error: str | None = None,
+) -> dict[str, Any]:
+    warnings = list(prepared.get("_sio_pipeline_warnings", []))
+    if runtime_error:
+        warnings.append(f"Exact sIO runtime oracle unavailable: {runtime_error}")
+    if runtime_error and _has_tech_state(original):
+        result = {
+            **result,
+            "supported": False,
+            "reason": "exact_sio_runtime_required_for_tech_twinborn_overload",
+            "required_fields": ["valid sIO bundle", "Node.js", "exact sIO tech schema", "evolvePassives"],
+        }
+    result["warnings"] = sorted(set(list(result.get("warnings", [])) + warnings))
     detail = prepared.get("_sio_account_detail", {})
     result["account_detail"] = detail
     if detail:
@@ -246,12 +218,56 @@ def calculate_clan_expedition_damage(profile: Mapping[str, Any]) -> dict[str, An
     return result
 
 
+def calculate_clan_expedition_damage_batch(
+    profiles: Iterable[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    originals = [dict(profile) for profile in profiles]
+    prepared = [prepare_sio_ce_profile(profile) for profile in originals]
+    try:
+        exact_rows = default_oracle().score_profiles(prepared)
+    except (SioRuntimeUnavailable, SioRuntimeInputError, OSError, ValueError) as error:
+        message = str(error)
+        return [
+            _decorate_report(
+                original,
+                ready,
+                calculate_ce_core(ready),
+                formula_pipeline="partial_python_sio_account_assembly_then_24804_67727_88426",
+                runtime_error=message,
+            )
+            for original, ready in zip(originals, prepared)
+        ]
+
+    reports: list[dict[str, Any]] = []
+    for original, ready, exact in zip(originals, prepared, exact_rows):
+        try:
+            report = _report_from_exact(ready, exact)
+            reports.append(_decorate_report(
+                original,
+                ready,
+                report,
+                formula_pipeline="sio_account_assembly_then_24804_then_runtime_13024_88426_67727",
+            ))
+        except (SioRuntimeUnavailable, SioRuntimeInputError, OSError, ValueError) as error:
+            reports.append(_decorate_report(
+                original,
+                ready,
+                calculate_ce_core(ready),
+                formula_pipeline="partial_python_sio_account_assembly_then_24804_67727_88426",
+                runtime_error=str(error),
+            ))
+    return reports
+
+
+def calculate_clan_expedition_damage(profile: Mapping[str, Any]) -> dict[str, Any]:
+    return calculate_clan_expedition_damage_batch([profile])[0]
+
+
 def compare_clan_expedition_profiles(
     before: Mapping[str, Any],
     after: Mapping[str, Any],
 ) -> dict[str, Any]:
-    before_result = calculate_clan_expedition_damage(before)
-    after_result = calculate_clan_expedition_damage(after)
+    before_result, after_result = calculate_clan_expedition_damage_batch([before, after])
     if not before_result.get("supported") or not after_result.get("supported"):
         return {
             "supported": False,
@@ -275,6 +291,7 @@ def compare_clan_expedition_profiles(
 __all__ = [
     "UnsupportedGameModeError",
     "calculate_clan_expedition_damage",
+    "calculate_clan_expedition_damage_batch",
     "compare_clan_expedition_profiles",
     "prepare_sio_ce_profile",
 ]
