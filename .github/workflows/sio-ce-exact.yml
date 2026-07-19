@@ -96,7 +96,7 @@ jobs:
           assert any(abs(float(value)) > 1e-12 for value in child['inherited_weights'])
           assert (root / 'report.json').is_file()
           PY
-      - name: Upload validation logs
+      - name: Upload validation logs and exact runtime snapshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -104,6 +104,11 @@ jobs:
           path: |
             *.log
             sio-runtime-audit-*.json
+            tools/sio_runtime/sio_ce_oracle.js
+            optimizer/sio_runtime_oracle.py
+            optimizer/sio_ce_account.py
+            optimizer/sio_item_pipeline.py
+            knowledge/sio_runtime_manifest.json
           if-no-files-found: error
           retention-days: 7
       - name: Verify lineage CLI
