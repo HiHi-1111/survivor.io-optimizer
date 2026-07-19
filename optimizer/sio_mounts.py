@@ -16,6 +16,16 @@ from optimizer.sio_ce_constants import (
     SIO_DIRECT_DAMAGE_COEFFICIENTS,
 )
 
+MOUNT_ALIASES = {
+    "doomsteed": "Doomsteed",
+    "Doomsteed": "Doomsteed",
+    "hoverboard": "Tech Hoverboard",
+    "tech_hoverboard": "Tech Hoverboard",
+    "Tech Hoverboard": "Tech Hoverboard",
+    "electric_scooter": "Electric Scooter",
+    "Electric Scooter": "Electric Scooter",
+}
+
 
 def _number(value: Any, default: float = 0.0) -> float:
     if value is None or isinstance(value, bool):
@@ -43,6 +53,18 @@ def _line_effects(name: str, completed_lines: int) -> dict[str, float]:
     return result
 
 
+def _normalized_mount_data(mounts: Mapping[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    active_raw = mounts.get("active")
+    active = MOUNT_ALIASES.get(str(active_raw), str(active_raw)) if active_raw else None
+    raw = mounts.get("data") if isinstance(mounts.get("data"), Mapping) else mounts
+    data: dict[str, Any] = {}
+    for key, value in raw.items():
+        if key == "active":
+            continue
+        data[MOUNT_ALIASES.get(str(key), str(key))] = value
+    return active, data
+
+
 def aggregate_mount_stats(mounts: Mapping[str, Any] | None) -> dict[str, Any]:
     """Apply active mount, undeployed sync, line effects and mount damage.
 
@@ -53,14 +75,13 @@ def aggregate_mount_stats(mounts: Mapping[str, Any] | None) -> dict[str, Any]:
     if not isinstance(mounts, Mapping):
         return {"stats": {}, "detail": {}, "warnings": []}
 
-    active = mounts.get("active")
-    data = mounts.get("data") if isinstance(mounts.get("data"), Mapping) else mounts
+    active, data = _normalized_mount_data(mounts)
     totals: dict[str, float] = {}
     details: dict[str, Any] = {}
     warnings: list[str] = []
 
     for name, definition in MOUNT_DEFINITIONS.items():
-        state = data.get(name, {}) if isinstance(data, Mapping) else {}
+        state = data.get(name, {})
         if not isinstance(state, Mapping) or not bool(state.get("enabled", False)):
             continue
 
@@ -108,3 +129,6 @@ def aggregate_mount_stats(mounts: Mapping[str, Any] | None) -> dict[str, Any]:
             "mount_damage": mount_damage,
         }
     return {"stats": totals, "detail": details, "warnings": warnings}
+
+
+__all__ = ["MOUNT_ALIASES", "aggregate_mount_stats"]
