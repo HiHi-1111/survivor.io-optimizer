@@ -41,6 +41,7 @@ jobs:
           optimizer/sio_tech_progression.py
           optimizer/sio_tech_configurations.py
           optimizer/sio_survivor_configurations.py
+          optimizer/sio_pet_configurations.py
           optimizer/sio_progression_frontiers.py
           optimizer/sio_tetris.py
           optimizer/sio_mount_puzzle_bridge.py
@@ -138,6 +139,7 @@ jobs:
             optimizer/sio_tech_progression.py
             optimizer/sio_tech_configurations.py
             optimizer/sio_survivor_configurations.py
+            optimizer/sio_pet_configurations.py
             optimizer/sio_progression_frontiers.py
             optimizer/sio_tetris.py
             optimizer/sio_mount_puzzle_bridge.py
