@@ -12,8 +12,9 @@ def _profile(*, scooter_stats=None, scooter_shards=20):
     return {
         "game_mode": "clan_expedition",
         "sio_ce": {
-            "stats_stage": "post_24804",
+            "stats_stage": "raw_profile",
             "stats": {},
+            "evolvePassives": False,
             "attack": {"atkBase": 1000, "atkFinal": 0},
             "passive_multiplier": 1.0,
         },
