@@ -12,6 +12,7 @@ TESTS = [
     "tests/test_sio_account_systems.py",
     "tests/test_sio_exact_actions.py",
     "tests/test_sio_runtime_oracle.py",
+    "tests/test_sio_calibration.py",
     "tests/test_champion_lineage.py",
     "tests/test_source_policy.py",
     "tests/test_sio_ce_integration.py",
