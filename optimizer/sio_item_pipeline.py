@@ -3,13 +3,12 @@
 Module 42052 assembles item/forge data. Module 24804 then applies item
 conditions after account-wide stats have been merged. Keeping those phases
 separate prevents Moonscar, Twin Lance and uptime thresholds from reading an
-incomplete account state.
+incomplete account state. The exact JavaScript runtime is authoritative; the
+functions here are the auditable fallback.
 """
 from __future__ import annotations
-
 from copy import deepcopy
 from typing import Any, Mapping
-
 from optimizer.sio_item_data import SIO_ITEMS
 from optimizer.sio_items import (
     CE_DURATION,
@@ -33,20 +32,73 @@ from optimizer.sio_items import (
     item_state_from_profile,
 )
 
+UPTIME_FIELDS = (
+    "lacerationUptime",
+    "divineFireUptime",
+    "poisonedUptime",
+    "weakenedUptime",
+    "chilledUptime",
+    "shieldDamageUptime",
+    "voidNeckBoostUptime",
+)
+
+
+def _sio(profile: Mapping[str, Any]) -> Mapping[str, Any]:
+    return profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
+
 
 def _active_survivor(profile: Mapping[str, Any]) -> str:
-    sio = profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
+    sio = _sio(profile)
     survivor = profile.get("survivor") if isinstance(profile.get("survivor"), Mapping) else {}
     meta = sio.get("meta") if isinstance(sio.get("meta"), Mapping) else profile.get("meta")
     meta = _unwrap_data(meta) if isinstance(meta, Mapping) else {}
     return str(
         survivor.get("id")
         or sio.get("active_survivor")
+        or sio.get("activeSurvivor")
         or profile.get("active_survivor")
+        or profile.get("activeSurvivor")
         or meta.get("mainHero")
         or meta.get("main_hero")
         or ""
     )
+
+
+def _evolve_passives(profile: Mapping[str, Any]) -> bool:
+    sio = _sio(profile)
+    settings = sio.get("settings") if isinstance(sio.get("settings"), Mapping) else profile.get("settings")
+    settings = _unwrap_data(settings) if isinstance(settings, Mapping) else {}
+    return bool(sio.get("evolvePassives", profile.get("evolvePassives", settings.get("evolvePassives", False))))
+
+
+def finalize_sio_stats_fallback(
+    profile: Mapping[str, Any],
+    stats: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Complete the CE-only transforms from ``24804.IE``.
+
+    ``_apply_special_item_rules`` already performs the item-dependent revive and
+    equipment conversions. This function adds the remaining evolved-passive,
+    Metalia and Joey transforms and clamps every uptime exactly once.
+    """
+    result = {str(key): _num(value) for key, value in stats.items() if _num(value)}
+    evolve = _evolve_passives(profile)
+    if "hpBulletBoost" in result:
+        result["hpBulletBoost"] = (result["hpBulletBoost"] + 10 * int(evolve) + 100) / 100
+    if "adrenaline" in result and evolve:
+        result["adrenaline"] *= 1.2
+    if "metaliaPoisoned" in result:
+        result["poisoned"] = result.get("poisoned", 0.0) + result["metaliaPoisoned"] + 15 * int(evolve)
+        result["metaliaPoisoned"] = 0.0
+    if "metaliaChilled" in result:
+        result["chilled"] = result.get("chilled", 0.0) + result["metaliaChilled"] + 15 * int(evolve)
+        result["metaliaChilled"] = 0.0
+    if "joeyWeakSpot" in result and evolve:
+        result["joeyWeakSpot"] += 3.5  # 5 * module-32085.x5 (0.7)
+    for field in UPTIME_FIELDS:
+        if field in result:
+            result[field] = max(0.0, min(1.0, result[field]))
+    return result
 
 
 def assemble_sio_item_base_stats(
@@ -59,8 +111,14 @@ def assemble_sio_item_base_stats(
     """
     items = item_state_from_profile(profile)
     collectibles = collectible_stars_from_profile(profile)
-    sio = profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
-    upgraded = set(sio.get("upgraded_collectibles", profile.get("upgraded_collectibles", [])) or [])
+    sio = _sio(profile)
+    upgraded = set(
+        sio.get("upgradedCollectibles")
+        or sio.get("upgraded_collectibles")
+        or profile.get("upgradedCollectibles")
+        or profile.get("upgraded_collectibles")
+        or []
+    )
     max_gear = int(_num(sio.get("max_gear", profile.get("max_gear", 0))))
     stats = {str(key): _num(value) for key, value in (base_stats or {}).items() if _num(value)}
     detail: dict[str, Any] = {"items": {}, "sets": {}, "collectibles": {}}
@@ -134,10 +192,10 @@ def apply_sio_item_conditions(
     stats: Mapping[str, Any],
     detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Apply module-24804 conditions after all account and mount stats exist."""
+    """Apply the Python fallback equivalent of ``24804.zP`` then ``24804.IE``."""
     items = item_state_from_profile(profile)
     collectibles = collectible_stars_from_profile(profile)
-    sio = profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
+    sio = _sio(profile)
     settings = sio.get("settings") if isinstance(sio.get("settings"), Mapping) else profile.get("settings", {})
     settings = _unwrap_data(settings) if isinstance(settings, Mapping) else {}
     revives = [_num(value) for value in (settings.get("revives", [40, 70, 90]) or [])]
@@ -151,9 +209,20 @@ def apply_sio_item_conditions(
         _active_survivor(profile) == "Venato",
         target_detail,
     )
+    result = finalize_sio_stats_fallback(profile, result)
+    target_detail["uptime_values"] = {field: result[field] for field in UPTIME_FIELDS if field in result}
+    target_detail["evolve_passives"] = _evolve_passives(profile)
     return {
         "stats": result,
         "detail": target_detail,
         "duration": CE_DURATION,
         "stats_stage": "post_24804_account_and_items",
     }
+
+
+__all__ = [
+    "UPTIME_FIELDS",
+    "apply_sio_item_conditions",
+    "assemble_sio_item_base_stats",
+    "finalize_sio_stats_fallback",
+]
