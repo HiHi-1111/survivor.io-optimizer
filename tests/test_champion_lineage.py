@@ -10,7 +10,7 @@ from optimizer.champion_lineage import (
     safe_exact_ce_prior,
     train_child,
 )
-from optimizer.exact_training_labels import prepare_exact_training_rows
+from optimizer.exact_training_labels import append_quarantine_jsonl, prepare_exact_training_rows
 from optimizer.learned_ranker import OnlineLinearRanker
 from optimizer.numeric_features import FEATURE_COLUMNS
 
@@ -99,20 +99,40 @@ def test_exact_labels_are_removed_from_proposal_features() -> None:
     assert good["exact_damage_delta"] == 10.0
 
 
-def test_same_state_contradictory_exact_labels_are_quarantined() -> None:
+def test_same_state_contradictory_exact_labels_are_retained_in_quarantine() -> None:
     first = _row("first")
     second = _row("second")
     second["candidates"][0]["exact_damage_delta"] = -1.0
     second["candidates"][1]["exact_damage_delta"] = 10.0
+    original_second = json.loads(json.dumps(second))
     accepted, quarantine = prepare_exact_training_rows([first, second])
     assert len(accepted) == 1
     assert len(quarantine) == 1
-    assert quarantine[0]["reason"] == "contradictory_exact_label"
+    record = quarantine[0]
+    assert record["reason"] == "contradictory_exact_label"
+    assert record["retained_for_audit"] is True
+    assert record["excluded_from_training"] is True
+    assert record["raw_row"] == original_second
+    assert second == original_second
+
+
+def test_quarantine_writer_appends_without_replacing_prior_evidence(tmp_path: Path) -> None:
+    path = tmp_path / "quarantine.jsonl"
+    first = {"reason": "one", "raw_row": {"id": 1}}
+    second = {"reason": "two", "raw_row": {"id": 2}}
+    assert append_quarantine_jsonl(path, [first]) == 1
+    before = path.read_text(encoding="utf-8")
+    assert append_quarantine_jsonl(path, [second]) == 1
+    after = path.read_text(encoding="utf-8")
+    assert after.startswith(before)
+    rows = [json.loads(line) for line in after.splitlines()]
+    assert rows == [first, second]
 
 
 def test_child_training_starts_from_parent_and_can_improve_exact_holdout() -> None:
     prepared, quarantine = prepare_exact_training_rows([_row(f"row_{index}") for index in range(8)])
-    assert quarantine == []
+    # Repeated identical evidence is retained in quarantine, not trained twice.
+    assert all(record["reason"] == "duplicate_exact_evidence" for record in quarantine)
     examples, schema_quarantine = audit_examples(prepared)
     assert schema_quarantine == []
     parent = safe_exact_ce_prior()
