@@ -94,7 +94,7 @@ def test_overload_level_13_uses_exact_matching_part_and_chip_delta() -> None:
         _profile({
             "deployed": True,
             "rarity": "Eternal",
-            "resonance": 7500,
+            "resonance": 10500,
             "overload": 12,
             "mode": "Drone Mode",
             "mult": 1.0,
@@ -106,6 +106,7 @@ def test_overload_level_13_uses_exact_matching_part_and_chip_delta() -> None:
         if row["action_type"] == "upgrade_resonance_overload"
         and row["metadata"].get("target_overload") == 13
     )
+    assert action["metadata"]["required_resonance"] == 10500
     assert action["consumed_items"] == {
         "resonance_chip": 5,
         "tech_part:energy_guidance_system:eternal": 1,
