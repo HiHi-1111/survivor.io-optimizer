@@ -47,6 +47,13 @@ REQUIRED_REGISTRY_IDS = {
     "resource_and_refund_ledger",
     "source_calibration_samples",
 }
+EXACT_RUNTIME_BINDINGS = (
+    "runtime.req(13024).T",
+    "runtime.req(24804).zP",
+    "runtime.req(88426).y",
+    "runtime.req(24804).IE",
+    "runtime.req(67727).f",
+)
 
 
 def _json(path: Path) -> Any:
@@ -138,20 +145,22 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
     labels_py = _source("optimizer/exact_training_labels.py")
     state_py = _source("optimizer/player_state.py")
 
-    for token in (
-        "runtime.req(13024).T",
-        "runtime.req(24804).zP",
-        "runtime.req(88426).y",
-        "runtime.req(24804).IE",
-        "runtime.req(67727).f",
-    ):
+    for token in EXACT_RUNTIME_BINDINGS:
         _check_contains(errors, oracle_js, token, "exact oracle")
-    order_positions = [oracle_js.find(token) for token in manifest["ce_formula_order"]]
+    # Check the actual module-function bindings, not human-readable labels. The
+    # post-24804 shortcut also contains the labels 88426.y and 67727.f, which
+    # previously caused a false order failure even though the exact path was right.
+    order_positions = [oracle_js.find(token) for token in EXACT_RUNTIME_BINDINGS]
     if any(position < 0 for position in order_positions) or order_positions != sorted(order_positions):
-        errors.append(f"exact oracle formula order is wrong: {order_positions}")
+        errors.append(f"exact oracle function binding order is wrong: {order_positions}")
+    expected_labels = tuple(manifest["ce_formula_order"])
+    if expected_labels != ("13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f"):
+        errors.append(f"manifest formula order changed unexpectedly: {expected_labels}")
 
     _check_contains(errors, oracle_py, 'ORACLE_SCHEMA = "sio_ce_oracle_v2"', "runtime bridge")
     _check_contains(errors, oracle_py, 'separators=(",", ":")', "runtime bridge compact JSON")
+    _check_contains(errors, oracle_py, '"skipRuntime24804": skip_runtime_24804', "post-24804 bridge")
+    _check_contains(errors, oracle_js, "if (skipRuntime24804)", "post-24804 oracle")
     _check_contains(errors, account_py, "defer_runtime_conditions=True", "account pipeline")
     _check_contains(errors, account_py, "pre_24804_runtime", "account pipeline")
     _check_contains(errors, item_pipeline_py, "finalize_sio_stats_fallback", "Python 24804 fallback")
