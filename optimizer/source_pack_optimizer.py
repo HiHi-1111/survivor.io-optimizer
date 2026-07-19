@@ -31,6 +31,11 @@ MOUNT_IDS = {
     "tech_hoverboard": "Tech Hoverboard",
     "doomsteed": "Doomsteed",
 }
+MOUNT_PUBLIC_IDS = {
+    "Electric Scooter": "electric_scooter",
+    "Tech Hoverboard": "hoverboard",
+    "Doomsteed": "doomsteed",
+}
 
 
 @lru_cache(maxsize=1)
@@ -145,6 +150,18 @@ def _transition(
     return after, dict(certificate), None
 
 
+def _public_action_id(action: Mapping[str, Any]) -> str:
+    if action.get("system") == "mounts" and action.get("action_type") == "upgrade_mount":
+        metadata = action.get("metadata") if isinstance(action.get("metadata"), Mapping) else {}
+        name = metadata.get("mount")
+        target = metadata.get("target_stars")
+        if name in MOUNT_PUBLIC_IDS and isinstance(target, (int, float)):
+            target_index = int(target)
+            if 0 <= target_index < len(STAR_LABELS):
+                return f"upgrade_{MOUNT_PUBLIC_IDS[str(name)]}_{STAR_LABELS[target_index].lower()}"
+    return str(action.get("action_id"))
+
+
 def _action_key(action: Mapping[str, Any]) -> str:
     if isinstance(action.get("state_patch"), Mapping):
         return json.dumps(
@@ -161,14 +178,19 @@ def _action_key(action: Mapping[str, Any]) -> str:
 
 def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
     combined = [*generate_exact_actions(profile), *load_source_pack_actions()]
-    seen: set[str] = set()
+    seen_keys: set[str] = set()
+    seen_ids: set[str] = set()
     result: list[dict[str, Any]] = []
-    for action in combined:
+    for source_action in combined:
+        action = dict(source_action)
+        action["action_id"] = _public_action_id(action)
         key = _action_key(action)
-        if key in seen:
+        action_id = str(action.get("action_id"))
+        if key in seen_keys or action_id in seen_ids:
             continue
-        seen.add(key)
-        result.append(dict(action))
+        seen_keys.add(key)
+        seen_ids.add(action_id)
+        result.append(action)
     return result
 
 
@@ -275,7 +297,8 @@ def optimize_source_pack_batch(
     return {
         "profiles": results,
         "numeric_backend": {
-            "backend": "deterministic_exact_sio_ce_batch",
+            "backend": "deterministic_cpu_exact_sio_ce",
+            "batch_scoring": True,
             "requested_device": device,
             "learned_or_gpu_ranking_used": False,
             "final_winner_source": "exact_before_after_damage_only",
