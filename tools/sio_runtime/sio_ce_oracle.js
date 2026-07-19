@@ -5,9 +5,9 @@
  *
  * This process loads the compiled webpack modules and executes the same CE order
  * used by sIO Tools: Tech/Twinborn -> item and uptime conditions -> direct damage
- * -> evolved-passive/final stat transforms -> final CE damage. It never uses the
- * network and never produces recommendations. JSON is read from stdin and JSON
- * is written to stdout so Python can batch and cache calls.
+ * -> evolved-passive/final stat transforms -> final CE damage. A profile that is
+ * explicitly marked post-24804 bypasses those transforms so they cannot be
+ * applied twice. The oracle never uses the network or produces recommendations.
  */
 
 const fs = require('fs');
@@ -98,8 +98,6 @@ function loadRuntime(root) {
       factory.call(module.exports, module, module.exports, req);
       return module.exports;
     } catch (error) {
-      // Webpack removes a failed module from its cache. Keeping a partially
-      // initialized export caused later rows in the same batch to fail differently.
       delete cache[id];
       throw error;
     }
@@ -120,7 +118,6 @@ function loadRuntime(root) {
     req.d(getter, { a: getter });
     return getter;
   };
-  // Webpack's namespace helper is required by dependencies pulled in by 24804.
   req.t = function(value, mode) {
     if (mode & 1) value = this(value);
     if (mode & 8) return value;
@@ -207,12 +204,9 @@ function uptimeSnapshot(stats) {
 }
 
 function scoreOne(runtime, payload) {
-  const techFunction = runtime.req(13024).T;
-  const applyConditions = runtime.req(24804).zP;
-  const finalizeStats = runtime.req(24804).IE;
   const directFunction = runtime.req(88426).y;
   const damageFunction = runtime.req(67727).f;
-
+  const skipRuntime24804 = payload.skipRuntime24804 === true;
   const stats = { ...(payload.stats || {}) };
   const attack = { ...(payload.attack || {}) };
   const directSeed = { ...(payload.direct_skill_factors || payload.ceDamage || {}) };
@@ -224,46 +218,65 @@ function scoreOne(runtime, payload) {
   const gameMode = payload.gameMode || (techInput && techInput.gameMode) || 'ce';
   const evolvePassives = payload.evolvePassives === true || (techInput && techInput.evolvePassives === true);
   let techResult = { stats: {}, ceDamage: {}, passivePools: new Float64Array(56).fill(1) };
+  let preFinalizeStats;
+  let finalStats;
+  let formulaModules;
+  let formulaOrder;
 
-  if (techInput) {
-    const normalized = {
-      evolvePassives,
-      cooldownReduction: number(techInput.cooldownReduction, number(stats.cooldownReduction, 0)),
-      techs: techInput.techs || {},
-      skills: techInput.skills || skills,
-      collectibles: techInput.collectibles || collectibles,
-      upgradedCollectibles: techInput.upgradedCollectibles || payload.upgradedCollectibles || [],
-      settings: { calcMode: 'damage', ...settings, ...(techInput.settings || {}) },
+  if (skipRuntime24804) {
+    if (techInput && techInput.techs && Object.keys(techInput.techs).length) {
+      throw new Error('post-24804 snapshots cannot apply raw Tech state again');
+    }
+    preFinalizeStats = stats;
+    finalStats = stats;
+    formulaModules = [88426, 67727];
+    formulaOrder = ['post_24804_snapshot', '88426.y', '67727.f'];
+  } else {
+    const techFunction = runtime.req(13024).T;
+    const applyConditions = runtime.req(24804).zP;
+    const finalizeStats = runtime.req(24804).IE;
+    if (techInput) {
+      const normalized = {
+        evolvePassives,
+        cooldownReduction: number(techInput.cooldownReduction, number(stats.cooldownReduction, 0)),
+        techs: techInput.techs || {},
+        skills: techInput.skills || skills,
+        collectibles: techInput.collectibles || collectibles,
+        upgradedCollectibles: techInput.upgradedCollectibles || payload.upgradedCollectibles || [],
+        settings: { calcMode: 'damage', ...settings, ...(techInput.settings || {}) },
+        gameMode,
+        eeOmnipower: techInput.eeOmnipower,
+        eeSkills: techInput.eeSkills,
+        stableTechEntries: techInput.stableTechEntries,
+      };
+      techResult = techFunction(normalized, {});
+      mergeNumeric(stats, techResult.stats || {});
+      Object.assign(directSeed, techResult.ceDamage || {});
+      Object.assign(skills, normalized.skills || {});
+    }
+    const conditioned = applyConditions({
+      withNotes: false,
+      venato: payload.venato === true || payload.activeSurvivor === 'Venato',
+      stats,
+      collectibles,
+      items,
+      settings,
       gameMode,
-      eeOmnipower: techInput.eeOmnipower,
-      eeSkills: techInput.eeSkills,
-      stableTechEntries: techInput.stableTechEntries,
-    };
-    techResult = techFunction(normalized, {});
-    mergeNumeric(stats, techResult.stats || {});
-    Object.assign(directSeed, techResult.ceDamage || {});
-    Object.assign(skills, normalized.skills || {});
+      eeSkills: payload.eeSkills,
+      eeOmnipower: payload.eeOmnipower,
+    });
+    preFinalizeStats = (conditioned && conditioned.stats) || stats;
+    finalStats = finalizeStats({
+      evolvePassives,
+      gameMode,
+      stats: preFinalizeStats,
+      settings,
+    });
+    formulaModules = [13024, 24804, 88426, 67727];
+    formulaOrder = ['13024.T', '24804.zP', '88426.y', '24804.IE', '67727.f'];
   }
 
-  const conditioned = applyConditions({
-    withNotes: false,
-    venato: payload.venato === true || payload.activeSurvivor === 'Venato',
-    stats,
-    collectibles,
-    items,
-    settings,
-    gameMode,
-    eeSkills: payload.eeSkills,
-    eeOmnipower: payload.eeOmnipower,
-  });
-  const preFinalizeStats = (conditioned && conditioned.stats) || stats;
   const direct = directFunction(preFinalizeStats, directSeed);
-  const finalStats = finalizeStats({
-    evolvePassives,
-    gameMode,
-    stats: preFinalizeStats,
-    settings,
-  });
   const passivePools = techResult.passivePools || new Float64Array(56).fill(1);
   const totalDamage = damageFunction(
     finalStats,
@@ -285,8 +298,10 @@ function scoreOne(runtime, payload) {
     ce_damage: clonePlain(direct.ceDamage || {}),
     damage_factor: number(direct.damageFactor, 0),
     passive_pools: Array.from(passivePools || []),
-    formula_modules: [13024, 24804, 88426, 67727],
-    formula_order: ['13024.T', '24804.zP', '88426.y', '24804.IE', '67727.f'],
+    formula_modules: formulaModules,
+    formula_order: formulaOrder,
+    skipped_24804: skipRuntime24804,
+    stats_stage: payload.statsStage || 'unknown',
     calc_mode: 'damage',
     game_mode: gameMode,
   };
