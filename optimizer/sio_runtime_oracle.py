@@ -26,6 +26,10 @@ ROOT = Path(__file__).resolve().parents[1]
 ORACLE_SCRIPT = ROOT / "tools" / "sio_runtime" / "sio_ce_oracle.js"
 DEFAULT_CACHE_ROOT = ROOT / ".cache" / "sio_runtime"
 DEFAULT_RESULT_CACHE = ROOT / ".cache" / "sio_runtime" / "ce_oracle_results.jsonl"
+ORACLE_SCHEMA = "sio_ce_oracle_v2"
+SIO_FORMULA_ORDER = ("13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f")
+SIO_FORMULA_MODULES = (13024, 24804, 88426, 67727)
+SIO_ITEM_SLOTS = ("Weapon", "Armor", "Necklace", "Belt", "Gloves", "Boots")
 
 
 class SioRuntimeUnavailable(RuntimeError):
@@ -52,24 +56,26 @@ def _unwrap(value: Any) -> Any:
     return value
 
 
+def _mapping(value: Any) -> dict[str, Any]:
+    value = _unwrap(value)
+    return deepcopy(dict(value)) if isinstance(value, Mapping) else {}
+
+
 def _candidate_bundle_paths() -> Iterable[Path]:
     explicit = os.environ.get("SIO_TOOLS_BUNDLE")
     if explicit:
         yield Path(explicit).expanduser()
     archive = ROOT / "data" / "sio_training" / "archive"
-    for name in (
+    names = (
         "sio_tools.exp0.dev.zip",
         "sio_tools.exp0.dev(1).zip",
         "sio-tools.exp0.dev.zip",
-    ):
+    )
+    for name in names:
         yield archive / name
     home = Path.home()
     for directory in (home / "Downloads", home / "downloads"):
-        for name in (
-            "sio_tools.exp0.dev.zip",
-            "sio_tools.exp0.dev(1).zip",
-            "sio-tools.exp0.dev.zip",
-        ):
+        for name in names:
             yield directory / name
 
 
@@ -141,7 +147,8 @@ def ensure_extracted_bundle(
         except (OSError, ValueError, KeyError, TypeError):
             pass
 
-    temporary = Path(tempfile.mkdtemp(prefix="sio-runtime-", dir=str(cache.parent if cache.parent.exists() else ROOT)))
+    temporary_parent = cache.parent if cache.parent.exists() else ROOT
+    temporary = Path(tempfile.mkdtemp(prefix="sio-runtime-", dir=str(temporary_parent)))
     try:
         unpacked = temporary / "extracted"
         _safe_extract(bundle, unpacked)
@@ -150,14 +157,14 @@ def ensure_extracted_bundle(
             shutil.rmtree(destination.parent)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(unpacked), str(destination))
-        relative = found.relative_to(unpacked)
-        final_root = destination / relative
+        final_root = destination / found.relative_to(unpacked)
         marker.write_text(
             json.dumps(
                 {"bundle_sha256": bundle_hash, "runtime_root": str(final_root)},
                 indent=2,
                 sort_keys=True,
-            ) + "\n",
+            )
+            + "\n",
             encoding="utf-8",
         )
         return final_root, bundle_hash
@@ -168,21 +175,53 @@ def ensure_extracted_bundle(
 def _exact_techs(profile: Mapping[str, Any]) -> Mapping[str, Any] | None:
     sio = profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
     explicit = sio.get("tech_input")
-    if isinstance(explicit, Mapping):
-        return explicit
-    raw = _unwrap(sio.get("techs") or profile.get("techs"))
+    if isinstance(explicit, Mapping) and isinstance(explicit.get("techs"), Mapping):
+        raw = explicit["techs"]
+    else:
+        raw = _unwrap(sio.get("techs") or profile.get("techs"))
     if not isinstance(raw, Mapping):
         return None
     if not raw:
         return {}
-    if all(isinstance(value, Mapping) for value in raw.values()):
-        return raw
-    return None
+    return raw if all(isinstance(value, Mapping) for value in raw.values()) else None
+
+
+def _item_state(profile: Mapping[str, Any], sio: Mapping[str, Any]) -> dict[str, Any]:
+    raw = _unwrap(sio.get("items") or profile.get("items"))
+    if isinstance(raw, Mapping) and any(slot in raw for slot in SIO_ITEM_SLOTS):
+        return {slot: deepcopy(dict(raw.get(slot) or {})) for slot in SIO_ITEM_SLOTS}
+    gear = profile.get("gear")
+    if not isinstance(gear, Mapping):
+        return {}
+    result: dict[str, Any] = {}
+    for slot in SIO_ITEM_SLOTS:
+        state = gear.get(slot) or gear.get(slot.lower())
+        if isinstance(state, Mapping):
+            normalized = deepcopy(dict(state))
+            normalized.setdefault("name", normalized.get("id"))
+            result[slot] = normalized
+    return result
+
+
+def _active_survivor(profile: Mapping[str, Any], sio: Mapping[str, Any]) -> str:
+    survivor = profile.get("survivor") if isinstance(profile.get("survivor"), Mapping) else {}
+    meta = _mapping(sio.get("meta") or profile.get("meta"))
+    return str(
+        sio.get("active_survivor")
+        or sio.get("activeSurvivor")
+        or profile.get("active_survivor")
+        or profile.get("activeSurvivor")
+        or survivor.get("id")
+        or meta.get("mainHero")
+        or meta.get("main_hero")
+        or ""
+    )
 
 
 def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
+    """Build the exact sIO CE request without dropping unknown source fields."""
     sio = profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
-    stats = sio.get("stats") if isinstance(sio.get("stats"), Mapping) else profile.get("stats", {})
+    stats = _mapping(sio.get("stats") if isinstance(sio.get("stats"), Mapping) else profile.get("stats"))
     attack: dict[str, Any] = {}
     for row in (profile.get("attack"), sio.get("attack")):
         if isinstance(row, Mapping):
@@ -190,44 +229,58 @@ def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
     if "atkBase" not in attack or "atkFinal" not in attack:
         raise SioRuntimeInputError("Exact sIO scoring requires attack.atkBase and attack.atkFinal.")
 
-    skills = _unwrap(sio.get("skills") or profile.get("skills") or {})
-    if not isinstance(skills, Mapping):
-        skills = {}
-    settings = _unwrap(sio.get("settings") or profile.get("settings") or {})
-    if not isinstance(settings, Mapping):
-        settings = {}
+    skills = _mapping(sio.get("skills") or profile.get("skills"))
+    settings = _mapping(sio.get("settings") or profile.get("settings"))
+    settings.setdefault("revives", [40, 70, 90])
+    settings["calcMode"] = "damage"
     evolve = sio.get("evolvePassives", profile.get("evolvePassives", settings.get("evolvePassives")))
     if evolve not in (True, False):
         raise SioRuntimeInputError(
             "Exact evolved-passive scoring requires sio_ce.evolvePassives=true/false; it is not guessed."
         )
+
     techs = _exact_techs(profile)
     if techs is None and (sio.get("techs") or profile.get("techs") or profile.get("tech")):
         raise SioRuntimeInputError("Tech state is not in the exact sIO deployed/rarity/resonance/overload schema.")
-    collectibles = _unwrap(sio.get("collectibles") or profile.get("collectibles") or {})
-    if not isinstance(collectibles, Mapping):
-        collectibles = {}
-    upgraded = sio.get("upgradedCollectibles", profile.get("upgradedCollectibles", [])) or []
-    direct = sio.get("direct_skill_factors") if isinstance(sio.get("direct_skill_factors"), Mapping) else profile.get("direct_skill_factors", {})
-    if not isinstance(direct, Mapping):
-        direct = {}
+    collectibles = _mapping(sio.get("collectibles") or profile.get("collectibles"))
+    upgraded = (
+        sio.get("upgradedCollectibles")
+        or sio.get("upgraded_collectibles")
+        or profile.get("upgradedCollectibles")
+        or profile.get("upgraded_collectibles")
+        or []
+    )
+    if not isinstance(upgraded, (list, tuple, set)):
+        upgraded = []
+    direct = _mapping(sio.get("direct_skill_factors") or profile.get("direct_skill_factors"))
+    active_survivor = _active_survivor(profile, sio)
+    items = _item_state(profile, sio)
 
     tech_input = {
         "evolvePassives": bool(evolve),
-        "cooldownReduction": float((stats or {}).get("cooldownReduction", 0) or 0),
-        "techs": dict(techs or {}),
-        "skills": dict(skills),
-        "collectibles": dict(collectibles),
+        "cooldownReduction": float(stats.get("cooldownReduction", 0) or 0),
+        "techs": deepcopy(dict(techs or {})),
+        "skills": deepcopy(skills),
+        "collectibles": deepcopy(collectibles),
         "upgradedCollectibles": list(upgraded),
-        "settings": {**dict(settings), "calcMode": "damage"},
+        "settings": deepcopy(settings),
         "gameMode": "ce",
     }
     return {
-        "stats": dict(stats or {}),
+        "stats": stats,
         "attack": attack,
-        "skills": dict(skills),
-        "direct_skill_factors": dict(direct),
+        "skills": skills,
+        "direct_skill_factors": direct,
         "tech_input": tech_input,
+        "items": items,
+        "collectibles": collectibles,
+        "upgradedCollectibles": list(upgraded),
+        "settings": settings,
+        "activeSurvivor": active_survivor,
+        "venato": active_survivor == "Venato",
+        "evolvePassives": bool(evolve),
+        "eeSkills": sio.get("eeSkills", profile.get("eeSkills")),
+        "eeOmnipower": sio.get("eeOmnipower", profile.get("eeOmnipower")),
         "gameMode": "ce",
     }
 
@@ -263,7 +316,7 @@ class SioCeRuntimeOracle:
         missing_indices: list[int] = []
         missing_keys: list[str] = []
         for index, request in enumerate(requests):
-            key = stable_hash({"schema": "sio_ce_oracle_v1", "request": request, "bundle": SIO_BUNDLE_SHA256})
+            key = stable_hash({"schema": ORACLE_SCHEMA, "request": request, "bundle": SIO_BUNDLE_SHA256})
             cached = self._cache.get(key)
             if cached is not None and isinstance(cached.get("result"), Mapping):
                 results[index] = deepcopy(dict(cached["result"]))
@@ -276,7 +329,11 @@ class SioCeRuntimeOracle:
             self._prepare()
             completed = subprocess.run(
                 [str(self._node), str(ORACLE_SCRIPT), str(self._runtime_root)],
-                input=json.dumps({"requests": missing_requests}, ensure_ascii=False),
+                input=json.dumps(
+                    {"requests": missing_requests},
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
                 text=True,
                 capture_output=True,
                 timeout=self.timeout_seconds,
@@ -288,6 +345,8 @@ class SioCeRuntimeOracle:
                 )
             try:
                 payload = json.loads(completed.stdout)
+                if payload.get("schema") != ORACLE_SCHEMA:
+                    raise ValueError(f"unexpected schema {payload.get('schema')!r}")
                 fresh = payload["results"]
             except (ValueError, KeyError, TypeError) as error:
                 raise SioRuntimeUnavailable(f"Invalid sIO oracle output: {error}") from error
@@ -299,8 +358,10 @@ class SioCeRuntimeOracle:
                     "formula_provenance": {
                         "source": "user-supplied sIO Tools runtime bundle",
                         "bundle_sha256": self._bundle_hash,
-                        "modules": [13024, 88426, 67727],
+                        "modules": list(SIO_FORMULA_MODULES),
+                        "order": list(SIO_FORMULA_ORDER),
                         "oracle": "tools/sio_runtime/sio_ce_oracle.js",
+                        "schema": ORACLE_SCHEMA,
                     },
                 }
                 results[index] = enriched
@@ -330,6 +391,7 @@ def score_profile_exact(profile: Mapping[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "ORACLE_SCHEMA",
     "SioCeRuntimeOracle",
     "SioRuntimeInputError",
     "SioRuntimeUnavailable",
