@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping
 
@@ -12,7 +13,18 @@ from optimizer.player_state import PlayerState, validate_player_state
 from optimizer.search_memory import search_guide_memory
 from optimizer.source_pack_optimizer import optimize_source_pack_actions
 
-CE_SCENARIO_ALIASES = {"clan_expedition", "scenario_clan_expedition", "ce"}
+# Old generic objective labels are accepted only as migration aliases into the
+# single Clan Expedition contract. They do not select another game mode or a
+# different final scoring formula.
+CE_SCENARIO_ALIASES = {
+    "clan_expedition",
+    "scenario_clan_expedition",
+    "ce",
+    "normal",
+    "scenario_1",
+    "scenario_2",
+    "scenario_3",
+}
 
 
 def _dump(value: Any) -> Any:
@@ -23,6 +35,11 @@ def _dump(value: Any) -> Any:
     if hasattr(value, "dict"):
         return value.dict()
     return value
+
+
+def _raw_profile(value: dict[str, Any] | PlayerState) -> dict[str, Any]:
+    dumped = _dump(value)
+    return deepcopy(dict(dumped)) if isinstance(dumped, Mapping) else {}
 
 
 def _select_scenario(knowledge: dict[str, Any], scenario_id: str):
@@ -41,13 +58,16 @@ def _costs_to_consumed(action: Mapping[str, Any] | None) -> dict[str, float]:
     totals: dict[str, float] = {}
     if not action:
         return totals
+    consumed = action.get("consumed_items")
+    if isinstance(consumed, Mapping):
+        return {str(key): float(value or 0) for key, value in consumed.items()}
     for cost in action.get("costs", []) or []:
         item_id = str(cost.get("resource_id"))
         totals[item_id] = totals.get(item_id, 0.0) + float(cost.get("amount", 0) or 0)
     return totals
 
 
-def _all_resource_counts(state: PlayerState) -> dict[str, float]:
+def _all_resource_counts(state: PlayerState, raw: Mapping[str, Any]) -> dict[str, float]:
     counts = {
         str(key): float(value or 0)
         for key, value in state.resources.model_dump().items()
@@ -59,6 +79,16 @@ def _all_resource_counts(state: PlayerState) -> dict[str, float]:
             amount = value.get("count", value.get("quantity", 0))
         if isinstance(amount, (int, float)):
             counts[str(key)] = counts.get(str(key), 0.0) + float(amount)
+    for section_name in ("resources", "inventory"):
+        section = raw.get(section_name)
+        if not isinstance(section, Mapping):
+            continue
+        for key, value in section.items():
+            amount = value
+            if isinstance(value, Mapping):
+                amount = value.get("count", value.get("quantity", value.get("amount", 0)))
+            if isinstance(amount, (int, float)):
+                counts[str(key)] = max(counts.get(str(key), 0.0), float(amount))
     return counts
 
 
@@ -68,24 +98,27 @@ def optimize(
     include_global_plan: bool = False,
     planner_options: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return exact sIO Clan Expedition damage and exact bridged upgrades.
+    """Return sIO Clan Expedition damage and exact bridged upgrades.
 
     ``include_global_plan`` remains in the public signature for compatibility,
-    but the old generic planner is not executed. It may only return after every
-    action family has a legal after-state bridge into the sIO CE formula.
+    but the old generic planner is never allowed to choose the winner.
     """
     del planner_options
+    raw = _raw_profile(player_state_dict)
     knowledge = load_knowledge()
     player_state = validate_player_state(player_state_dict)
-    scenario = _select_scenario(knowledge, player_state.goal_scenario)
-    damage_report = estimate_damage_totals(player_state)
-    source_pack_plan = optimize_source_pack_actions(player_state)
+    requested_scenario = raw.get("goal_scenario", player_state.goal_scenario)
+    scenario = _select_scenario(knowledge, str(requested_scenario))
+    raw["game_mode"] = "clan_expedition"
+    raw["goal_scenario"] = "clan_expedition"
+    damage_report = estimate_damage_totals(raw)
+    source_pack_plan = optimize_source_pack_actions(raw)
 
     best = source_pack_plan.get("best")
     ranked = list(source_pack_plan.get("ranked_actions", []))
     rejected = list(source_pack_plan.get("rejected_actions", []))
     resources_used = _costs_to_consumed(best)
-    resources = _all_resource_counts(player_state)
+    resources = _all_resource_counts(player_state, raw)
     resources_saved = {
         key: amount - resources_used.get(key, 0.0)
         for key, amount in resources.items()
@@ -106,21 +139,34 @@ def optimize(
     warnings = list(damage_report.get("warnings", [])) + list(source_pack_plan.get("warnings", []))
     if include_global_plan:
         warnings.append(
-            "The generic multi-system planner was requested but deliberately not run; exact CE after-state bridges are incomplete."
+            "The retired generic planner was requested but did not choose the winner; exact CE before/after damage remained authoritative."
         )
+    action_chain = [{**best, "consumed_items": resources_used}] if best else []
+    compatibility_steps = action_chain or [source_pack_plan.get("no_op_baseline") or {
+        "action_id": "save_hold_no_op", "action_type": "save_hold", "consumed_items": {}
+    }]
     global_plan = {
         "supported": False,
-        "reason": "exact_ce_after_state_bridges_incomplete",
+        "reason": "generic_multimode_planner_retired_exact_ce_only",
         "learned_or_heuristic_winner_selection": False,
+        "actions_considered": int(source_pack_plan.get("templates_considered", 0)),
+        "best_action_chain": {
+            "ordered_steps": compatibility_steps,
+            "marginal_value": {
+                "delta": expected_damage_gain,
+                "before": damage_report.get("total_damage"),
+                "after": (
+                    float(damage_report.get("total_damage") or 0.0) + expected_damage_gain
+                    if damage_report.get("total_damage") is not None else None
+                ),
+            },
+        },
     }
-    action_chain = []
-    if best:
-        action_chain = [{**best, "consumed_items": resources_used}]
 
     future_goals = [
-        "Complete sIO module 24804 condition and uptime assembly.",
-        "Add legal CE after-state bridges for SS/Xeno Transmute, Tech, Survivors, Pets and Collectibles.",
-        "Keep unsupported mechanics unknown until they match sIO or the user-provided Bible.",
+        "Supply exact source data for any mechanic still marked unknown.",
+        "Record repeated observed CE runs only for formula-review calibration.",
+        "Keep learned champions limited to proposal ordering; exact CE damage remains the winner gate.",
     ]
     explanation = {
         "summary": source_pack_plan.get("explanation"),
@@ -137,6 +183,7 @@ def optimize(
     return {
         "scenario": _dump(scenario),
         "scenario_used": scenario.id,
+        "requested_scenario_alias": requested_scenario,
         "game_mode": "clan_expedition",
         "recommendation": best,
         "best": best,
