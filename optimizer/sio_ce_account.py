@@ -1,9 +1,10 @@
 """Full account-to-damage Clan Expedition pipeline built around sIO.
 
-Python assembles source-backed account components. The supplied sIO runtime then
-executes Tech/Twinborn, module 24804 item and uptime conditions, direct damage,
-final evolved-passive transforms and the final CE formula in the original order.
-The Python 24804 port is retained only as an auditable fallback.
+Raw account profiles are assembled by the original sIO runtime functions. Python
+also assembles the same source-backed systems so the optimizer retains an
+auditable fallback when Node or the source-locked bundle is unavailable. The
+exact runtime then executes Tech, uptime conditions, direct damage, final stat
+transforms and CE damage in the original order.
 """
 
 from __future__ import annotations
@@ -35,6 +36,24 @@ POST_24804_STAGES = {
     "post_24804_items",
     "post_24804_account_and_items",
 }
+RAW_ACCOUNT_STAGES = {
+    "raw_profile",
+    "sio_raw_profile",
+    "raw_account",
+    "account_profile",
+}
+RAW_ACCOUNT_SECTION_KEYS = {
+    "heroes",
+    "items",
+    "collectibles",
+    "customSets",
+    "evoTree",
+    "mounts",
+    "skills",
+    "pets",
+    "petSkills",
+    "techs",
+}
 
 
 def _number(value: Any, default: float = 0.0) -> float:
@@ -53,6 +72,22 @@ def _add(target: dict[str, Any], source: Mapping[str, Any] | None) -> None:
 
 def _sio(profile: Mapping[str, Any]) -> Mapping[str, Any]:
     return profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
+
+
+def _plain_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping) and isinstance(value.get("data"), Mapping):
+        value = value["data"]
+    if isinstance(value, Mapping) and isinstance(value.get("owned"), Mapping):
+        value = value["owned"]
+    return deepcopy(dict(value)) if isinstance(value, Mapping) else {}
+
+
+def _first_mapping(*values: Any) -> dict[str, Any]:
+    for value in values:
+        result = _plain_mapping(value)
+        if result:
+            return result
+    return {}
 
 
 def _normalize_explicit_tech_input(sio: dict[str, Any]) -> None:
@@ -77,6 +112,116 @@ def _normalize_explicit_tech_input(sio: dict[str, Any]) -> None:
         existing = sio.get("settings") if isinstance(sio.get("settings"), Mapping) else {}
         sio["settings"] = {**dict(existing), **deepcopy(dict(explicit_settings))}
     sio.pop("tech_input", None)
+
+
+def _runtime_account_input(
+    profile: Mapping[str, Any],
+    sio: Mapping[str, Any],
+    *,
+    stage: str,
+    mounts: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Map the raw profile to the pure account functions used by sIO's UI.
+
+    Automatic runtime assembly is limited to explicitly raw account stages. A
+    pre-computed stat snapshot is never reinterpreted as raw ownership data.
+    Callers may opt in or out with ``runtimeAccountAssembly`` and may provide a
+    fully mapped ``runtime_account_input`` when importing sIO state directly.
+    """
+    explicit = sio.get("runtime_account_input")
+    if isinstance(explicit, Mapping):
+        return deepcopy(dict(explicit))
+    enabled = sio.get("runtimeAccountAssembly", profile.get("runtimeAccountAssembly"))
+    if enabled is False:
+        return None
+    has_raw_sections = any(key in sio or key in profile for key in RAW_ACCOUNT_SECTION_KEYS)
+    if enabled is not True and not (stage in RAW_ACCOUNT_STAGES and has_raw_sections):
+        return None
+
+    meta = _first_mapping(sio.get("meta"), profile.get("meta"))
+    heroes = _first_mapping(sio.get("heroes"), profile.get("heroes"))
+    collectibles = _first_mapping(sio.get("collectibles"), profile.get("collectibles"))
+    custom_sets = _first_mapping(
+        sio.get("customSets"),
+        sio.get("custom_sets"),
+        profile.get("customSets"),
+        profile.get("custom_sets"),
+    )
+    evo_tree = _first_mapping(
+        sio.get("evoTree"),
+        sio.get("evo_tree"),
+        profile.get("evoTree"),
+        profile.get("evo_tree"),
+    )
+    skills = _first_mapping(sio.get("skills"), profile.get("skills"))
+    pets = _first_mapping(sio.get("pets"), profile.get("pets"))
+    pet_skills = _first_mapping(
+        sio.get("petSkills"),
+        sio.get("pet_skills"),
+        profile.get("petSkills"),
+        profile.get("pet_skills"),
+    )
+    techs = _first_mapping(sio.get("techs"), profile.get("techs"))
+    settings = _first_mapping(sio.get("settings"), profile.get("settings"))
+    settings.setdefault("revives", [40, 70, 90])
+    settings["calcMode"] = "damage"
+    items = item_state_from_profile(profile)
+    upgraded = (
+        sio.get("upgradedCollectibles")
+        or sio.get("upgraded_collectibles")
+        or profile.get("upgradedCollectibles")
+        or profile.get("upgraded_collectibles")
+        or []
+    )
+    if not isinstance(upgraded, (list, tuple, set)):
+        upgraded = []
+    teamwork = sio.get("teamwork", meta.get("teamwork", profile.get("teamwork", [])))
+    if not isinstance(teamwork, (list, tuple, set, Mapping)):
+        teamwork = []
+    stats_overrides = _first_mapping(
+        sio.get("statsOverrides"),
+        sio.get("stats_overrides"),
+        profile.get("statsOverrides"),
+        profile.get("stats_overrides"),
+    )
+    main_hero = str(
+        sio.get("activeSurvivor")
+        or sio.get("active_survivor")
+        or meta.get("mainHero")
+        or meta.get("main_hero")
+        or "None"
+    )
+    return {
+        "beta": bool(sio.get("beta", profile.get("beta", False))),
+        "mainHero": main_hero,
+        "synergy": bool(sio.get("synergy", meta.get("synergy", False))),
+        "synergyLevel": int(_number(sio.get("synergyLevel", meta.get("synergyLevel", 0)))),
+        "harmonyL": str(sio.get("harmonyL", meta.get("harmonyL", "None")) or "None"),
+        "harmonyR": str(sio.get("harmonyR", meta.get("harmonyR", "None")) or "None"),
+        "teamwork": deepcopy(teamwork),
+        "clanLevel": int(_number(sio.get("clanLevel", meta.get("clanLevel", 0)))),
+        "heroes": heroes,
+        "items": items,
+        "collectibles": collectibles,
+        "upgradedCollectibles": list(upgraded),
+        "maxGear": int(_number(sio.get("maxGear", meta.get("maxGear", profile.get("maxGear", 0))))),
+        "customSets": custom_sets,
+        "evoTree": evo_tree,
+        "mounts": deepcopy(dict(mounts or {})),
+        "skills": skills,
+        "pets": pets,
+        "petSkills": pet_skills,
+        "techs": techs,
+        "settings": settings,
+        "evolvePassives": bool(sio.get("evolvePassives", profile.get("evolvePassives", False))),
+        "turf": _first_mapping(sio.get("turf"), profile.get("turf")),
+        "lmeTestaments": _first_mapping(sio.get("lmeTestaments"), profile.get("lmeTestaments")),
+        "lmeStatsOverrides": _first_mapping(sio.get("lmeStatsOverrides"), profile.get("lmeStatsOverrides")),
+        "eeSkills": deepcopy(sio.get("eeSkills", profile.get("eeSkills"))),
+        "eeOmnipower": deepcopy(sio.get("eeOmnipower", profile.get("eeOmnipower"))),
+        "statsOverrides": stats_overrides,
+        "gameMode": "ce",
+    }
 
 
 def _has_tech_state(profile: Mapping[str, Any]) -> bool:
@@ -108,9 +253,9 @@ def prepare_sio_ce_profile(
 ) -> dict[str, Any]:
     """Assemble account stats without mutating the caller.
 
-    When ``defer_runtime_conditions`` is true, module 24804 is deliberately not
-    approximated in Python. Raw items/settings remain on the profile so the exact
-    JavaScript runtime can apply ``24804.zP`` and ``24804.IE`` once, after Tech.
+    Raw profile ownership is preserved under ``runtime_account_input`` before the
+    Python fallback modifies or hides any section. The JavaScript runtime may use
+    that input to execute the original sIO account functions directly.
     """
     prepared = deepcopy(dict(profile))
     sio = prepared.get("sio_ce")
@@ -124,6 +269,17 @@ def prepare_sio_ce_profile(
         prepared["_sio_pipeline_warnings"] = []
         sio["skipRuntime24804"] = True
         return prepared
+
+    mounts = sio.get("mounts") if isinstance(sio.get("mounts"), Mapping) else prepared.get("mounts")
+    exact_account_input = _runtime_account_input(
+        prepared,
+        sio,
+        stage=stage,
+        mounts=mounts if isinstance(mounts, Mapping) else None,
+    )
+    if exact_account_input is not None:
+        sio["runtime_account_input"] = exact_account_input
+        sio["runtimeAccountAssembly"] = True
 
     stats = _explicit_stats(prepared)
     survivor_result = assemble_sio_survivor_stats(prepared)
@@ -141,7 +297,6 @@ def prepare_sio_ce_profile(
     _add(stats, skill_result.get("stats"))
     _add(stats, pet_result.get("stats"))
 
-    mounts = sio.get("mounts") if isinstance(sio.get("mounts"), Mapping) else prepared.get("mounts")
     mount_result = aggregate_mount_stats(mounts if isinstance(mounts, Mapping) else None)
     _add(stats, mount_result.get("stats"))
 
@@ -161,9 +316,8 @@ def prepare_sio_ce_profile(
     warnings.extend(mount_result.get("warnings", []))
     sio["stats"] = stats
     sio["stats_stage"] = stats_stage
-    # Mount effects are already inside the merged stat map. Hide raw mounts from
-    # the Python core so they cannot be counted twice. Exact 24804 still receives
-    # raw items and settings, which are intentionally preserved.
+    # Mount effects are already inside the Python fallback stat map. The exact
+    # runtime retains the untouched raw mount state inside runtime_account_input.
     sio.pop("mounts", None)
     prepared["mounts"] = {}
     prepared["sio_ce"] = sio
@@ -174,6 +328,7 @@ def prepare_sio_ce_profile(
         "pets": pet_result.get("detail", {}),
         "mounts": mount_result.get("detail", {}),
         "items": final_item_detail,
+        "runtime_account_assembly_requested": exact_account_input is not None,
     }
     prepared["_sio_pipeline_warnings"] = sorted(set(warnings))
     return prepared
@@ -222,6 +377,9 @@ def _report_from_exact(prepared: Mapping[str, Any], exact: Mapping[str, Any]) ->
         "passive_pools": exact.get("passive_pools", []),
         "formula_provenance": exact.get("formula_provenance", {}),
         "formula_order": exact.get("formula_order", []),
+        "account_assembly_exact": bool(exact.get("account_assembly_exact")),
+        "account_assembly_modules": exact.get("account_assembly_modules", []),
+        "account_context": exact.get("account_context", {}),
         "runtime_exact": True,
     }
 
@@ -288,12 +446,17 @@ def calculate_clan_expedition_damage_batch(
     for original, ready, exact in zip(originals, prepared, exact_rows):
         try:
             report = _report_from_exact(ready, exact)
+            formula_pipeline = (
+                "sio_runtime_account_then_13024_24804_88426_67727"
+                if report.get("account_assembly_exact")
+                else "sio_account_then_runtime_13024_24804_88426_67727"
+            )
             reports.append(
                 _decorate_report(
                     original,
                     ready,
                     report,
-                    formula_pipeline="sio_account_then_runtime_13024_24804_88426_67727",
+                    formula_pipeline=formula_pipeline,
                 )
             )
         except (SioRuntimeUnavailable, SioRuntimeInputError, OSError, ValueError) as error:
