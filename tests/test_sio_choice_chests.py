@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import optimizer.source_pack_optimizer as source_optimizer
 from optimizer.sio_choice_chests import (
+    exact_cover_allocations,
     expand_actions_with_choice_chests,
     normalize_choice_chests,
 )
@@ -51,6 +52,7 @@ def test_selector_chests_cover_shortages_with_one_canonical_count_allocation() -
     }
     assert variant["metadata"]["combination_search"] is True
     assert variant["metadata"]["permutation_search"] is False
+    assert variant["metadata"]["allocation_policy"] == "exact_cover_pareto_by_chest_type"
 
 
 def test_selector_chest_pick_order_does_not_create_duplicate_actions() -> None:
@@ -70,11 +72,64 @@ def test_selector_chest_pick_order_does_not_create_duplicate_actions() -> None:
     }
 
 
+def test_exact_cover_search_ignores_unrelated_reward_combinations() -> None:
+    chests = [
+        {
+            "resource_id": "selector",
+            "count": 100,
+            "options": {
+                "needed": 1,
+                "unrelated_a": 1,
+                "unrelated_b": 1,
+                "unrelated_c": 1,
+            },
+        }
+    ]
+    rows = exact_cover_allocations(chests, {"needed": 2})
+    assert rows == [
+        {
+            "chests": {"selector": 2},
+            "grants": {"needed": 2.0},
+            "option_counts": {"selector": {"needed": 2}},
+        }
+    ]
+
+
+def test_different_chest_types_keep_nondominated_exact_allocations() -> None:
+    chests = [
+        {"resource_id": "small", "count": 2, "options": {"core": 1}},
+        {"resource_id": "large", "count": 1, "options": {"core": 2}},
+    ]
+    rows = exact_cover_allocations(chests, {"core": 2})
+    assert {tuple(sorted(row["chests"].items())) for row in rows} == {
+        (("small", 2),),
+        (("large", 1),),
+    }
+
+
+def test_dominated_mixed_chest_allocation_is_removed() -> None:
+    chests = [
+        {"resource_id": "a", "count": 2, "options": {"core": 1}},
+        {"resource_id": "b", "count": 2, "options": {"core": 1}},
+    ]
+    rows = exact_cover_allocations(chests, {"core": 1})
+    assert {tuple(sorted(row["chests"].items())) for row in rows} == {
+        (("a", 1),),
+        (("b", 1),),
+    }
+    assert all(sum(row["chests"].values()) == 1 for row in rows)
+
+
 def test_unknown_choice_conversion_is_not_guessed() -> None:
     profile = {"resources": {"selector": 5}, "choice_chests": {"selector": {}}}
     assert normalize_choice_chests(profile, profile["resources"]) == []
     rows = expand_actions_with_choice_chests(profile, [_action({"a": 1})], profile["resources"])
     assert rows == [_action({"a": 1})]
+
+
+def test_reward_units_must_exactly_cover_shortage_without_hidden_leftover() -> None:
+    chests = [{"resource_id": "bundle", "count": 1, "options": {"core": 5}}]
+    assert exact_cover_allocations(chests, {"core": 3}) == []
 
 
 def test_public_optimizer_scores_chest_assisted_complete_after_state(monkeypatch) -> None:
