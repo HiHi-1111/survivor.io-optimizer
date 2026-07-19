@@ -25,6 +25,7 @@ from optimizer.sio_exact_actions import (
 )
 from optimizer.sio_item_reallocations import generate_exhaustive_item_reallocations
 from optimizer.sio_progression_frontiers import generate_progression_frontiers
+from optimizer.sio_tech_configurations import generate_twinborn_mode_actions
 from optimizer.sio_tech_progression import generate_tech_progression_actions
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -199,6 +200,7 @@ def _all_actions(profile: Mapping[str, Any]) -> tuple[list[dict[str, Any]], list
     base_actions = [
         *generate_exact_actions(profile),
         *generate_exhaustive_item_reallocations(profile),
+        *generate_twinborn_mode_actions(profile),
         *generate_tech_progression_actions(profile),
         *generate_progression_frontiers(profile),
         *load_source_pack_actions(),
@@ -360,6 +362,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
             "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
             "Every exact cumulative progression frontier is evaluated, not only the next level.",
             "Every exact directional two-slot item reallocation frontier is evaluated before structural deduplication.",
+            "Twinborn modes are evaluated as complete per-tech assignments, never item permutations.",
             "Choice chests use canonical multiset allocations, never pick-order permutations.",
             "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
         ],
