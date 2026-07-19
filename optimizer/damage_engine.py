@@ -1,11 +1,10 @@
 """Clan Expedition damage entry points backed by the supplied sIO formula.
 
 Whole-profile optimization uses the exact sIO account/runtime pipeline. A small
-legacy snapshot reader remains for old tests and imported profiles that already
-contain explicit ``damage_multiplier`` values but no reconstructable sIO attack
-split. That reader multiplies only the values supplied by the profile, ignores
-survival stats, is clearly marked non-runtime-exact, and is never used to invent
-legal actions or training labels.
+legacy snapshot reader remains for old imported profiles that already contain
+explicit ``damage_multiplier`` values but no reconstructable sIO attack split.
+That reader multiplies only the values supplied by the profile, ignores survival
+stats, is marked non-runtime-exact, and is excluded from exact training.
 """
 
 from __future__ import annotations
@@ -31,9 +30,20 @@ LEGACY_ALIASES = {
     "boss_damage": "damageBoss",
 }
 LEGACY_SYSTEMS = ("gear", "survivor", "tech", "pet", "collectibles")
+_NUMERIC_TEXT = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)\s*(x|%)?\s*$", re.IGNORECASE)
 
 
 def _number(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, str):
+        text = value.replace(",", "").strip()
+        match = _NUMERIC_TEXT.match(text)
+        if not match:
+            return default
+        number = float(match.group(1))
+        suffix = (match.group(2) or "").lower()
+        if suffix == "%":
+            number = 1.0 + number / 100.0 if text.startswith("+") else number / 100.0
+        value = number
     try:
         result = float(value)
     except (TypeError, ValueError):
@@ -63,7 +73,6 @@ def _legacy_percent(value: Any) -> float:
 
 
 def _legacy_sio_stats(build_stats: Mapping[str, Any]) -> dict[str, Any]:
-    """Translate the old snake-case stat snapshot into sIO field names."""
     converted: dict[str, Any] = {}
     for source, target in LEGACY_ALIASES.items():
         if source not in build_stats:
@@ -326,16 +335,12 @@ def _legacy_explicit_multiplier_report(profile: Mapping[str, Any]) -> dict[str, 
 
 
 def estimate_damage_score(build_stats: Mapping[str, Any]) -> float:
-    """Compatibility helper for callers that only have a CE stat dictionary."""
     profile = {
         "game_mode": "clan_expedition",
         "build_stats": dict(build_stats),
         "sio_ce": {
             "stats_stage": "legacy_stat_snapshot",
-            "attack": {
-                "atkBase": _number(build_stats.get("atk")),
-                "atkFinal": 0.0,
-            },
+            "attack": {"atkBase": _number(build_stats.get("atk")), "atkFinal": 0.0},
             "passive_multiplier": 1.0,
         },
     }
@@ -344,7 +349,6 @@ def estimate_damage_score(build_stats: Mapping[str, Any]) -> float:
 
 
 def estimate_damage_totals(profile_input: Any) -> dict[str, Any]:
-    """Calculate a Clan Expedition damage report with explicit provenance."""
     if hasattr(profile_input, "model_dump"):
         profile = profile_input.model_dump()
     elif hasattr(profile_input, "dict"):
@@ -359,7 +363,8 @@ def estimate_damage_totals(profile_input: Any) -> dict[str, Any]:
         raise UnsupportedGameModeError(f"Only Clan Expedition is supported; received {explicit_mode!r}.")
 
     legacy_report = _legacy_explicit_multiplier_report(profile)
-    if legacy_report is not None and not isinstance((profile.get("sio_ce") or {}).get("attack") if isinstance(profile.get("sio_ce"), Mapping) else None, Mapping):
+    sio_attack = (profile.get("sio_ce") or {}).get("attack") if isinstance(profile.get("sio_ce"), Mapping) else None
+    if legacy_report is not None and not isinstance(sio_attack, Mapping):
         return legacy_report
 
     profile = _normalize_legacy_profile(profile)
