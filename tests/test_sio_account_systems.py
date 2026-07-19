@@ -73,6 +73,6 @@ def test_account_sources_are_merged_before_moonscar_thresholds():
     assert result["normalized_stats"]["critDamage"] == 200
     assert result["account_detail"]["survivors"]["mainHero"] == "King"
     assert result["formula_pipeline"] in {
-        "partial_python_sio_account_assembly_then_24804_67727_88426",
-        "sio_account_assembly_then_24804_then_runtime_13024_88426_67727",
+        "python_fallback_24804_67727_88426",
+        "sio_account_then_runtime_13024_24804_88426_67727",
     }
