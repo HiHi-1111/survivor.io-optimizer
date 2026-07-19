@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import shutil
+from types import SimpleNamespace
 
 import pytest
 
 from optimizer.sio_ce_constants import SIO_BUNDLE_SHA256
+import optimizer.sio_runtime_oracle as runtime_oracle_module
 from optimizer.sio_runtime_oracle import (
     ORACLE_SCHEMA,
     SioCeRuntimeOracle,
@@ -107,6 +110,72 @@ def test_post_24804_request_drops_raw_upgrade_context_and_needs_no_evolve_choice
     assert request["items"] == {}
     assert request["collectibles"] == {}
     assert request["stats"]["hpBulletBoost"] == 1.6
+
+
+def test_post_snapshot_oracle_starts_from_sio_identity_defaults() -> None:
+    source = runtime_oracle_module.ORACLE_SCRIPT.read_text(encoding="utf-8")
+    assert "const baseStats = runtime.req(37013).c.baseStats || {};" in source
+    assert "let stats = { ...baseStats, ...(payload.stats || {}) };" in source
+
+
+def test_oracle_cache_key_includes_oracle_source_hash(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    script = tmp_path / "oracle.js"
+    script.write_text("// oracle v1\n", encoding="utf-8")
+    monkeypatch.setattr(runtime_oracle_module, "ORACLE_SCRIPT", script)
+    monkeypatch.setattr(
+        runtime_oracle_module,
+        "ensure_extracted_bundle",
+        lambda _bundle=None: (tmp_path, SIO_BUNDLE_SHA256),
+    )
+    monkeypatch.setattr(runtime_oracle_module, "find_node", lambda: "node")
+
+    calls: list[str] = []
+
+    def fake_run(*_args, **_kwargs):
+        calls.append(script.read_text(encoding="utf-8"))
+        return SimpleNamespace(
+            returncode=0,
+            stderr="",
+            stdout=json.dumps(
+                {
+                    "schema": ORACLE_SCHEMA,
+                    "results": [
+                        {
+                            "supported": True,
+                            "total_damage": len(calls),
+                            "formula_modules": [88426, 67727],
+                            "formula_order": ["post_24804_snapshot", "88426.y", "67727.f"],
+                        }
+                    ],
+                }
+            ),
+        )
+
+    monkeypatch.setattr(runtime_oracle_module.subprocess, "run", fake_run)
+    profile = {
+        "game_mode": "clan_expedition",
+        "sio_ce": {
+            "stats_stage": "post_24804_account_and_items",
+            "stats": {},
+            "attack": {"atkBase": 1000, "atkFinal": 0},
+        },
+    }
+    cache = tmp_path / "oracle-cache.jsonl"
+
+    first = SioCeRuntimeOracle(cache_path=cache)
+    assert first.score_profile(profile)["total_damage"] == 1
+    first.close()
+
+    same_source = SioCeRuntimeOracle(cache_path=cache)
+    assert same_source.score_profile(profile)["total_damage"] == 1
+    same_source.close()
+    assert len(calls) == 1
+
+    script.write_text("// oracle v2\n", encoding="utf-8")
+    changed_source = SioCeRuntimeOracle(cache_path=cache)
+    assert changed_source.score_profile(profile)["total_damage"] == 2
+    changed_source.close()
+    assert len(calls) == 2
 
 
 def test_missing_evolved_passive_choice_is_unknown_not_guessed() -> None:
@@ -241,4 +310,30 @@ def test_post_24804_snapshot_is_not_transformed_a_second_time(tmp_path: Path) ->
     assert result["stats"]["chilled"] == pytest.approx(45)
     assert result["formula_modules"] == [88426, 67727]
     assert result["formula_order"] == ["post_24804_snapshot", "88426.y", "67727.f"]
+    oracle.close()
+
+
+@pytest.mark.skipif(
+    not os.environ.get("SIO_TOOLS_BUNDLE") or shutil.which("node") is None,
+    reason="Exact supplied sIO bundle and Node are required for runtime integration.",
+)
+def test_sparse_post_24804_snapshot_inherits_sio_identity_defaults(tmp_path: Path) -> None:
+    profile = {
+        "game_mode": "clan_expedition",
+        "sio_ce": {
+            "stats_stage": "post_24804_account_and_items",
+            "stats": {},
+            "attack": {"atkBase": 1000, "atkFinal": 0},
+        },
+    }
+    oracle = SioCeRuntimeOracle(
+        bundle_path=Path(os.environ["SIO_TOOLS_BUNDLE"]),
+        cache_path=tmp_path / "sparse-post-24804.jsonl",
+    )
+    result = oracle.score_profile(profile)
+    assert result["supported"] is True
+    assert result["total_damage"] == pytest.approx(1000.0)
+    assert result["stats"]["critDamage"] == 200
+    assert result["stats"]["shieldDamageUptime"] == 1
+    assert result["stats"]["voidNeckBoostUptime"] == 1
     oracle.close()
