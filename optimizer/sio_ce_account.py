@@ -204,7 +204,23 @@ def _runtime_account_input(
         "items": items,
         "collectibles": collectibles,
         "upgradedCollectibles": list(upgraded),
-        "maxGear": int(_number(sio.get("maxGear", meta.get("maxGear", profile.get("maxGear", 0))))),
+        "maxGear": int(
+            _number(
+                sio.get(
+                    "maxGear",
+                    sio.get(
+                        "max_gear",
+                        meta.get(
+                            "maxGear",
+                            meta.get(
+                                "max_gear",
+                                profile.get("maxGear", profile.get("max_gear", 0)),
+                            ),
+                        ),
+                    ),
+                )
+            )
+        ),
         "customSets": custom_sets,
         "evoTree": evo_tree,
         "mounts": deepcopy(dict(mounts or {})),
