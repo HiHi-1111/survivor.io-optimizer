@@ -13,8 +13,9 @@ def ce_profile(*, scooter_stats=None, scooter_stars=0, scooter_shards=20):
         "game_mode": "clan_expedition",
         "goal_scenario": "clan_expedition",
         "sio_ce": {
-            "stats_stage": "post_24804",
+            "stats_stage": "raw_profile",
             "stats": {},
+            "evolvePassives": False,
             "attack": {"atkBase": 1000, "atkFinal": 0},
             "passive_multiplier": 1.0,
         },
@@ -66,8 +67,8 @@ def test_raw_sio_item_state_is_assembled_before_ce_damage():
         }
     )
     assert result["supported"] is True
-    assert result["normalized_stats"]["skillDamage"] == 105
-    assert result["normalized_stats"]["atkEquip"] == 952 + 200 * 60
+    assert result["normalized_stats"]["skillDamage"] == 135
+    assert result["normalized_stats"]["atkEquip"] == 2538 + 200 * 160
     assert result["item_detail"]["items"]["Weapon"]["name"] == "Twin Lance"
     assert result["total_damage"] > 1000
 
