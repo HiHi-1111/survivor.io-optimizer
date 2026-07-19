@@ -13,17 +13,24 @@ from optimizer.player_state import PlayerState, validate_player_state
 from optimizer.search_memory import search_guide_memory
 from optimizer.source_pack_optimizer import optimize_source_pack_actions
 
-# Old generic objective labels are accepted only as migration aliases into the
-# single Clan Expedition contract. They do not select another game mode or a
-# different final scoring formula.
+# Old objective labels are migration aliases into the one CE contract. They do
+# not enable another combat mode or change the exact before/after winner.
 CE_SCENARIO_ALIASES = {
     "clan_expedition",
     "scenario_clan_expedition",
+    "clan_expedition_damage",
     "ce",
     "normal",
     "scenario_1",
     "scenario_2",
     "scenario_3",
+    "scenario_event_shop",
+    "scenario_f2p_gems",
+    "scenario_chapter_push",
+    "scenario_clan_shop",
+    "scenario_pet_xeno",
+    "scenario_gear_ss",
+    "scenario_collectibles",
 }
 
 
@@ -101,7 +108,7 @@ def optimize(
     """Return sIO Clan Expedition damage and exact bridged upgrades.
 
     ``include_global_plan`` remains in the public signature for compatibility,
-    but the old generic planner is never allowed to choose the winner.
+    but the retired generic planner is never allowed to choose the winner.
     """
     del planner_options
     raw = _raw_profile(player_state_dict)
@@ -114,19 +121,21 @@ def optimize(
     damage_report = estimate_damage_totals(raw)
     source_pack_plan = optimize_source_pack_actions(raw)
 
-    best = source_pack_plan.get("best")
-    ranked = list(source_pack_plan.get("ranked_actions", []))
+    best_spend = source_pack_plan.get("best")
+    public_best = source_pack_plan.get("best_including_no_op") or best_spend
+    ranked_spend = list(source_pack_plan.get("ranked_actions", []))
+    public_options = ranked_spend if best_spend else ([public_best] if public_best else [])
     rejected = list(source_pack_plan.get("rejected_actions", []))
-    resources_used = _costs_to_consumed(best)
+    resources_used = _costs_to_consumed(best_spend)
     resources = _all_resource_counts(player_state, raw)
     resources_saved = {
         key: amount - resources_used.get(key, 0.0)
         for key, amount in resources.items()
         if amount - resources_used.get(key, 0.0) > 0
     }
-    expected_damage_gain = float((best or {}).get("expected_dps_gain", 0.0) or 0.0)
+    expected_damage_gain = float((best_spend or {}).get("expected_dps_gain", 0.0) or 0.0)
 
-    guide_query = str((best or {}).get("action_id", "")).replace("_", " ")
+    guide_query = str((best_spend or {}).get("action_id", "")).replace("_", " ")
     guide_matches = search_guide_memory(guide_query) if guide_query else []
     source_refs = sorted(
         {
@@ -141,10 +150,8 @@ def optimize(
         warnings.append(
             "The retired generic planner was requested but did not choose the winner; exact CE before/after damage remained authoritative."
         )
-    action_chain = [{**best, "consumed_items": resources_used}] if best else []
-    compatibility_steps = action_chain or [source_pack_plan.get("no_op_baseline") or {
-        "action_id": "save_hold_no_op", "action_type": "save_hold", "consumed_items": {}
-    }]
+    action_chain = [{**best_spend, "consumed_items": resources_used}] if best_spend else []
+    compatibility_steps = action_chain or ([public_best] if public_best else [])
     global_plan = {
         "supported": False,
         "reason": "generic_multimode_planner_retired_exact_ce_only",
@@ -168,6 +175,7 @@ def optimize(
         "Record repeated observed CE runs only for formula-review calibration.",
         "Keep learned champions limited to proposal ordering; exact CE damage remains the winner gate.",
     ]
+    next_best = ranked_spend[1] if len(ranked_spend) > 1 else None
     explanation = {
         "summary": source_pack_plan.get("explanation"),
         "scenario_tradeoff": scenario.description,
@@ -177,7 +185,7 @@ def optimize(
         "assumptions": list(damage_report.get("warnings", [])),
         "missing_data": coverage.get("systems_missing_data", []),
         "future_goals": future_goals,
-        "next_best_action": ranked[1] if len(ranked) > 1 else None,
+        "next_best_action": next_best,
     }
 
     return {
@@ -185,13 +193,14 @@ def optimize(
         "scenario_used": scenario.id,
         "requested_scenario_alias": requested_scenario,
         "game_mode": "clan_expedition",
-        "recommendation": best,
-        "best": best,
-        "best_including_no_op": source_pack_plan.get("best_including_no_op"),
+        "recommendation": public_best,
+        "best": public_best,
+        "best_spend_action": best_spend,
+        "best_including_no_op": public_best,
         "no_op_baseline": source_pack_plan.get("no_op_baseline"),
-        "no_action_recommended": source_pack_plan.get("no_action_recommended", best is None),
-        "ranked_alternatives": ranked[1:] if best else ranked,
-        "top_options": ranked,
+        "no_action_recommended": source_pack_plan.get("no_action_recommended", best_spend is None),
+        "ranked_alternatives": ranked_spend[1:] if best_spend else [],
+        "top_options": public_options,
         "rejected_alternatives": rejected,
         "avoid": rejected,
         "action_chain": action_chain,
@@ -210,7 +219,7 @@ def optimize(
         "future_goals": future_goals,
         "missing_data": coverage.get("systems_missing_data", []),
         "confidence_level": "exact_core_with_explicit_unknowns" if damage_report.get("supported") else "unknown",
-        "next_best_action": ranked[1] if len(ranked) > 1 else None,
+        "next_best_action": next_best,
         "global_plan": global_plan,
         "guide_matches": guide_matches,
         "source_refs": source_refs,
