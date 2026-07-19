@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from optimizer.player_state import PlayerState
-from optimizer.sio_ce_damage import compare_clan_expedition_profiles
+from optimizer.sio_ce_account import compare_clan_expedition_profiles
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PACK_DIR = ROOT / "knowledge" / "source_pack"
