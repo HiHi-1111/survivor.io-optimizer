@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import optimizer.source_pack_optimizer as source_optimizer
 from optimizer.sio_survivor_configurations import (
     NONE,
     generate_survivor_configuration_actions,
@@ -139,3 +140,52 @@ def test_current_state_is_skipped_but_all_other_complete_states_are_actions() ->
     assert plan.total_states == 2
     assert len(plan.actions) == 1
     assert plan.actions[0]["metadata"]["teamwork"] == []
+
+
+def test_public_optimizer_withholds_global_claim_when_survivor_search_is_truncated(monkeypatch) -> None:
+    profile = {
+        "game_mode": "clan_expedition",
+        "sio_ce": {
+            "stats_stage": "post_24804",
+            "stats": {},
+            "attack": {"atkBase": 1000, "atkFinal": 0},
+            "passive_multiplier": 1.0,
+            "heroes": {
+                "Master Yang": _hero(12),
+                "Metalia": _hero(12),
+                "Raphael": _hero(8),
+                "April": _hero(8),
+                "Splinter": _hero(8),
+            },
+            "meta": {"mainHero": "Master Yang", "synergy": False, "teamwork": []},
+            "configuration_constraints": {"survivor": {"max_states": 1}},
+            "exact_actions": [
+                {
+                    "action_id": "positive_test_action",
+                    "system": "test",
+                    "action_type": "exact",
+                    "state_patch": {"test_damage": 10},
+                    "consumed_items": {},
+                }
+            ],
+        },
+    }
+
+    def fake_batch(states):
+        return [
+            {
+                "supported": True,
+                "total_damage": 1000.0 + float(state.get("test_damage", 0)),
+                "formula_provenance": {"test": True},
+                "runtime_exact": True,
+            }
+            for state in states
+        ]
+
+    monkeypatch.setattr(source_optimizer, "calculate_clan_expedition_damage_batch", fake_batch)
+    result = source_optimizer.optimize_source_pack_actions(profile)
+    assert result["optimization_complete"] is False
+    assert result["recommendation_withheld"] is True
+    assert result["best"] is None
+    assert result["provisional_best_evaluated"]["action_id"] == "positive_test_action"
+    assert result["configuration_searches"]["survivor_configurations"]["complete"] is False
