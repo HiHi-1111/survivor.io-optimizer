@@ -11,7 +11,7 @@ permissions:
 jobs:
   exact-ce:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -35,6 +35,7 @@ jobs:
           optimizer/sio_exact_actions.py
           optimizer/champion_lineage.py
           optimizer/exact_training_labels.py
+          optimizer/sio_calibration.py
           tools/sio_training/train_champion_lineage.py
       - name: Validate offline oracle JavaScript
         run: node --check tools/sio_runtime/sio_ce_oracle.js
@@ -42,15 +43,23 @@ jobs:
         shell: bash
         run: |
           set +e
-          python tools/run_sio_ce_tests.py 2>&1 | tee pytest-${{ matrix.python-version }}.log
+          python tools/run_sio_ce_tests.py 2>&1 | tee pytest-focused-${{ matrix.python-version }}.log
           code=${PIPESTATUS[0]}
           exit "$code"
-      - name: Upload validation log
+      - name: Run complete repository suite
+        if: matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -q 2>&1 | tee pytest-full-${{ matrix.python-version }}.log
+          code=${PIPESTATUS[0]}
+          exit "$code"
+      - name: Upload validation logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: exact-ce-py${{ matrix.python-version }}
-          path: pytest-${{ matrix.python-version }}.log
+          path: pytest-*-${{ matrix.python-version }}.log
           if-no-files-found: error
           retention-days: 7
       - name: Verify lineage CLI
