@@ -26,7 +26,7 @@ def test_only_verified_aggregate_component_stats_are_copied() -> None:
         "mount_puzzles": {
             "electric_scooter": {
                 "verified": True,
-                "component_stats": {"skillDamage": 12, "critRate": 3},
+                "component_stats": {"skillDamage": 12, "critDamage": 3},
                 "placements": [{"type": "I", "row": 0, "col": 0, "rotation": 0}],
                 "board_mask": 123,
                 "states_explored": 456,
@@ -35,7 +35,7 @@ def test_only_verified_aggregate_component_stats_are_copied() -> None:
     }
     normalized, report = apply_verified_mount_puzzle_stats(profile)
     assert normalized["mounts"]["data"]["Electric Scooter"]["stats"] == {
-        "critRate": 3.0,
+        "critDamage": 3.0,
         "skillDamage": 12.0,
     }
     assert normalized["sio_ce"]["mount_puzzles"] == profile["sio_ce"]["mount_puzzles"]
