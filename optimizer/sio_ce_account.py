@@ -44,19 +44,35 @@ def _sio(profile: Mapping[str, Any]) -> Mapping[str, Any]:
     return profile.get("sio_ce") if isinstance(profile.get("sio_ce"), Mapping) else {}
 
 
+def _has_mount_state(profile: Mapping[str, Any]) -> bool:
+    sio = _sio(profile)
+    mounts = sio.get("mounts") if isinstance(sio.get("mounts"), Mapping) else profile.get("mounts")
+    if not isinstance(mounts, Mapping):
+        return False
+    if mounts.get("active"):
+        return True
+    data = mounts.get("data") if isinstance(mounts.get("data"), Mapping) else mounts
+    return any(
+        isinstance(value, Mapping) and bool(value.get("enabled"))
+        for key, value in data.items()
+        if key != "active"
+    )
+
+
 def _raw_systems_present(profile: Mapping[str, Any]) -> bool:
     sio = _sio(profile)
+    pet = pet_state(profile)
     return bool(
         item_state_from_profile(profile)
         or hero_state_from_profile(profile)
         or collectible_state(profile)
-        or (pet_state(profile).get("active") or pet_state(profile).get("main_pet"))
+        or pet.get("active")
+        or pet.get("main_pet")
         or profile.get("skills")
         or profile.get("evoTree")
         or sio.get("skills")
         or sio.get("evoTree")
-        or profile.get("mounts")
-        or sio.get("mounts")
+        or _has_mount_state(profile)
     )
 
 
@@ -116,7 +132,9 @@ def prepare_sio_ce_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
         )
 
     sio["stats"] = stats
-    sio["stats_stage"] = "post_24804_account_and_items"
+    # Use the core-recognized completed-stage label. The more descriptive order
+    # remains available in ``formula_pipeline`` and account_detail.
+    sio["stats_stage"] = "post_24804"
     # Mount stats and direct mount damage are already in ``stats``. Remove raw
     # mounts from the core payload to prevent a second aggregation.
     sio.pop("mounts", None)
