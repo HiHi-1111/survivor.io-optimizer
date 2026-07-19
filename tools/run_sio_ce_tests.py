@@ -14,6 +14,7 @@ TESTS = [
     "tests/test_sio_runtime_account_assembly.py",
     "tests/test_sio_exact_actions.py",
     "tests/test_sio_tech_progression.py",
+    "tests/test_sio_tech_configurations.py",
     "tests/test_sio_progression_frontiers.py",
     "tests/test_sio_tetris.py",
     "tests/test_sio_combinations.py",
