@@ -1,8 +1,9 @@
 """Small persistent online ranker for proposal ordering only.
 
-Exact sIO CE damage always chooses the final optimizer winner. When lineage mode
-is requested, this ranker inherits the current immutable champion rather than
-silently starting from zero.
+Exact sIO CE damage always chooses the final optimizer winner. Every enabled
+ranker inherits the immutable lineage champion before it can observe a sample;
+there is no zero-weight birth path. Legacy checkpoints may seed generation zero
+only when they contain a finite non-zero model.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ class OnlineLinearRanker:
         learning_rate: float = 0.01,
         enabled: bool = True,
         lineage_root: Path | None = None,
-        require_inherited_start: bool = False,
+        require_inherited_start: bool = True,
     ) -> None:
         self.checkpoint_path = checkpoint_path
         self.learning_rate = float(learning_rate)
@@ -36,49 +37,38 @@ class OnlineLinearRanker:
         self.loaded = False
         self.inherited = False
         self.parent_champion_id: str | None = None
-        self.lineage_root = lineage_root or (
-            Path(os.environ["SIO_CHAMPION_LINEAGE_ROOT"])
-            if os.environ.get("SIO_CHAMPION_LINEAGE_ROOT") else None
-        )
+        env_root = os.environ.get("SIO_CHAMPION_LINEAGE_ROOT")
+        self.lineage_root = lineage_root or (Path(env_root) if env_root else checkpoint_path.parent / "champion_lineage")
         self.require_inherited_start = bool(require_inherited_start)
         if not self.enabled:
             return
-        if checkpoint_path.exists() and self._load_checkpoint(checkpoint_path):
-            return
-        if self.lineage_root is not None or self.require_inherited_start:
-            from optimizer.champion_lineage import ChampionLineage
 
-            root = self.lineage_root or checkpoint_path.parent / "champion_lineage"
-            champion = ChampionLineage(root).ensure_genesis([checkpoint_path])
-            self.weights = [float(value) for value in champion["weights"]]
-            self.samples = int(champion.get("samples", 0))
-            self.updates = int(champion.get("updates", 0))
-            self.loaded = True
-            self.inherited = True
-            self.parent_champion_id = str(champion["champion_id"])
-            if not any(abs(value) > 1e-12 for value in self.weights):
-                raise RuntimeError("Lineage ranker cannot inherit a zero checkpoint.")
+        from optimizer.champion_lineage import ChampionLineage
 
-    def _load_checkpoint(self, path: Path) -> bool:
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            stored = payload.get("weights", [])
-            if len(stored) != len(self.weights):
-                return False
-            weights = [float(value) for value in stored]
-            if any(not math.isfinite(value) for value in weights):
-                return False
-            if self.require_inherited_start and not any(abs(value) > 1e-12 for value in weights):
-                return False
-            self.weights = weights
-            self.samples = int(payload.get("samples", 0))
-            self.updates = int(payload.get("updates", 0))
-            self.parent_champion_id = payload.get("parent_champion_id")
-            self.inherited = bool(payload.get("inherited_from_champion", False))
-            self.loaded = True
-            return True
-        except (OSError, ValueError, TypeError):
-            return False
+        legacy_paths: list[Path] = []
+        legacy_payload: dict[str, Any] | None = None
+        if checkpoint_path.is_file():
+            try:
+                payload = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+                stored = payload.get("weights", [])
+                if len(stored) == len(FEATURE_COLUMNS):
+                    values = [float(value) for value in stored]
+                    if all(math.isfinite(value) for value in values) and any(abs(value) > 1e-12 for value in values):
+                        legacy_paths.append(checkpoint_path)
+                        legacy_payload = payload
+            except (OSError, ValueError, TypeError):
+                legacy_payload = None
+
+        champion = ChampionLineage(self.lineage_root).ensure_genesis(legacy_paths)
+        self.weights = [float(value) for value in champion["weights"]]
+        if not any(abs(value) > 1e-12 for value in self.weights):
+            raise RuntimeError("A proposal ranker cannot inherit a zero checkpoint.")
+        self.parent_champion_id = str(champion["champion_id"])
+        self.inherited = True
+        self.loaded = bool(champion.get("bootstrap_source") == "migrated_past_champion" or champion.get("generation", 0) > 0)
+        if legacy_payload is not None and champion.get("migrated_from") == str(checkpoint_path):
+            self.samples = int(legacy_payload.get("samples", 0))
+            self.updates = int(legacy_payload.get("updates", 0))
 
     def observe(self, rows: list[dict[str, Any]], winner_ids: set[str]) -> bool:
         if not self.enabled or not rows or not winner_ids:
@@ -113,6 +103,7 @@ class OnlineLinearRanker:
     def save(self) -> None:
         if not self.enabled:
             return
+        # This is a mutable working-child checkpoint, never the champion file.
         atomic_write_json(self.checkpoint_path, self.report())
 
     def report(self) -> dict[str, Any]:
@@ -125,18 +116,20 @@ class OnlineLinearRanker:
             reverse=True,
         )
         return {
-            "version": 2,
+            "version": 3,
             "model": "online_linear_pairwise_ranker",
-            "role": "proposal_ordering_only",
+            "role": "proposal_ordering_child_only",
             "enabled": self.enabled,
             "samples": self.samples,
             "updates": self.updates,
             "loaded_from_checkpoint": self.loaded,
             "inherited_from_champion": self.inherited,
             "parent_champion_id": self.parent_champion_id,
+            "lineage_root": str(self.lineage_root),
             "weights": self.weights,
             "feature_importance": importance,
             "checkpoint_path": str(self.checkpoint_path),
+            "can_replace_champion_directly": False,
         }
 
 
