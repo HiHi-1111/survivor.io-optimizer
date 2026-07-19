@@ -26,41 +26,42 @@ TECH_TYPES = {
     "Hi-Gravity Pulser": "twin",
 }
 
-# module 32085.nk: cumulative multiplier-chip spend.
+# Exact module 32085.nk export: cumulative multiplier-chip spend.
 MULTIPLIER_CHIPS = {
     "atk": {
         1.0: 0, 1.2: 1, 1.4: 2, 1.6: 4, 1.8: 7, 2.0: 12,
-        2.2: 18, 2.4: 25, 2.6: 35, 2.8: 47, 3.0: 60,
+        2.2: 17, 2.4: 24, 2.6: 33, 2.8: 45, 3.0: 60,
     },
     "def": {
         1.0: 0, 1.2: 1, 1.4: 2, 1.6: 4, 1.8: 7, 2.0: 12,
-        2.2: 18, 2.4: 25, 2.6: 35, 2.8: 47, 3.0: 60,
+        2.2: 17, 2.4: 24, 2.6: 33, 2.8: 45, 3.0: 60,
     },
     "twin": {
-        1.0: 0, 1.2: 1, 1.4: 2, 1.6: 4, 1.8: 7, 2.0: 12,
-        2.2: 18, 2.4: 25, 2.6: 35, 2.8: 47, 3.0: 60,
-        3.2: 66, 3.4: 72, 3.6: 78, 3.8: 84, 4.0: 90,
-        4.2: 96, 4.4: 102, 4.6: 108, 4.8: 114, 5.0: 120,
+        1.0: 0, 1.2: 1, 1.4: 2, 1.6: 4, 1.8: 6, 2.0: 9,
+        2.2: 12, 2.4: 16, 2.6: 20, 2.8: 25, 3.0: 30,
+        3.2: 36, 3.4: 42, 3.6: 48, 3.8: 54, 4.0: 60,
+        4.2: 66, 4.4: 72, 4.6: 78, 4.8: 84, 5.0: 90,
     },
 }
 
-# module 32085.jc: cumulative overload-chip spend at levels 0..18.
+# Exact module 32085.jc export: cumulative overload-chip spend at levels 0..18.
 OVERLOAD_CHIPS = (0, 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 26, 30, 35, 40, 45, 50, 55, 60)
 
-# module 32085.Fd: cumulative extra matching Tech parts at overload levels.
+# Exact module 32085.Fd export: cumulative extra matching Tech parts.
 OVERLOAD_EXTRA_PARTS = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6)
 
-# module 32085.gs: extra matching parts caused by multiplier-chip count.
+# Exact module 32085.gs export: extra matching parts from multiplier chips.
 MULTIPLIER_EXTRA_PARTS = {
-    0: 0, 1: 0, 2: 0, 4: 0, 7: 0, 12: 0, 18: 0, 25: 0, 35: 0,
-    47: 0, 60: 0, 66: 1, 72: 2, 78: 3, 84: 4, 90: 5,
-    96: 6, 102: 7, 108: 8, 114: 9, 120: 10,
+    0: 0, 1: 0, 2: 0, 4: 0, 6: 0, 9: 0, 12: 0, 16: 0,
+    20: 0, 25: 0, 30: 0, 36: 1, 42: 2, 48: 3, 54: 4,
+    60: 5, 66: 6, 72: 7, 78: 8, 84: 9, 90: 10,
 }
 
-# module 32085.sm: minimum resonance required for Overload level 0..18.
+# Exact module 32085.sm export. The supplied bundle provides legal resonance
+# gates through Overload 16. Levels without a published gate are not generated.
 OVERLOAD_RESONANCE_THRESHOLDS = (
-    0, 900, 1200, 1650, 2100, 2550, 3000, 3600, 4200, 4800,
-    5400, 6000, 6750, 7500, 8250, 9000, 10200, 11700, 15000,
+    0, 900, 1200, 1650, 2100, 2550, 3000, 3500, 4500,
+    5000, 6000, 7500, 9000, 10500, 12000, 13500, 15000,
 )
 
 
@@ -134,34 +135,25 @@ def generate_tech_progression_actions(profile: Mapping[str, Any]) -> list[dict[s
     actions: list[dict[str, Any]] = []
     for name, state in techs.items():
         tech_type = str(state.get("tech_type") or TECH_TYPES.get(name) or "")
-        if tech_type not in MULTIPLIER_CHIPS:
-            continue
-        if state.get("deployed") is False:
+        if tech_type not in MULTIPLIER_CHIPS or state.get("deployed") is False:
             continue
         current_multiplier = _current_multiplier(state)
         multipliers = sorted(MULTIPLIER_CHIPS[tech_type])
         try:
             index = multipliers.index(current_multiplier)
         except ValueError:
-            # A non-table multiplier is not rounded into a legal state.
             index = -1
         if 0 <= index < len(multipliers) - 1:
             target_multiplier = multipliers[index + 1]
             current_chips = MULTIPLIER_CHIPS[tech_type][current_multiplier]
             target_chips = MULTIPLIER_CHIPS[tech_type][target_multiplier]
             chip_delta = target_chips - current_chips
-            part_delta = (
-                MULTIPLIER_EXTRA_PARTS.get(target_chips, 0)
-                - MULTIPLIER_EXTRA_PARTS.get(current_chips, 0)
-            )
+            part_delta = MULTIPLIER_EXTRA_PARTS.get(target_chips, 0) - MULTIPLIER_EXTRA_PARTS.get(current_chips, 0)
             consumed: dict[str, float] = {}
             if chip_delta:
                 consumed["resonance_chip"] = chip_delta
             part_resource = _part_resource(state)
-            if part_delta and not part_resource:
-                # The exact part type is required. Do not invent a generic part.
-                pass
-            else:
+            if not part_delta or part_resource:
                 if part_delta:
                     consumed[str(part_resource)] = part_delta
                 patched = deepcopy(techs)
@@ -185,10 +177,14 @@ def generate_tech_progression_actions(profile: Mapping[str, Any]) -> list[dict[s
         current_overload = int(_num(state.get("overload", 0)))
         target_overload = current_overload + 1
         resonance = _num(state.get("resonance", 0))
-        if target_overload < len(OVERLOAD_CHIPS) and resonance >= OVERLOAD_RESONANCE_THRESHOLDS[target_overload]:
+        if (
+            target_overload < len(OVERLOAD_CHIPS)
+            and target_overload < len(OVERLOAD_RESONANCE_THRESHOLDS)
+            and resonance >= OVERLOAD_RESONANCE_THRESHOLDS[target_overload]
+        ):
             chip_delta = OVERLOAD_CHIPS[target_overload] - OVERLOAD_CHIPS[current_overload]
             part_delta = OVERLOAD_EXTRA_PARTS[target_overload] - OVERLOAD_EXTRA_PARTS[current_overload]
-            consumed = {}
+            consumed: dict[str, float] = {}
             if chip_delta:
                 consumed["resonance_chip"] = chip_delta
             part_resource = _part_resource(state)
