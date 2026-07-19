@@ -15,6 +15,7 @@ TESTS = [
     "tests/test_sio_tech_progression.py",
     "tests/test_sio_progression_frontiers.py",
     "tests/test_sio_runtime_oracle.py",
+    "tests/test_sio_bundle_mapping.py",
     "tests/test_sio_calibration.py",
     "tests/test_champion_lineage.py",
     "tests/test_source_policy.py",
