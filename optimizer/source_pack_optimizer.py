@@ -23,6 +23,7 @@ from optimizer.sio_exact_actions import (
     generate_exact_actions,
     resource_counts,
 )
+from optimizer.sio_item_reallocations import generate_exhaustive_item_reallocations
 from optimizer.sio_progression_frontiers import generate_progression_frontiers
 from optimizer.sio_tech_progression import generate_tech_progression_actions
 
@@ -194,9 +195,10 @@ def _action_key(action: Mapping[str, Any]) -> str:
     return str(action.get("action_id"))
 
 
-def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _all_actions(profile: Mapping[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     base_actions = [
         *generate_exact_actions(profile),
+        *generate_exhaustive_item_reallocations(profile),
         *generate_tech_progression_actions(profile),
         *generate_progression_frontiers(profile),
         *load_source_pack_actions(),
@@ -206,20 +208,38 @@ def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
     # sequences. Directional equipment source->target reallocations remain ordered
     # because reversing their roles is a genuinely different state transition.
     combined = expand_actions_with_choice_chests(profile, base_actions, resource_counts(profile))
-    seen_keys: set[str] = set()
+    seen_keys: dict[str, str] = {}
     seen_ids: set[str] = set()
     result: list[dict[str, Any]] = []
+    deduplicated: list[dict[str, str]] = []
     for source_action in combined:
         action = dict(source_action)
         action["action_id"] = _public_action_id(action)
         key = _action_key(action)
         action_id = str(action.get("action_id"))
-        if key in seen_keys or action_id in seen_ids:
+        duplicate_of = seen_keys.get(key)
+        if duplicate_of is not None:
+            deduplicated.append(
+                {
+                    "action_id": action_id,
+                    "duplicate_of": duplicate_of,
+                    "reason": "equivalent_complete_after_state_and_ledger",
+                }
+            )
             continue
-        seen_keys.add(key)
+        if action_id in seen_ids:
+            deduplicated.append(
+                {
+                    "action_id": action_id,
+                    "duplicate_of": action_id,
+                    "reason": "duplicate_action_id",
+                }
+            )
+            continue
+        seen_keys[key] = action_id
         seen_ids.add(action_id)
         result.append(action)
-    return result
+    return result, deduplicated
 
 
 def _candidate(
@@ -258,7 +278,7 @@ def _candidate(
 
 def _prepare_profile(profile_input: PlayerState | Mapping[str, Any]) -> dict[str, Any]:
     profile = _profile_data(profile_input)
-    actions = _all_actions(profile)
+    actions, deduplicated = _all_actions(profile)
     transitions: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
     rejected: list[dict[str, str]] = []
     for action in actions:
@@ -272,6 +292,7 @@ def _prepare_profile(profile_input: PlayerState | Mapping[str, Any]) -> dict[str
         "actions": actions,
         "transitions": transitions,
         "rejected": rejected,
+        "deduplicated": deduplicated,
     }
 
 
@@ -279,6 +300,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
     actions = list(prepared["actions"])
     transitions = list(prepared["transitions"])
     rejected = [dict(row) for row in prepared["rejected"]]
+    deduplicated = [dict(row) for row in prepared.get("deduplicated", [])]
     if not reports:
         reports = [{"supported": False, "reason": "missing_baseline_formula_report"}]
     before = reports[0]
@@ -330,12 +352,14 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "actionable_count": len(ranked_all),
         "rejected_count": len(rejected),
         "rejected_actions": rejected,
-        "deduplicated_actions": [],
+        "deduplicated_count": len(deduplicated),
+        "deduplicated_actions": deduplicated,
         "false_prunes": [],
         "pruning_policy": "none; every legal exact after-state is batch-scored",
         "warnings": [
             "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
             "Every exact cumulative progression frontier is evaluated, not only the next level.",
+            "Every exact directional two-slot item reallocation frontier is evaluated before structural deduplication.",
             "Choice chests use canonical multiset allocations, never pick-order permutations.",
             "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
         ],
