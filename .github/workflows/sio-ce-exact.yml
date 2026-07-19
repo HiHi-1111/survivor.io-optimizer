@@ -39,8 +39,11 @@ jobs:
           optimizer/sio_combinations.py
           optimizer/sio_choice_chests.py
           optimizer/sio_tech_progression.py
+          optimizer/sio_tech_configurations.py
+          optimizer/sio_survivor_configurations.py
           optimizer/sio_progression_frontiers.py
           optimizer/sio_tetris.py
+          optimizer/sio_mount_puzzle_bridge.py
           optimizer/source_pack_optimizer.py
           optimizer/champion_lineage.py
           optimizer/exact_training_labels.py
@@ -133,8 +136,11 @@ jobs:
             optimizer/sio_combinations.py
             optimizer/sio_choice_chests.py
             optimizer/sio_tech_progression.py
+            optimizer/sio_tech_configurations.py
+            optimizer/sio_survivor_configurations.py
             optimizer/sio_progression_frontiers.py
             optimizer/sio_tetris.py
+            optimizer/sio_mount_puzzle_bridge.py
             optimizer/source_pack_optimizer.py
             optimizer/exact_training_labels.py
             knowledge/sio_runtime_manifest.json
