@@ -3,10 +3,11 @@
 
 /* Exact offline Clan Expedition oracle for the user-supplied sIO bundle.
  *
- * Loads the compiled webpack modules and calls the original sIO Tech/Twinborn,
- * direct-damage and final CE functions. It never uses the network and never
- * produces recommendations. JSON is read from stdin and JSON is written to
- * stdout so Python can batch/cache calls.
+ * This process loads the compiled webpack modules and executes the same CE order
+ * used by sIO Tools: Tech/Twinborn -> item and uptime conditions -> direct damage
+ * -> evolved-passive/final stat transforms -> final CE damage. It never uses the
+ * network and never produces recommendations. JSON is read from stdin and JSON
+ * is written to stdout so Python can batch and cache calls.
  */
 
 const fs = require('fs');
@@ -136,27 +137,52 @@ function mergeNumeric(target, source) {
   return target;
 }
 
+function clonePlain(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function uptimeSnapshot(stats) {
+  const result = {};
+  for (const key of [
+    'lacerationUptime', 'divineFireUptime', 'poisonedUptime',
+    'weakenedUptime', 'chilledUptime', 'shieldDamageUptime',
+    'voidNeckBoostUptime',
+  ]) {
+    if (stats[key] !== undefined) result[key] = number(stats[key]);
+  }
+  return result;
+}
+
 function scoreOne(runtime, payload) {
   const techFunction = runtime.req(13024).T;
+  const applyConditions = runtime.req(24804).zP;
+  const finalizeStats = runtime.req(24804).IE;
   const directFunction = runtime.req(88426).y;
   const damageFunction = runtime.req(67727).f;
+
   const stats = { ...(payload.stats || {}) };
   const attack = { ...(payload.attack || {}) };
   const directSeed = { ...(payload.direct_skill_factors || payload.ceDamage || {}) };
   const skills = { ...(payload.skills || {}) };
   const techInput = payload.tech_input || payload.techInput || null;
+  const settings = { revives: [40, 70, 90], ...(payload.settings || {}) };
+  const collectibles = { ...(payload.collectibles || {}) };
+  const items = { ...(payload.items || {}) };
+  const gameMode = payload.gameMode || (techInput && techInput.gameMode) || 'ce';
+  const evolvePassives = payload.evolvePassives === true || (techInput && techInput.evolvePassives === true);
   let techResult = { stats: {}, ceDamage: {}, passivePools: new Float64Array(56).fill(1) };
 
   if (techInput) {
     const normalized = {
-      evolvePassives: techInput.evolvePassives === true,
+      evolvePassives,
       cooldownReduction: number(techInput.cooldownReduction, number(stats.cooldownReduction, 0)),
       techs: techInput.techs || {},
       skills: techInput.skills || skills,
-      collectibles: techInput.collectibles || {},
-      upgradedCollectibles: techInput.upgradedCollectibles || [],
-      settings: { calcMode: 'damage', ...(techInput.settings || {}) },
-      gameMode: techInput.gameMode || payload.gameMode || 'ce',
+      collectibles: techInput.collectibles || collectibles,
+      upgradedCollectibles: techInput.upgradedCollectibles || payload.upgradedCollectibles || [],
+      settings: { calcMode: 'damage', ...settings, ...(techInput.settings || {}) },
+      gameMode,
       eeOmnipower: techInput.eeOmnipower,
       eeSkills: techInput.eeSkills,
       stableTechEntries: techInput.stableTechEntries,
@@ -167,29 +193,50 @@ function scoreOne(runtime, payload) {
     Object.assign(skills, normalized.skills || {});
   }
 
-  const direct = directFunction(stats, directSeed);
+  const conditioned = applyConditions({
+    withNotes: false,
+    venato: payload.venato === true || payload.activeSurvivor === 'Venato',
+    stats,
+    collectibles,
+    items,
+    settings,
+    gameMode,
+    eeSkills: payload.eeSkills,
+    eeOmnipower: payload.eeOmnipower,
+  });
+  const preFinalizeStats = (conditioned && conditioned.stats) || stats;
+  const direct = directFunction(preFinalizeStats, directSeed);
+  const finalStats = finalizeStats({
+    evolvePassives,
+    gameMode,
+    stats: preFinalizeStats,
+    settings,
+  });
   const passivePools = techResult.passivePools || new Float64Array(56).fill(1);
   const totalDamage = damageFunction(
-    stats,
+    finalStats,
     attack,
     number(direct.damageFactor, 0),
     direct.ceDamage || {},
     'damage',
     skills,
     passivePools,
-    payload.gameMode || (techInput && techInput.gameMode) || 'ce'
+    gameMode
   );
   return {
     supported: Number.isFinite(Number(totalDamage)),
     total_damage: number(totalDamage, 0),
-    stats,
-    tech_stats: techResult.stats || {},
-    ce_damage: direct.ceDamage || {},
+    stats: clonePlain(finalStats),
+    pre_finalize_stats: clonePlain(preFinalizeStats),
+    uptime_values: uptimeSnapshot(finalStats),
+    tech_stats: clonePlain(techResult.stats || {}),
+    ce_damage: clonePlain(direct.ceDamage || {}),
     damage_factor: number(direct.damageFactor, 0),
     passive_pools: Array.from(passivePools || []),
-    formula_modules: [13024, 88426, 67727],
+    formula_modules: [13024, 24804, 88426, 67727],
+    formula_order: ['13024.T', '24804.zP', '88426.y', '24804.IE', '67727.f'],
     calc_mode: 'damage',
-    game_mode: payload.gameMode || 'ce',
+    game_mode: gameMode,
   };
 }
 
@@ -205,7 +252,7 @@ function main() {
     catch (error) { return { supported: false, error: String(error && (error.stack || error.message || error)) }; }
   });
   process.stdout.write(JSON.stringify({
-    schema: 'sio_ce_oracle_v1',
+    schema: 'sio_ce_oracle_v2',
     modules_registered: runtime.modulesRegistered,
     eval_error_count: runtime.evalErrors.length,
     results,
