@@ -237,11 +237,16 @@ def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
 
     stage = str(sio.get("stats_stage", profile.get("stats_stage", "unknown")))
     skip_runtime_24804 = bool(sio.get("skipRuntime24804") or stage in POST_24804_STAGES)
+    account_input = _mapping(sio.get("runtime_account_input"))
+    if skip_runtime_24804:
+        account_input = {}
     skills = _mapping(sio.get("skills") or profile.get("skills"))
     settings = _mapping(sio.get("settings") or profile.get("settings"))
     settings.setdefault("revives", [40, 70, 90])
     settings["calcMode"] = "damage"
     evolve = sio.get("evolvePassives", profile.get("evolvePassives", settings.get("evolvePassives")))
+    if account_input and account_input.get("evolvePassives") in (True, False):
+        evolve = account_input["evolvePassives"]
     if evolve not in (True, False):
         if skip_runtime_24804:
             evolve = False
@@ -266,9 +271,15 @@ def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
     direct = _mapping(sio.get("direct_skill_factors") or profile.get("direct_skill_factors"))
     active_survivor = _active_survivor(profile, sio)
     items = _item_state(profile, sio)
+    if account_input:
+        active_survivor = str(account_input.get("mainHero") or active_survivor)
+        skills = _mapping(account_input.get("skills"))
+        settings = _mapping(account_input.get("settings")) or settings
+        settings.setdefault("revives", [40, 70, 90])
+        settings["calcMode"] = "damage"
 
     tech_input: dict[str, Any] | None = None
-    if not skip_runtime_24804:
+    if not skip_runtime_24804 and not account_input:
         tech_input = {
             "evolvePassives": bool(evolve),
             "cooldownReduction": float(stats.get("cooldownReduction", 0) or 0),
@@ -283,13 +294,14 @@ def build_oracle_request(profile: Mapping[str, Any]) -> dict[str, Any]:
         "stats": stats,
         "statsStage": stage,
         "skipRuntime24804": skip_runtime_24804,
+        "account_input": account_input or None,
         "attack": attack,
         "skills": skills,
         "direct_skill_factors": direct,
         "tech_input": tech_input,
-        "items": items if not skip_runtime_24804 else {},
-        "collectibles": collectibles if not skip_runtime_24804 else {},
-        "upgradedCollectibles": list(upgraded) if not skip_runtime_24804 else [],
+        "items": items if not skip_runtime_24804 and not account_input else {},
+        "collectibles": collectibles if not skip_runtime_24804 and not account_input else {},
+        "upgradedCollectibles": list(upgraded) if not skip_runtime_24804 and not account_input else [],
         "settings": settings,
         "activeSurvivor": active_survivor,
         "venato": active_survivor == "Venato",
@@ -375,6 +387,7 @@ class SioCeRuntimeOracle:
                         "bundle_sha256": self._bundle_hash,
                         "modules": list(result.get("formula_modules") or SIO_FORMULA_MODULES),
                         "order": list(result.get("formula_order") or SIO_FORMULA_ORDER),
+                        "account_modules": list(result.get("account_assembly_modules") or []),
                         "oracle": "tools/sio_runtime/sio_ce_oracle.js",
                         "schema": ORACLE_SCHEMA,
                     },
