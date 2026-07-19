@@ -16,6 +16,7 @@ from typing import Any, Mapping
 
 from optimizer.player_state import PlayerState
 from optimizer.sio_ce_account import calculate_clan_expedition_damage_batch
+from optimizer.sio_choice_chests import expand_actions_with_choice_chests
 from optimizer.sio_exact_actions import (
     affordability_certificate,
     apply_exact_action,
@@ -184,20 +185,27 @@ def _action_key(action: Mapping[str, Any]) -> str:
                 "patch": action.get("state_patch"),
                 "consumed": action.get("consumed_items"),
                 "refunded": action.get("refunded_items"),
+                "choice_grants": action.get("choice_chest_grants"),
             },
             sort_keys=True,
+            separators=(",", ":"),
             default=str,
         )
     return str(action.get("action_id"))
 
 
 def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
-    combined = [
+    base_actions = [
         *generate_exact_actions(profile),
         *generate_tech_progression_actions(profile),
         *generate_progression_frontiers(profile),
         *load_source_pack_actions(),
     ]
+    # Selector chests are expanded only after exact complete after-states exist.
+    # The expansion searches canonical count allocations and never ordered pick
+    # sequences. Directional equipment source->target reallocations remain ordered
+    # because reversing their roles is a genuinely different state transition.
+    combined = expand_actions_with_choice_chests(profile, base_actions, resource_counts(profile))
     seen_keys: set[str] = set()
     seen_ids: set[str] = set()
     result: list[dict[str, Any]] = []
@@ -278,10 +286,12 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
     ranked_all: list[dict[str, Any]] = []
     for index, (action, _after_profile, certificate) in enumerate(transitions):
         if index >= len(after_reports):
-            rejected.append({
-                "action_id": str(action.get("action_id")),
-                "reason": "missing_after_state_formula_report",
-            })
+            rejected.append(
+                {
+                    "action_id": str(action.get("action_id")),
+                    "reason": "missing_after_state_formula_report",
+                }
+            )
             continue
         candidate, reason = _candidate(action, certificate, before, after_reports[index])
         if candidate is None:
@@ -326,6 +336,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "warnings": [
             "Actions without an exact cumulative cost or state patch are rejected rather than guessed.",
             "Every exact cumulative progression frontier is evaluated, not only the next level.",
+            "Choice chests use canonical multiset allocations, never pick-order permutations.",
             "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
         ],
         "explanation": (
