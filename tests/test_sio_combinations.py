@@ -13,11 +13,12 @@ def test_three_selector_chests_over_three_rewards_use_ten_combinations_not_twent
     assert multiset_combination_count(3, 3) == 10
     assert len(rows) == 10
     assert len({allocation_key(row) for row in rows}) == 10
-    assert {tuple(sorted(row.items())) for row in rows} >= {
-        (("eternal", 3),),
-        (("void", 3),),
-        (("chaos", 3),),
-        (("eternal", 1), ("void", 1), ("chaos", 1)),
+    actual = {allocation_key(row) for row in rows}
+    assert actual >= {
+        allocation_key({"eternal": 3}),
+        allocation_key({"void": 3}),
+        allocation_key({"chaos": 3}),
+        allocation_key({"eternal": 1, "void": 1, "chaos": 1}),
     }
 
 
