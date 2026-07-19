@@ -2,9 +2,9 @@
 """Audit sIO bundle coverage, formula order, uptime fields and evidence retention.
 
 This is intentionally static and deterministic. It does not trust comments or a
-single status flag: it checks the source-locked manifest, the feature registry,
-the exact JavaScript oracle and the Python fallback. When the supplied bundle is
-available it also verifies its SHA and required webpack module/token presence.
+single status flag: it checks the source-locked manifest, feature registry, exact
+JavaScript oracle and Python fallback. When the supplied bundle is available it
+also verifies its SHA and required webpack module/token presence.
 """
 from __future__ import annotations
 
@@ -54,6 +54,26 @@ EXACT_RUNTIME_BINDINGS = (
     "runtime.req(24804).IE",
     "runtime.req(67727).f",
 )
+EXACT_ACCOUNT_BINDINGS = {
+    "37013.c.baseStats": "runtime.req(37013).c.baseStats",
+    "63941.x": "runtime.req(63941).x",
+    "5005.Q": "runtime.req(5005).Q",
+    "42052.vY": "runtime.req(42052).vY",
+    "41950.j": "runtime.req(41950).j",
+    "57223.m": "runtime.req(57223).m",
+    "89505.Y3": "runtime.req(89505).Y3",
+    "42806.x": "runtime.req(42806).x",
+    "70324.t": "runtime.req(70324).t",
+    "30039.s": "runtime.req(30039).s",
+    "40498.N": "runtime.req(40498).N",
+    "80438.b": "runtime.req(80438).b",
+    "51642.F": "runtime.req(51642).F",
+    "94578.p": "runtime.req(94578).p",
+    "92316.xt": "runtime.req(92316).xt",
+    "30396.i": "runtime.req(30396).i",
+    "13024.T": "runtime.req(13024).T",
+    "19425.a6": "runtime.req(19425).a6",
+}
 
 
 def _json(path: Path) -> Any:
@@ -147,9 +167,6 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
 
     for token in EXACT_RUNTIME_BINDINGS:
         _check_contains(errors, oracle_js, token, "exact oracle")
-    # Check the actual module-function bindings, not human-readable labels. The
-    # post-24804 shortcut also contains the labels 88426.y and 67727.f, which
-    # previously caused a false order failure even though the exact path was right.
     order_positions = [oracle_js.find(token) for token in EXACT_RUNTIME_BINDINGS]
     if any(position < 0 for position in order_positions) or order_positions != sorted(order_positions):
         errors.append(f"exact oracle function binding order is wrong: {order_positions}")
@@ -157,11 +174,21 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
     if expected_labels != ("13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f"):
         errors.append(f"manifest formula order changed unexpectedly: {expected_labels}")
 
+    manifest_account_functions = set((manifest.get("account_functions") or {}).keys())
+    missing_manifest_functions = sorted(set(EXACT_ACCOUNT_BINDINGS) - manifest_account_functions)
+    if missing_manifest_functions:
+        errors.append(f"manifest missing exact account functions: {missing_manifest_functions}")
+    for function_name, token in EXACT_ACCOUNT_BINDINGS.items():
+        _check_contains(errors, oracle_js, token, f"exact account function {function_name}")
+
     _check_contains(errors, oracle_py, 'ORACLE_SCHEMA = "sio_ce_oracle_v2"', "runtime bridge")
     _check_contains(errors, oracle_py, 'separators=(",", ":")', "runtime bridge compact JSON")
     _check_contains(errors, oracle_py, '"skipRuntime24804": skip_runtime_24804', "post-24804 bridge")
+    _check_contains(errors, oracle_py, '"account_input": account_input or None', "raw account bridge")
     _check_contains(errors, oracle_js, "if (skipRuntime24804)", "post-24804 oracle")
+    _check_contains(errors, oracle_js, "assembleRuntimeAccount", "raw account oracle")
     _check_contains(errors, account_py, "defer_runtime_conditions=True", "account pipeline")
+    _check_contains(errors, account_py, 'sio["runtime_account_input"]', "raw account preservation")
     _check_contains(errors, account_py, "pre_24804_runtime", "account pipeline")
     _check_contains(errors, item_pipeline_py, "finalize_sio_stats_fallback", "Python 24804 fallback")
     _check_contains(errors, item_pipeline_py, "metaliaPoisoned", "Python 24804 fallback")
@@ -203,6 +230,7 @@ def audit(*, require_bundle: bool = False) -> dict[str, Any]:
         "manifest": str(MANIFEST_PATH.relative_to(ROOT)),
         "registry_entries": len(registry),
         "missing_registry_ids": missing_registry,
+        "account_functions_checked": len(EXACT_ACCOUNT_BINDINGS),
         "bundle": bundle_report,
         "errors": errors,
         "warnings": warnings,
