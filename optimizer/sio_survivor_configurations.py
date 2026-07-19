@@ -10,9 +10,9 @@ Source contracts mapped from sIO modules 32085, 92316, and the Heroes UI:
   unordered subset. This module uses combinations, never slot permutations.
 * Donatello and Vulcan are not selectable as Teamwork members in the sIO UI.
 
-The complete state count is calculated before enumeration. When it exceeds the
-configured budget, no partial actions are returned. That prevents a truncated
-configuration search from being presented as the exact optimum.
+The complete state count is calculated before subset materialization. When it
+exceeds the configured budget, no partial actions are returned. That prevents a
+truncated configuration search from being presented as the exact optimum.
 """
 from __future__ import annotations
 
@@ -203,25 +203,23 @@ def plan_survivor_configurations(profile: Mapping[str, Any]) -> SurvivorConfigur
     main_candidates = _owned_candidates(heroes, MAIN_HEROES, beta_allowed=beta_allowed)
     main_candidates = _allowed(main_candidates, constraints.get("main_candidates"), current_main)
     main_candidates = tuple(name for name in main_candidates if name in heroes and _number(heroes[name].get("stars")) > 0)
-    if not main_candidates:
-        return SurvivorConfigurationPlan((), True, 0, int(constraints.get("max_states", DEFAULT_MAX_STATES)), None, ())
-
-    harmony_candidates = _owned_candidates(heroes, HARMONY_HEROES, beta_allowed=beta_allowed)
-    current_left = str(meta.get("harmonyL") or NONE)
-    current_right = str(meta.get("harmonyR") or NONE)
-    harmony_candidates = _allowed(
-        harmony_candidates,
-        constraints.get("harmony_candidates"),
-        current_left if current_left != NONE else current_right,
-    )
-    if current_right != NONE and current_right not in harmony_candidates:
-        harmony_candidates = (*harmony_candidates, current_right)
-    harmony_candidates = tuple(dict.fromkeys(harmony_candidates))
-    synergy = bool(meta.get("synergy"))
-    allow_none_harmony = bool(constraints.get("allow_none_harmony", True))
     max_states = max(1, int(_number(constraints.get("max_states"), DEFAULT_MAX_STATES)))
+    if not main_candidates:
+        return SurvivorConfigurationPlan((), True, 0, max_states, None, ())
 
-    state_dimensions: list[tuple[str, tuple[tuple[str, str], ...], tuple[tuple[str, ...], ...]]] = []
+    synergy = bool(meta.get("synergy"))
+    harmony_candidates = _owned_candidates(heroes, HARMONY_HEROES, beta_allowed=beta_allowed)
+    harmony_candidates = _allowed(harmony_candidates, constraints.get("harmony_candidates"))
+    current_left = str(meta.get("harmonyL") or NONE) if synergy else NONE
+    current_right = str(meta.get("harmonyR") or NONE) if synergy else NONE
+    if current_left not in harmony_candidates:
+        current_left = NONE
+    if current_right not in harmony_candidates:
+        current_right = NONE
+    allow_none_harmony = bool(constraints.get("allow_none_harmony", True))
+
+    # First pass: count exact states without materializing Teamwork subsets.
+    state_specs: list[tuple[str, tuple[tuple[str, str], ...], tuple[str, ...], int]] = []
     total_states = 0
     for main in main_candidates:
         harmony = _harmony_assignments(
@@ -236,16 +234,13 @@ def plan_survivor_configurations(profile: Mapping[str, Any]) -> SurvivorConfigur
             constraints.get("teamwork_candidates"),
             beta_allowed=beta_allowed,
         )
-        slots = teamwork_slot_count(heroes[main].get("stars"))
+        available_slots = teamwork_slot_count(heroes[main].get("stars"))
+        searched_slots = available_slots
         maximum_slots = constraints.get("max_teamwork_slots")
         if maximum_slots is not None:
-            slots = min(slots, max(0, int(_number(maximum_slots))))
-        teamwork = _teamwork_subsets(teamwork_candidates, slots)
-        expected = len(harmony) * _combination_count(len(teamwork_candidates), slots)
-        if expected != len(harmony) * len(teamwork):
-            raise AssertionError("Teamwork combination count mismatch")
-        total_states += expected
-        state_dimensions.append((main, harmony, teamwork))
+            searched_slots = min(searched_slots, max(0, int(_number(maximum_slots))))
+        total_states += len(harmony) * _combination_count(len(teamwork_candidates), searched_slots)
+        state_specs.append((main, harmony, teamwork_candidates, searched_slots))
 
     if total_states > max_states:
         return SurvivorConfigurationPlan(
@@ -260,7 +255,10 @@ def plan_survivor_configurations(profile: Mapping[str, Any]) -> SurvivorConfigur
     current_teamwork = tuple(sorted(str(value) for value in (meta.get("teamwork") or []) if value and value != NONE))
     current_key = (current_main, current_left, current_right, current_teamwork)
     actions: list[dict[str, Any]] = []
-    for main, harmony, teamwork_sets in state_dimensions:
+    # Second pass: the budget is proven, so materialize every exact subset.
+    for main, harmony, teamwork_candidates, searched_slots in state_specs:
+        teamwork_sets = _teamwork_subsets(teamwork_candidates, searched_slots)
+        available_slots = teamwork_slot_count(heroes[main].get("stars"))
         for left, right in harmony:
             for teamwork in teamwork_sets:
                 key = (main, left, right, teamwork)
@@ -296,7 +294,8 @@ def plan_survivor_configurations(profile: Mapping[str, Any]) -> SurvivorConfigur
                             "harmony_left": left,
                             "harmony_right": right,
                             "teamwork": list(teamwork),
-                            "teamwork_slots": teamwork_slot_count(heroes[main].get("stars")),
+                            "teamwork_slots_available": available_slots,
+                            "teamwork_slots_searched": searched_slots,
                             "teamwork_combination_search": True,
                             "teamwork_permutation_search": False,
                             "complete_search": True,
