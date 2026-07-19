@@ -21,6 +21,7 @@ from optimizer.sio_exact_actions import (
     generate_exact_actions,
     resource_counts,
 )
+from optimizer.sio_tech_progression import generate_tech_progression_actions
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PACK_DIR = ROOT / "knowledge" / "source_pack"
@@ -177,7 +178,11 @@ def _action_key(action: Mapping[str, Any]) -> str:
 
 
 def _all_actions(profile: Mapping[str, Any]) -> list[dict[str, Any]]:
-    combined = [*generate_exact_actions(profile), *load_source_pack_actions()]
+    combined = [
+        *generate_exact_actions(profile),
+        *generate_tech_progression_actions(profile),
+        *load_source_pack_actions(),
+    ]
     seen_keys: set[str] = set()
     seen_ids: set[str] = set()
     result: list[dict[str, Any]] = []
