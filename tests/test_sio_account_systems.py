@@ -75,4 +75,5 @@ def test_account_sources_are_merged_before_moonscar_thresholds():
     assert result["formula_pipeline"] in {
         "python_fallback_24804_67727_88426",
         "sio_account_then_runtime_13024_24804_88426_67727",
+        "sio_runtime_account_then_13024_24804_88426_67727",
     }
