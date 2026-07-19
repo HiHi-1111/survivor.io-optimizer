@@ -30,16 +30,28 @@ jobs:
       - name: Compile exact optimizer modules
         run: >-
           python -m compileall -q
+          optimizer/player_state.py
           optimizer/sio_ce_account.py
           optimizer/sio_runtime_oracle.py
+          optimizer/sio_item_pipeline.py
           optimizer/sio_exact_actions.py
           optimizer/sio_tech_progression.py
           optimizer/champion_lineage.py
           optimizer/exact_training_labels.py
           optimizer/sio_calibration.py
+          tools/sio_training/audit_sio_runtime_coverage.py
           tools/sio_training/train_champion_lineage.py
       - name: Validate offline oracle JavaScript
         run: node --check tools/sio_runtime/sio_ce_oracle.js
+      - name: Audit sIO formula, uptime, registry and cleanup coverage
+        shell: bash
+        run: |
+          set +e
+          python tools/sio_training/audit_sio_runtime_coverage.py \
+            --output sio-runtime-audit-${{ matrix.python-version }}.json \
+            2>&1 | tee sio-runtime-audit-${{ matrix.python-version }}.log
+          code=${PIPESTATUS[0]}
+          exit "$code"
       - name: Run focused exact CE and lineage suite
         shell: bash
         run: |
@@ -89,7 +101,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: exact-ce-py${{ matrix.python-version }}
-          path: "*.log"
+          path: |
+            *.log
+            sio-runtime-audit-*.json
           if-no-files-found: error
           retention-days: 7
       - name: Verify lineage CLI
