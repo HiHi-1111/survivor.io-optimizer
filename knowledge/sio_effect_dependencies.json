@@ -1,0 +1,111 @@
+{
+  "schema": "sio-effect-dependencies-v1",
+  "bundle_sha256": "7665a1d4ad479f799b9360347dad98ffdca8125d35c6fb0072c68343708c847d",
+  "authority": "user-supplied sIO Tools runtime bundle",
+  "formula_modules": [37013, 24804, 67727, 88426],
+  "attack_formula": {
+    "bucket": "base_attack",
+    "source_module": 67727,
+    "expression": "(atkBase + atkEquip*(1+atkEquipPercent/100) + atkHero*(1+atkHeroPercent/100))*(1+atkPercent/100) + atkFinal",
+    "fields": ["atkBase", "atkEquip", "atkEquipPercent", "atkHero", "atkHeroPercent", "atkPercent", "atkFinal"]
+  },
+  "conditional_effects": [
+    {
+      "effect": "poisoned",
+      "uptime": "poisonedUptime",
+      "bucket": "poison_weaken_chill_exposed",
+      "source_modules": [37013, 24804, 67727],
+      "expression": "max(0, poisoned * poisonedUptime)",
+      "safe_neutral_when_zero_uptime": true
+    },
+    {
+      "effect": "weakened",
+      "uptime": "weakenedUptime",
+      "bucket": "poison_weaken_chill_exposed",
+      "source_modules": [37013, 24804, 67727],
+      "expression": "max(0, weakened * weakenedUptime)",
+      "safe_neutral_when_zero_uptime": true
+    },
+    {
+      "effect": "chilled",
+      "uptime": "chilledUptime",
+      "bucket": "poison_weaken_chill_exposed",
+      "source_modules": [37013, 24804, 67727],
+      "expression": "max(0, chilled * chilledUptime)",
+      "safe_neutral_when_zero_uptime": true
+    },
+    {
+      "effect": "laceration",
+      "uptime": "lacerationUptime",
+      "bucket": "laceration_divine_fire_uptime",
+      "source_modules": [37013, 24804, 67727],
+      "expression": "max(0, laceration * lacerationUptime)",
+      "safe_neutral_when_zero_uptime": true
+    },
+    {
+      "effect": "divineFire",
+      "uptime": "divineFireUptime",
+      "bucket": "laceration_divine_fire_uptime",
+      "source_modules": [37013, 24804, 67727],
+      "expression": "max(0, divineFire * divineFireUptime)",
+      "safe_neutral_when_zero_uptime": true
+    },
+    {
+      "effect": "shieldDamage",
+      "uptime": "shieldDamageUptime",
+      "bucket": "shield_damage_uptime",
+      "source_modules": [37013, 24804, 67727],
+      "expression": "max(0, shieldDamage * shieldDamageUptime)",
+      "safe_neutral_when_zero_uptime": true
+    },
+    {
+      "effect": "voidNeckBoost",
+      "uptime": "voidNeckBoostUptime",
+      "bucket": "void_neck_effective",
+      "source_modules": [24804, 67727],
+      "expression": "voidNeckBoost * voidNeckBoostUptime",
+      "safe_neutral_when_zero_uptime": true
+    }
+  ],
+  "multiplicative_effects": {
+    "critRate": "crit_expected",
+    "critDamage": "crit_expected",
+    "skillDamage": "skill_damage",
+    "vulnerability": "vulnerability",
+    "exposedDamage": "poison_weaken_chill_exposed",
+    "clarity": "clarity",
+    "eternalMultiplier": "eternal_multiplier",
+    "glacialBloodline": "glacial_bloodline",
+    "joeyWeakSpot": "joey_weak_spot",
+    "ssGlovesLaser": "ss_gloves_laser",
+    "flashriftRip": "flashrift_rip",
+    "taloxaOverload": "taloxa_overload",
+    "eternalSuitBoost": "eternal_suit_boost",
+    "voidGlovesInstakill": "void_gloves_instakill",
+    "voidBootsBoost": "void_boots_boost",
+    "chaosBeltBoost": "chaos_belt_boost",
+    "hpBulletBoost": "hp_bullet_boost",
+    "damageDealt": "damage_dealt",
+    "adrenaline": "adrenaline",
+    "damageTransmute": "damage_transmute",
+    "damageBoss": "damage_boss",
+    "xenoResMultiplier": "xeno_res_multiplier"
+  },
+  "direct_effects": [
+    "ssMiscPath", "cooldownReduction", "taloxaBeam", "crimsonBat",
+    "harmonyTaloxa", "harmonyJoey", "harmonyMetalia", "harmonyYang",
+    "harmonyKing", "harmonyCommon", "xenoDamage", "mountDamage"
+  ],
+  "safe_neutral_systems": {
+    "items": [42052, 24804, 88426],
+    "mounts": [51642, 37013, 88426],
+    "pets": [19425, 30396, 88426],
+    "survivor": [92316, 30396, 88426],
+    "collectibles": [57223, 89505, 42052, 24804]
+  },
+  "rules": [
+    "The preflight estimate may order exact evaluations but never select the final winner.",
+    "A state may skip the exact runtime only when its system has declared source coverage, the source-backed fallback proves zero CE change, and no unknown formula field changed.",
+    "Any unsupported, unknown, Tech, Twinborn, Overload, or unclassified effect must remain in the exact runtime batch."
+  ]
+}
