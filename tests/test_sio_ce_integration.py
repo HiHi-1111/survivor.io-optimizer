@@ -93,8 +93,12 @@ def test_sync_rate_upgrade_with_no_board_stats_is_not_fake_damage():
     result = optimize_source_pack_actions(ce_profile(scooter_stats={}))
     assert result["best"] is None
     assert result["no_action_recommended"] is True
-    candidate = next(row for row in result["ranked_actions"] if row["action_id"] == "upgrade_electric_scooter_y1")
-    assert candidate["expected_dps_gain"] == 0
+    candidate = next(
+        row for row in result["preflight_neutral_actions"]
+        if row["action_id"] == "upgrade_electric_scooter_y1"
+    )
+    assert candidate["preflight_estimate"]["estimated_damage_gain"] == 0
+    assert candidate["reason"] == "source_proven_zero_ce_delta"
 
 
 def test_unbridged_tech_action_is_rejected_not_heuristically_scored():
