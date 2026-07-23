@@ -400,7 +400,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "Xeno support pets use combinations only inside identical skill-role groups; distinct skill roles remain directional.",
         "Choice chests use canonical multiset allocations, never pick-order permutations.",
         "Tetris layout geometry is excluded; only verified aggregate mount component stats are scored.",
-        "The source-backed effect preflight orders exact work and suppresses only proven zero-damage states; unknown effects are always exact-scored.",
+        "Every legal exact after-state is batch-scored unless the source-backed effect preflight proves zero CE delta; unknown effects are always exact-scored.",
         "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
     ]
     if not configuration_complete:
