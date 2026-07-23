@@ -55,19 +55,23 @@ def test_mount_action_requires_owned_mount_exact_previous_star_and_ce_state() ->
     assert result["best"]["after_damage"] > result["best"]["before_damage"]
 
 
-def test_sync_rate_without_board_stats_is_zero_damage() -> None:
+def test_sync_rate_without_board_stats_is_source_proven_neutral() -> None:
     result = optimize_source_pack_actions(_profile(scooter_stats={}), device="cpu")
     assert result["best"] is None
     assert result["no_action_recommended"] is True
-    action = next(row for row in result["ranked_actions"] if row["action_id"] == "upgrade_electric_scooter_y1")
-    assert action["expected_dps_gain"] == 0
+    action = next(
+        row for row in result["preflight_neutral_actions"]
+        if row["action_id"] == "upgrade_electric_scooter_y1"
+    )
+    assert action["reason"] == "source_proven_zero_ce_delta"
+    assert action["preflight_estimate"]["estimated_damage_gain"] == 0
 
 
 def test_unaffordable_templates_are_logged_not_pruned() -> None:
     result = optimize_source_pack_actions(_profile(scooter_shards=0), device="cpu")
     assert result["best"] is None
     assert result["rejected_count"] > 0
-    assert result["pruning_policy"].startswith("none")
+    assert "source-proven zero CE states" in result["pruning_policy"]
 
 
 def test_profiles_use_deterministic_exact_cpu_scoring() -> None:
@@ -79,6 +83,7 @@ def test_profiles_use_deterministic_exact_cpu_scoring() -> None:
     assert batch["numeric_backend"]["learned_or_gpu_ranking_used"] is False
     assert batch["numeric_backend"]["profiles_batched"] == 2
     assert batch["numeric_backend"]["runtime_processes_per_uncached_batch"] == 1
+    assert batch["numeric_backend"]["effect_preflight_used"] is True
     assert batch["profiles"][0]["best"]["action_id"] == "upgrade_electric_scooter_y1"
     assert batch["profiles"][1]["best"] is None
 

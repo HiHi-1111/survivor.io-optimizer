@@ -17,6 +17,7 @@ from typing import Any, Mapping
 from optimizer.player_state import PlayerState
 from optimizer.sio_ce_account import calculate_clan_expedition_damage_batch
 from optimizer.sio_choice_chests import expand_actions_with_choice_chests
+from optimizer.sio_effect_evaluator import evaluate_preflight_transitions
 from optimizer.sio_exact_actions import (
     affordability_certificate,
     apply_exact_action,
@@ -321,11 +322,14 @@ def _prepare_profile(profile_input: PlayerState | Mapping[str, Any]) -> dict[str
             rejected.append({"action_id": str(action.get("action_id")), "reason": str(reason)})
         else:
             transitions.append((action, after, certificate))
+    preflight = evaluate_preflight_transitions(profile, transitions)
     audit = profile.get("_sio_optimizer_audit") if isinstance(profile.get("_sio_optimizer_audit"), Mapping) else {}
     return {
         "profile": profile,
         "actions": actions,
-        "transitions": transitions,
+        "transitions": list(preflight["transitions"]),
+        "preflight_skipped": list(preflight["skipped"]),
+        "effect_preflight": deepcopy(dict(preflight["report"])),
         "rejected": rejected,
         "deduplicated": deduplicated,
         "configuration_searches": configuration_searches,
@@ -339,6 +343,8 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
     rejected = [dict(row) for row in prepared["rejected"]]
     deduplicated = [dict(row) for row in prepared.get("deduplicated", [])]
     configuration_searches = deepcopy(dict(prepared.get("configuration_searches") or {}))
+    effect_preflight = deepcopy(dict(prepared.get("effect_preflight") or {}))
+    preflight_skipped = [dict(row) for row in prepared.get("preflight_skipped", [])]
     configuration_complete = all(
         bool(report.get("complete", False))
         for report in configuration_searches.values()
@@ -394,6 +400,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "Xeno support pets use combinations only inside identical skill-role groups; distinct skill roles remain directional.",
         "Choice chests use canonical multiset allocations, never pick-order permutations.",
         "Tetris layout geometry is excluded; only verified aggregate mount component stats are scored.",
+        "The source-backed effect preflight orders exact work and suppresses only proven zero-damage states; unknown effects are always exact-scored.",
         "runtime_exact=false means the auditable Python sIO port was used because the supplied runtime was unavailable.",
     ]
     if not configuration_complete:
@@ -410,6 +417,9 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "optimization_complete": configuration_complete,
         "configuration_searches": configuration_searches,
         "input_audit": deepcopy(dict(prepared.get("input_audit") or {})),
+        "effect_preflight": effect_preflight,
+        "preflight_neutral_count": len(preflight_skipped),
+        "preflight_neutral_actions": preflight_skipped,
         "ranked_actions": ranked,
         "ranked_alternatives": ranked[1:] if best_evaluated else ranked,
         "templates_considered": len(actions),
@@ -419,7 +429,7 @@ def _result_from_reports(prepared: Mapping[str, Any], reports: list[Mapping[str,
         "deduplicated_count": len(deduplicated),
         "deduplicated_actions": deduplicated,
         "false_prunes": [],
-        "pruning_policy": "none; every legal exact after-state is batch-scored",
+        "pruning_policy": "only source-proven zero CE states are suppressed; every uncertain or potentially relevant legal state is exact-scored",
         "warnings": warnings,
         "explanation": (
             "No global recommendation was issued because an exact configuration frontier exceeded its state budget."
@@ -471,6 +481,8 @@ def optimize_source_pack_batch(
             "profiles_batched": len(prepared_profiles),
             "states_scored_in_one_batch": len(formula_states),
             "runtime_processes_per_uncached_batch": 1 if formula_states else 0,
+            "effect_preflight_used": any(bool(row.get("effect_preflight", {}).get("enabled")) for row in prepared_profiles),
+            "source_proven_states_skipped": sum(len(row.get("preflight_skipped", [])) for row in prepared_profiles),
         },
         "profile_feature_matrix_shape": [0, 0],
         "inventory_feature_matrix_shape": [0, 0],

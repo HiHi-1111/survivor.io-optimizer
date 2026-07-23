@@ -5,7 +5,13 @@
     "scope": "supported",
     "formula_status": "runtime_exact",
     "action_status": "exact_before_after_gate",
-    "runtime_order": ["13024.T", "24804.zP", "88426.y", "24804.IE", "67727.f"],
+    "runtime_order": [
+      "13024.T",
+      "24804.zP",
+      "88426.y",
+      "24804.IE",
+      "67727.f"
+    ],
     "notes": "Only exact CE before/after damage may select the final winner."
   },
   {
@@ -26,7 +32,15 @@
     "scope": "supported",
     "formula_status": "runtime_exact_24804_67727",
     "fallback_status": "ported_and_tested",
-    "uptimes": ["poisonedUptime", "weakenedUptime", "chilledUptime", "lacerationUptime", "divineFireUptime", "shieldDamageUptime", "voidNeckBoostUptime"]
+    "uptimes": [
+      "poisonedUptime",
+      "weakenedUptime",
+      "chilledUptime",
+      "lacerationUptime",
+      "divineFireUptime",
+      "shieldDamageUptime",
+      "voidNeckBoostUptime"
+    ]
   },
   {
     "id": "ss_equipment_evc_paths",
@@ -34,7 +48,9 @@
     "scope": "supported",
     "formula_status": "runtime_exact_42052_24804",
     "action_status": "all_exact_cumulative_paths_and_complete_directional_two_slot_reallocations",
-    "remaining_source_blocked": ["item-specific irreversible UI warnings"]
+    "remaining_source_blocked": [
+      "item-specific irreversible UI warnings"
+    ]
   },
   {
     "id": "chaos_fusion_power",
@@ -49,7 +65,10 @@
     "scope": "supported",
     "formula_status": "runtime_exact_42052_24804",
     "action_status": "exact_levels_refunds_and_rebuilds",
-    "remaining_source_blocked": ["effect-condition reroll legality", "reroll costs"]
+    "remaining_source_blocked": [
+      "effect-condition reroll legality",
+      "reroll costs"
+    ]
   },
   {
     "id": "normal_tech_resonance",
@@ -57,7 +76,10 @@
     "scope": "supported",
     "formula_status": "runtime_exact_13024",
     "action_status": "all_exact_multiplier_frontiers",
-    "remaining_source_blocked": ["support-part worker search", "full support reassignment legality catalog"]
+    "remaining_source_blocked": [
+      "support-part worker search",
+      "full support reassignment legality catalog"
+    ]
   },
   {
     "id": "twinborn_tech_modes",
@@ -65,7 +87,12 @@
     "scope": "supported",
     "formula_status": "runtime_exact_13024",
     "action_status": "all_proven_complete_mode_assignments",
-    "implemented": ["six Twinborn pairs", "one mode per pair", "Cartesian complete-state assignments", "no inventory permutations"]
+    "implemented": [
+      "six Twinborn pairs",
+      "one mode per pair",
+      "Cartesian complete-state assignments",
+      "no inventory permutations"
+    ]
   },
   {
     "id": "resonance_overload",
@@ -81,7 +108,11 @@
     "scope": "source_blocked_worker_parity",
     "formula_status": "runtime_exact_for_supplied_states",
     "action_status": "partial",
-    "remaining_source_blocked": ["omitted resonance worker", "omitted skills worker", "reserved-Legend and fodder strategy implementation"]
+    "remaining_source_blocked": [
+      "omitted resonance worker",
+      "omitted skills worker",
+      "reserved-Legend and fodder strategy implementation"
+    ]
   },
   {
     "id": "survivor_progression",
@@ -89,7 +120,10 @@
     "scope": "supported",
     "formula_status": "runtime_exact_92316_30396",
     "action_status": "all_exact_cumulative_star_and_core_frontiers",
-    "remaining_source_blocked": ["missing exact level-resource table", "reset and shard-conversion table"]
+    "remaining_source_blocked": [
+      "missing exact level-resource table",
+      "reset and shard-conversion table"
+    ]
   },
   {
     "id": "survivor_teamwork",
@@ -97,7 +131,12 @@
     "scope": "supported",
     "formula_status": "runtime_exact_92316_30396",
     "action_status": "complete_unordered_subset_frontier_under_declared_budget",
-    "implemented": ["exact slot formula", "Donatello/Vulcan exclusion", "combination search", "no Teamwork permutations"]
+    "implemented": [
+      "exact slot formula",
+      "Donatello/Vulcan exclusion",
+      "combination search",
+      "no Teamwork permutations"
+    ]
   },
   {
     "id": "survivor_synergy_harmony",
@@ -120,7 +159,10 @@
     "scope": "supported",
     "formula_status": "runtime_exact_19425_30396",
     "action_status": "all_exact_cumulative_awakening_frontiers_and_owned_active_pet_choices",
-    "remaining_source_blocked": ["normal-pet rarity merge graph", "assist-skill optimizer"]
+    "remaining_source_blocked": [
+      "normal-pet rarity merge graph",
+      "assist-skill optimizer"
+    ]
   },
   {
     "id": "xeno_pets",
@@ -128,8 +170,16 @@
     "scope": "supported",
     "formula_status": "runtime_exact_19425_30396_88426",
     "action_status": "exact_star_frontiers_active_pet_and_support_role_assignments",
-    "implemented": ["active pet cannot support itself", "unique support pets", "combinations for identical skill-role rows", "role-specific assignments for different skill rows"],
-    "remaining_source_blocked": ["awakening-power allocation rules", "dismiss/exchange loss table"]
+    "implemented": [
+      "active pet cannot support itself",
+      "unique support pets",
+      "combinations for identical skill-role rows",
+      "role-specific assignments for different skill rows"
+    ],
+    "remaining_source_blocked": [
+      "awakening-power allocation rules",
+      "dismiss/exchange loss table"
+    ]
   },
   {
     "id": "xeno_pet_skills",
@@ -137,7 +187,12 @@
     "scope": "source_blocked",
     "formula_status": "runtime_exact_when_skill_state_is_supplied",
     "action_status": "not_generated_without_exact_costs",
-    "remaining_source_blocked": ["omitted petsSkills worker", "four-slot eligibility", "Elixir costs", "empty-slot legality"]
+    "remaining_source_blocked": [
+      "omitted petsSkills worker",
+      "four-slot eligibility",
+      "Elixir costs",
+      "empty-slot legality"
+    ]
   },
   {
     "id": "collectibles",
@@ -145,7 +200,9 @@
     "scope": "supported_state",
     "formula_status": "runtime_exact_57223_89505_42052_24804",
     "action_status": "exact_when_profile_supplies_cost",
-    "remaining_source_blocked": ["universal shard and edition cost tables"]
+    "remaining_source_blocked": [
+      "universal shard and edition cost tables"
+    ]
   },
   {
     "id": "custom_collection_sets",
@@ -153,7 +210,10 @@
     "scope": "source_blocked_worker_search",
     "formula_status": "runtime_exact_42806_for_supplied_state",
     "action_status": "not_automatic",
-    "remaining_source_blocked": ["omitted customSets worker", "layout/depth/unique legality tables"]
+    "remaining_source_blocked": [
+      "omitted customSets worker",
+      "layout/depth/unique legality tables"
+    ]
   },
   {
     "id": "collectible_optimizer",
@@ -161,7 +221,11 @@
     "scope": "source_blocked_worker_search",
     "formula_status": "runtime_exact_for_supplied_states",
     "action_status": "partial",
-    "remaining_source_blocked": ["omitted collectiblesStars worker", "complete progression costs", "deconstructor reset data"]
+    "remaining_source_blocked": [
+      "omitted collectiblesStars worker",
+      "complete progression costs",
+      "deconstructor reset data"
+    ]
   },
   {
     "id": "collectible_deconstructor",
@@ -176,8 +240,18 @@
     "scope": "supported",
     "formula_status": "runtime_exact_51642_88426",
     "action_status": "all_exact_cumulative_star_frontiers",
-    "implemented": ["active mount", "inactive sync transfer", "component stats", "line caps and effects", "direct CE mount damage"],
-    "remaining_source_blocked": ["fusion", "refinement", "reroll and reset/refund costs"]
+    "implemented": [
+      "active mount",
+      "inactive sync transfer",
+      "component stats",
+      "line caps and effects",
+      "direct CE mount damage"
+    ],
+    "remaining_source_blocked": [
+      "fusion",
+      "refinement",
+      "reroll and reset/refund costs"
+    ]
   },
   {
     "id": "mount_puzzle_optimizer",
@@ -185,8 +259,20 @@
     "scope": "supported_independent_solver_and_verified_stat_bridge",
     "formula_status": "sio_ui_contract_mapped",
     "action_status": "combination_solver_plus_verified_aggregate_stat_import",
-    "implemented": ["I/O/T/J/L rotations", "mount board sizes", "multiset combinations", "no identical-piece permutations", "placement geometry excluded from training", "only verified aggregate component stats reach CE scoring"],
-    "remaining_source_blocked": ["omitted tetris and mountPuzzles workers", "piece-to-stat source catalog", "screenshot confidence parser", "worker parity"]
+    "implemented": [
+      "I/O/T/J/L rotations",
+      "mount board sizes",
+      "multiset combinations",
+      "no identical-piece permutations",
+      "placement geometry excluded from training",
+      "only verified aggregate component stats reach CE scoring"
+    ],
+    "remaining_source_blocked": [
+      "omitted tetris and mountPuzzles workers",
+      "piece-to-stat source catalog",
+      "screenshot confidence parser",
+      "worker parity"
+    ]
   },
   {
     "id": "resource_and_refund_ledger",
@@ -194,8 +280,17 @@
     "scope": "all_actions",
     "formula_status": "not_applicable",
     "action_status": "balanced_certificate_required",
-    "implemented": ["complete item reallocation frontiers", "structural after-state dedup reporting", "choice-chest exact shortage conversion", "Pareto allocations by chest type"],
-    "remaining_source_blocked": ["Xeno skill reset", "Survivor reset", "collectible deconstruction"]
+    "implemented": [
+      "complete item reallocation frontiers",
+      "structural after-state dedup reporting",
+      "choice-chest exact shortage conversion",
+      "Pareto allocations by chest type"
+    ],
+    "remaining_source_blocked": [
+      "Xeno skill reset",
+      "Survivor reset",
+      "collectible deconstruction"
+    ]
   },
   {
     "id": "choice_chest_combinations",
@@ -203,7 +298,13 @@
     "scope": "supported_when_exact_options_are_supplied",
     "formula_status": "not_damage_formula",
     "action_status": "shortage_pruned_multiset_exact_cover",
-    "implemented": ["no pick-order permutations", "exact reward units", "multiple chest types", "Pareto-equivalent chest allocations", "no hidden leftovers"]
+    "implemented": [
+      "no pick-order permutations",
+      "exact reward units",
+      "multiple chest types",
+      "Pareto-equivalent chest allocations",
+      "no hidden leftovers"
+    ]
   },
   {
     "id": "source_calibration_samples",
@@ -211,7 +312,10 @@
     "scope": "data_blocked",
     "formula_status": "append_only_recording_implemented",
     "action_status": "cannot_override_hard_mechanics",
-    "remaining_data_needed": ["repeated real CE observations", "build fingerprints"]
+    "remaining_data_needed": [
+      "repeated real CE observations",
+      "build fingerprints"
+    ]
   },
   {
     "id": "input_schema_and_aliases",
@@ -219,7 +323,14 @@
     "scope": "supported",
     "formula_status": "not_applicable",
     "action_status": "implemented",
-    "implemented": ["unknown fields retained", "snake/camel aliases", "choice chests", "configuration constraints", "mount puzzle results", "reused Pydantic TypeAdapters"]
+    "implemented": [
+      "unknown fields retained",
+      "snake/camel aliases",
+      "choice chests",
+      "configuration constraints",
+      "mount puzzle results",
+      "reused Pydantic TypeAdapters"
+    ]
   },
   {
     "id": "exact_runtime_account_assembly",
@@ -234,7 +345,27 @@
     "scope": "supported",
     "formula_status": "not_applicable",
     "action_status": "append_only_quarantine",
-    "implemented": ["raw evidence retained", "stable SHA", "contradictions and duplicates excluded", "Tetris geometry stripped only from features"]
+    "implemented": [
+      "raw evidence retained",
+      "stable SHA",
+      "contradictions and duplicates excluded",
+      "Tetris geometry stripped only from features"
+    ]
+  },
+  {
+    "id": "source_locked_effect_preflight",
+    "name": "Source-Locked Effect Dependency Preflight",
+    "scope": "supported",
+    "formula_status": "source_backed_37013_24804_67727_88426",
+    "action_status": "proposal_ordering_and_proven_zero_suppression_only",
+    "implemented": [
+      "current-build flat ATK versus percentage ATK comparison",
+      "conditional effect dependency graph",
+      "inactive poison weaken chill laceration divine fire shield and void-neck detection",
+      "source-module coverage gate",
+      "unknown effects always retained for exact runtime",
+      "exact runtime remains final winner"
+    ]
   },
   {
     "id": "champion_lineage",
@@ -242,13 +373,26 @@
     "scope": "supported",
     "formula_status": "exact_labels_only",
     "action_status": "implemented",
-    "implemented": ["nonzero parent inheritance", "immutable champions", "child checkpoints", "holdout and no-op promotion gates"]
+    "implemented": [
+      "nonzero parent inheritance",
+      "immutable champions",
+      "child checkpoints",
+      "holdout and no-op promotion gates"
+    ]
   },
   {
     "id": "unsupported_modes",
     "name": "Other Combat Modes",
     "scope": "retained_but_not_scored",
     "formula_status": "unsupported",
-    "modes": ["Ender's Echo", "Path of Trials", "Zone Operation", "Lunar Mine Expedition", "Operation Retreat", "Survivor Showdown", "chapters"]
+    "modes": [
+      "Ender's Echo",
+      "Path of Trials",
+      "Zone Operation",
+      "Lunar Mine Expedition",
+      "Operation Retreat",
+      "Survivor Showdown",
+      "chapters"
+    ]
   }
 ]
