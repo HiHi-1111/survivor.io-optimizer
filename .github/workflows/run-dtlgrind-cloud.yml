@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -15,12 +13,11 @@ jobs:
   optimize:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out optimizer
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,25 +38,26 @@ jobs:
       - name: Run exact DTlgrind optimizer
         run: python tools/run_dtlgrind_cloud.py
 
+      - name: Save mobile report in repository
+        if: always()
+        run: |
+          mkdir -p docs/dtlgrind
+          if [ -f site/index.html ]; then cp site/index.html docs/dtlgrind/index.html; fi
+          if [ -f site/result.json ]; then cp site/result.json docs/dtlgrind/result.json; fi
+          if [ -f training_outputs/browser_jobs/dtlgrind_latest.json ]; then cp training_outputs/browser_jobs/dtlgrind_latest.json docs/dtlgrind/checkpoint.json; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/dtlgrind
+          git diff --cached --quiet || git commit -m "Update DTlgrind optimizer report"
+          git push origin HEAD:main
+
       - name: Upload full optimizer result
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dtlgrind-optimizer-result
           path: |
             site/
             training_outputs/browser_jobs/dtlgrind_latest.json
+          if-no-files-found: warn
           retention-days: 30
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload Pages site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - name: Deploy result page
-        id: deployment
-        uses: actions/deploy-pages@v4
