@@ -2,6 +2,15 @@ name: Run DTlgrind Cloud Optimizer
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/run-dtlgrind-cloud.yml"
+      - "app/browser_runner.py"
+      - "optimizer/**"
+      - "profiles/dtlgrind.json"
+      - "tools/run_dtlgrind_cloud.py"
+      - "requirements.txt"
 
 permissions:
   contents: write
