@@ -8,7 +8,7 @@ if exist ".venv\Scripts\python.exe" (
   set "PYTHON=python"
 )
 
-%PYTHON% -m app.browser_runner
+%PYTHON% -m app.verified_browser_runner
 if errorlevel 1 (
   echo.
   echo The optimizer could not start. Confirm Python and project dependencies are installed.
