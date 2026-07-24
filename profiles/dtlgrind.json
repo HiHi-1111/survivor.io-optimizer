@@ -2,17 +2,32 @@
   "profile_name": "DTlgrind",
   "game_mode": "clan_expedition",
   "goal_scenario": "clan_expedition",
-  "notes": "User-confirmed account snapshot. Omitted spendable resources are treated as unavailable.",
+  "notes": "User-confirmed July 2026 account snapshot. Omitted spendable resources are treated as unavailable. Spare equipment is recorded explicitly and is not assigned invented salvage values.",
   "build_stats": {
-    "atk": 822300
+    "atk": 824890,
+    "observedTotalAtk": 824890,
+    "atkBase": 128717,
+    "atkFinal": 443886,
+    "critRate": 108,
+    "critDamage": 764,
+    "skillDamage": 621.4,
+    "shieldDamage": 294.24,
+    "poisoned": 276,
+    "weakened": 281,
+    "chilled": 226,
+    "laceration": 107.96,
+    "movementSpeed": 14,
+    "movementSpeedCap": 16,
+    "petAttack": 701156,
+    "xenoPetSyncRate": 85
   },
   "gear": {
-    "weapon": {"family": "SS", "eternal": 3, "void": 2, "chaos": 2, "level": 205},
-    "necklace": {"family": "SS", "eternal": 3, "void": 3, "chaos": 2, "level": 205},
-    "gloves": {"family": "SS", "eternal": 3, "void": 3, "chaos": 2, "level": 205},
-    "armor": {"family": "SS", "eternal": 1, "void": 0, "chaos": 0, "level": 205},
-    "belt": {"family": "SS", "eternal": 1, "void": 0, "chaos": 0, "level": 205},
-    "boots": {"family": "SS", "eternal": 1, "void": 0, "chaos": 0, "level": 205}
+    "weapon": {"family": "SS", "name": "Twin Lance", "e": 3, "v": 2, "c": 2, "base": 0, "x": 0, "eternal": 3, "void": 2, "chaos": 2, "level": 205},
+    "necklace": {"family": "SS", "name": "Judgment Necklace", "e": 3, "v": 3, "c": 2, "base": 0, "x": 0, "eternal": 3, "void": 3, "chaos": 2, "level": 205},
+    "gloves": {"family": "SS", "name": "Moonscar Bracer", "e": 3, "v": 3, "c": 2, "base": 0, "x": 0, "eternal": 3, "void": 3, "chaos": 2, "level": 205},
+    "armor": {"family": "SS", "name": "Evervoid Armor", "e": 1, "v": 0, "c": 0, "base": 0, "x": 0, "eternal": 1, "void": 0, "chaos": 0, "level": 205},
+    "belt": {"family": "SS", "name": "Stardust Sash", "e": 1, "v": 0, "c": 0, "base": 0, "x": 0, "eternal": 1, "void": 0, "chaos": 0, "level": 205},
+    "boots": {"family": "SS", "name": "Glacial Warboots", "e": 1, "v": 0, "c": 0, "base": 0, "x": 0, "eternal": 1, "void": 0, "chaos": 0, "level": 205}
   },
   "survivor": {
     "id": "Venato",
@@ -27,6 +42,7 @@
   "pets": {
     "main_pet": "Nutjob",
     "sync_rate": 0.85,
+    "attack": 701156,
     "awakened": {"Nutjob": 4, "Gourmoew": 2},
     "default_other_xeno_awakening": 1
   },
@@ -42,11 +58,33 @@
     },
     "data": {"base_materials_unlimited": true}
   },
+  "mounts": {
+    "active": "Doomsteed",
+    "data": {
+      "Doomsteed": {
+        "enabled": true,
+        "rarity": "Legend",
+        "stars": 0,
+        "component_sync_rate": 0.40,
+        "component_final_atk": 24200,
+        "component_final_hp": 96800,
+        "random_component_stats": {
+          "shieldDamage": 78,
+          "poisoned": 108,
+          "weakened": 116,
+          "damageBoss": 7,
+          "laceration": 32,
+          "chilled": 54,
+          "critDamage": 28
+        }
+      }
+    }
+  },
   "resources": {
     "relic_core": 0,
     "xeno_core": 0,
     "resonance_chip": 0,
-    "gems": 130539,
+    "gems": 140781,
     "eternal_core": 20,
     "void_core": 0,
     "chaos_core": 10,
@@ -63,13 +101,29 @@
       "voidwalker_excellent_equipment_supply_crate": 1,
       "legend_collectible_or_resonance_choice_chest": 1
     },
-    "items": {
-      "xeno_awakening_crystal": 59
-    },
-    "resources": {
-      "coins": 42500000,
-      "base_tech_materials": "unlimited"
-    }
+    "items": {"xeno_awakening_crystal": 59},
+    "spare_equipment": [
+      {"name": "Voidwaker Emblem", "slot": "Necklace", "side": "void", "rarity": "red", "plus": 4, "quantity": 1},
+      {"name": "Void Power", "slot": "Weapon", "side": "void", "rarity": "yellow", "quantity": 1},
+      {"name": "Chaos Weapon", "slot": "Weapon", "side": "chaos", "rarity": "yellow", "quantity": 1},
+      {"name": "Eternal Suit", "slot": "Armor", "side": "eternal", "rarity": "yellow", "quantity": 1},
+      {"name": "Voidwaker Sash", "slot": "Belt", "side": "void", "rarity": "yellow", "quantity": 1},
+      {"name": "Eternal Boots", "slot": "Boots", "side": "eternal", "rarity": "yellow", "quantity": 1},
+      {"name": "Eternal Boots", "slot": "Boots", "side": "eternal", "rarity": "purple", "quantity": 1},
+      {"name": "Voidwaker Treads", "slot": "Boots", "side": "void", "rarity": "purple", "quantity": 1}
+    ],
+    "resources": {"coins": 54000000, "base_tech_materials": "unlimited"}
+  },
+  "collectible_summary_stats": {
+    "finalAtk": 369960,
+    "finalHp": 1481480,
+    "critRate": 20,
+    "critDamage": 140,
+    "skillDamage": 130,
+    "shieldDamage": 10,
+    "poisoned": 50,
+    "weakened": 50,
+    "chilled": 50
   },
   "collectibles": {
     "owned": {
@@ -86,8 +140,27 @@
   },
   "sio_ce": {
     "stats_stage": "legacy_stat_snapshot",
-    "stats": {"observedTotalAtk": 822300, "maxGear": 205},
-    "attack": {"atkBase": 128717, "atkFinal": 441298},
+    "stats": {
+      "observedTotalAtk": 824890,
+      "maxGear": 205,
+      "critRate": 108,
+      "critDamage": 764,
+      "skillDamage": 621.4,
+      "shieldDamage": 294.24,
+      "poisoned": 276,
+      "weakened": 281,
+      "chilled": 226,
+      "laceration": 107.96
+    },
+    "attack": {"atkBase": 128717, "atkFinal": 443886},
+    "items": {
+      "Weapon": {"name": "Twin Lance", "e": 3, "v": 2, "c": 2, "base": 0, "x": 0, "level": 205},
+      "Armor": {"name": "Evervoid Armor", "e": 1, "v": 0, "c": 0, "base": 0, "x": 0, "level": 205},
+      "Necklace": {"name": "Judgment Necklace", "e": 3, "v": 3, "c": 2, "base": 0, "x": 0, "level": 205},
+      "Belt": {"name": "Stardust Sash", "e": 1, "v": 0, "c": 0, "base": 0, "x": 0, "level": 205},
+      "Gloves": {"name": "Moonscar Bracer", "e": 3, "v": 3, "c": 2, "base": 0, "x": 0, "level": 205},
+      "Boots": {"name": "Glacial Warboots", "e": 1, "v": 0, "c": 0, "base": 0, "x": 0, "level": 205}
+    },
     "activeSurvivor": "Venato",
     "meta": {"synergy": true, "synergyLevel": 4, "harmonyL": "Metallia", "harmonyR": "Common", "maxGear": 205},
     "settings": {"calcMode": "damage"},
@@ -95,7 +168,7 @@
       "objective": "maximum_clan_expedition_damage",
       "allow_astral_forge_refunds": true,
       "allow_resource_spending": true,
-      "gem_budget": 130539,
+      "gem_budget": 140781,
       "omit_unlisted_resources": true,
       "search_until_frontier_exhausted": true,
       "survival_weight": 0
