@@ -21,6 +21,7 @@ from app.browser_runner import ROOT, RunnerHandler, ThreadingHTTPServer
 from optimizer.source_pack_optimizer import _prepare_profile as source_prepare_profile
 
 DEFAULT_PROFILE = ROOT / "profiles" / "dtlgrind.json"
+_ORIGINAL_INJECT = verified._inject_choice_chest_specs
 
 
 def _slug(value: Any) -> str:
@@ -35,7 +36,7 @@ def _normalize_dtlgrind_inventory(profile: dict[str, Any]) -> dict[str, Any]:
     not converted because the missing merge-fodder state is not known. The two
     Relic Core chests contain Relic Cores and are therefore counted directly.
     """
-    profile = verified._inject_choice_chest_specs(profile)
+    profile = _ORIGINAL_INJECT(profile)
     inventory = profile.setdefault("inventory", {})
     items = inventory.setdefault("items", {})
 
