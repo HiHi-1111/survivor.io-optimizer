@@ -36,10 +36,14 @@
     .progress-meta { display:flex; justify-content:space-between; margin-top:9px; color:var(--muted); font-size:.82rem; }
     .section { margin-top:18px; }
     .action { white-space:pre-wrap; overflow-wrap:anywhere; background:#090d17; border:1px solid var(--line); border-radius:14px; padding:14px; color:#cdd7e8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; max-height:330px; overflow:auto; }
+    .account-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:14px; }
+    .account-item { background:#090d17; border:1px solid var(--line); border-radius:12px; padding:12px; }
+    .account-item strong { display:block; margin-top:5px; }
+    .inventory-list { margin:14px 0 0; padding-left:19px; color:#cdd7e8; line-height:1.6; }
     .notice { color:var(--warn); }
     .error { color:var(--bad); }
-    @media (max-width:850px) { .hero{align-items:stretch;flex-direction:column}.hero button{width:100%}.grid{grid-template-columns:repeat(2,1fr)} }
-    @media (max-width:520px) { main{width:min(100% - 20px,1120px);padding-top:22px}.grid{grid-template-columns:1fr}.card.big{grid-column:span 1} }
+    @media (max-width:850px) { .hero{align-items:stretch;flex-direction:column}.hero button{width:100%}.grid,.account-grid{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:520px) { main{width:min(100% - 20px,1120px);padding-top:22px}.grid,.account-grid{grid-template-columns:1fr}.card.big{grid-column:span 1} }
   </style>
 </head>
 <body>
@@ -48,7 +52,7 @@
     <div>
       <div class="eyebrow">Survivor.io · Clan Expedition</div>
       <h1>DTlgrind Optimizer</h1>
-      <p class="subtitle">Press Start once. The runner generates legal profiles from your saved account, removes duplicates, scores exact CE damage, and keeps the best result.</p>
+      <p class="subtitle">Runs on this machine/server using the saved DTlgrind account. It generates legal profiles, removes duplicates, scores CE damage, and keeps the best result.</p>
     </div>
     <button id="start">Start Optimization</button>
   </div>
@@ -58,7 +62,26 @@
     <div class="status-copy"><strong id="status">Ready</strong><span id="stage">Waiting for you to start.</span></div>
   </div>
 
-  <div class="grid">
+  <section class="card">
+    <div class="label">Loaded account snapshot · July 2026</div>
+    <div class="account-grid">
+      <div class="account-item"><span class="sub">Total ATK</span><strong>824,890</strong></div>
+      <div class="account-item"><span class="sub">Base / Final ATK</span><strong>128,717 / 443,886</strong></div>
+      <div class="account-item"><span class="sub">Gems</span><strong>140,781</strong></div>
+      <div class="account-item"><span class="sub">Coins</span><strong>54M</strong></div>
+      <div class="account-item"><span class="sub">Crit rate / damage</span><strong>108% / 764%</strong></div>
+      <div class="account-item"><span class="sub">Skill damage</span><strong>621.4%</strong></div>
+      <div class="account-item"><span class="sub">Pet</span><strong>Nutjob · 85% sync</strong></div>
+      <div class="account-item"><span class="sub">Spare equipment</span><strong>8 recorded items</strong></div>
+    </div>
+    <ul class="inventory-list">
+      <li>Red +4 Void necklace</li><li>Yellow Void weapon</li><li>Yellow Chaos weapon</li><li>Yellow Eternal chest</li>
+      <li>Yellow Void belt</li><li>Yellow Eternal boots</li><li>Purple Eternal boots</li><li>Purple Void boots</li>
+    </ul>
+    <div class="sub">Spare gear is recorded exactly as supplied. The optimizer will not invent salvage/core values that are not proven by its source tables.</div>
+  </section>
+
+  <div class="grid section">
     <section class="card big">
       <div class="label">Highest damage found</div>
       <div id="bestDamage" class="value">—</div>
@@ -74,14 +97,8 @@
     <section class="card"><div class="label">Rejected / skipped</div><div id="rejected" class="value">0</div><div id="skipped" class="sub">0 source-proven neutral</div></section>
   </div>
 
-  <section class="card section">
-    <div class="label">Best upgrade path found</div>
-    <div id="action" class="action">No result yet.</div>
-  </section>
-  <section class="card section">
-    <div class="label">Runner notes</div>
-    <div id="notes" class="sub">The final result is only marked complete when every generated exact configuration frontier reports complete.</div>
-  </section>
+  <section class="card section"><div class="label">Best upgrade path found</div><div id="action" class="action">No result yet.</div></section>
+  <section class="card section"><div class="label">Runner notes</div><div id="notes" class="sub">A result is marked complete only when every generated exact configuration frontier reports complete.</div></section>
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -96,59 +113,31 @@ function duration(seconds) {
 }
 function compactAction(action) {
   if (!action) return 'No resource-spending profile has beaten the current baseline yet.';
-  const shown = {
-    action_id: action.action_id,
-    system: action.system,
-    action_type: action.action_type,
-    before_damage: action.before_damage,
-    after_damage: action.after_damage,
-    damage_gain: action.expected_dps_gain,
-    percent_gain: action.percent_damage_gain,
-    consumed_items: action.consumed_items,
-    refunded_items: action.refunded_items
-  };
+  const shown = {action_id:action.action_id,system:action.system,action_type:action.action_type,before_damage:action.before_damage,after_damage:action.after_damage,damage_gain:action.expected_dps_gain,percent_gain:action.percent_damage_gain,consumed_items:action.consumed_items,refunded_items:action.refunded_items};
   return JSON.stringify(shown, null, 2);
 }
 function render(s) {
   const active = ['preparing','running'].includes(s.status);
   $('start').disabled = active;
-  $('start').textContent = active ? 'Optimization Running' : (s.status === 'complete' ? 'Run Again' : 'Start Optimization');
+  $('start').textContent = active ? 'Optimization Running' : (['complete','incomplete','error'].includes(s.status) ? 'Run Again' : 'Start Optimization');
   $('dot').className = `dot ${s.status}`;
   $('status').textContent = s.status === 'idle' ? 'Ready' : s.status.replace('_',' ').replace(/^./, x=>x.toUpperCase());
   $('stage').textContent = s.stage || '';
   $('bestDamage').textContent = s.best_damage == null ? '—' : nf.format(s.best_damage);
-  if (s.damage_gain != null) {
-    $('gain').innerHTML = `<span class="gain">+${nf.format(s.damage_gain)} (${df.format(s.damage_gain_percent || 0)}%)</span> from ${nf.format(s.baseline_damage || 0)} baseline`;
-  }
-  $('elapsed').textContent = duration(s.elapsed_seconds);
-  $('eta').textContent = duration(s.eta_seconds);
-  $('total').textContent = nf.format(s.total_states || 0);
-  $('remaining').textContent = `${nf.format(s.remaining_states || 0)} remaining`;
-  $('speed').textContent = df.format(s.states_per_second || 0);
-  $('deduped').textContent = nf.format(s.deduplicated_states || 0);
-  $('rejected').textContent = nf.format(s.rejected_states || 0);
-  $('skipped').textContent = `${nf.format(s.preflight_skipped || 0)} source-proven neutral`;
+  if (s.damage_gain != null) $('gain').innerHTML = `<span class="gain">+${nf.format(s.damage_gain)} (${df.format(s.damage_gain_percent || 0)}%)</span> from ${nf.format(s.baseline_damage || 0)} baseline`;
+  $('elapsed').textContent = duration(s.elapsed_seconds); $('eta').textContent = duration(s.eta_seconds);
+  $('total').textContent = nf.format(s.total_states || 0); $('remaining').textContent = `${nf.format(s.remaining_states || 0)} remaining`;
+  $('speed').textContent = df.format(s.states_per_second || 0); $('deduped').textContent = nf.format(s.deduplicated_states || 0);
+  $('rejected').textContent = nf.format(s.rejected_states || 0); $('skipped').textContent = `${nf.format(s.preflight_skipped || 0)} source-proven neutral`;
   const pct = s.total_states ? Math.min(100, s.checked_states / s.total_states * 100) : 0;
-  $('bar').style.width = `${pct}%`;
-  $('checked').textContent = `${nf.format(s.checked_states || 0)} checked`;
-  $('percent').textContent = `${df.format(pct)}%`;
+  $('bar').style.width = `${pct}%`; $('checked').textContent = `${nf.format(s.checked_states || 0)} checked`; $('percent').textContent = `${df.format(pct)}%`;
   $('action').textContent = compactAction(s.best_action);
-  const warnings = (s.warnings || []).slice(-5);
-  $('notes').className = `sub ${s.error ? 'error' : (s.status === 'incomplete' ? 'notice' : '')}`;
+  const warnings = (s.warnings || []).slice(-5); $('notes').className = `sub ${s.error ? 'error' : (s.status === 'incomplete' ? 'notice' : '')}`;
   $('notes').textContent = s.error || warnings.join('\n') || 'No warnings.';
   if (!active && timer) { clearInterval(timer); timer = null; }
 }
-async function status() {
-  try { render(await (await fetch('/api/status', {cache:'no-store'})).json()); }
-  catch (e) { $('notes').textContent = `Could not reach runner: ${e}`; }
-}
-$('start').addEventListener('click', async () => {
-  $('start').disabled = true;
-  const response = await fetch('/api/start', {method:'POST'});
-  const payload = await response.json();
-  render(payload);
-  if (!timer) timer = setInterval(status, 500);
-});
+async function status() { try { render(await (await fetch('/api/status', {cache:'no-store'})).json()); } catch (e) { $('notes').textContent = `Could not reach runner: ${e}`; } }
+$('start').addEventListener('click', async () => { $('start').disabled = true; const response = await fetch('/api/start', {method:'POST'}); const payload = await response.json(); render(payload); if (!timer) timer = setInterval(status, 500); });
 status();
 </script>
 </body>
