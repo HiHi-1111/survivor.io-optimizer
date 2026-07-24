@@ -1,0 +1,104 @@
+{
+  "profile_name": "DTlgrind",
+  "game_mode": "clan_expedition",
+  "goal_scenario": "clan_expedition",
+  "notes": "User-confirmed account snapshot. Omitted spendable resources are treated as unavailable.",
+  "build_stats": {
+    "atk": 822300
+  },
+  "gear": {
+    "weapon": {"family": "SS", "eternal": 3, "void": 2, "chaos": 2, "level": 205},
+    "necklace": {"family": "SS", "eternal": 3, "void": 3, "chaos": 2, "level": 205},
+    "gloves": {"family": "SS", "eternal": 3, "void": 3, "chaos": 2, "level": 205},
+    "armor": {"family": "SS", "eternal": 1, "void": 0, "chaos": 0, "level": 205},
+    "belt": {"family": "SS", "eternal": 1, "void": 0, "chaos": 0, "level": 205},
+    "boots": {"family": "SS", "eternal": 1, "void": 0, "chaos": 0, "level": 205}
+  },
+  "survivor": {
+    "id": "Venato",
+    "level": 139,
+    "awakening": 2,
+    "synergy_unlocked": true,
+    "synergy_level": 4,
+    "harmony_left": "Metallia",
+    "harmony_right": "Common",
+    "support_awakening": {"Metallia": 1, "Common": 1}
+  },
+  "pets": {
+    "main_pet": "Nutjob",
+    "sync_rate": 0.85,
+    "awakened": {"Nutjob": 4, "Gourmoew": 2},
+    "default_other_xeno_awakening": 1
+  },
+  "tech_parts": {
+    "equipped": ["Drone", "Rocket", "Soccer", "Lightning", "Laser", "Molotov"],
+    "resonance": {
+      "Drone": {"mode": 900, "multiplier": 1.0},
+      "Rocket": {"mode": 900, "multiplier": 1.2},
+      "Soccer": {"mode": 700, "multiplier": 1.0},
+      "Lightning": {"mode": 960, "multiplier": 1.2},
+      "Laser": {"mode": 1260, "multiplier": 1.4},
+      "Molotov": {"mode": 600, "multiplier": 1.0}
+    },
+    "data": {"base_materials_unlimited": true}
+  },
+  "resources": {
+    "relic_core": 0,
+    "xeno_core": 0,
+    "resonance_chip": 0,
+    "gems": 130539,
+    "eternal_core": 20,
+    "void_core": 0,
+    "chaos_core": 10,
+    "xeno_pet_elixir": 1,
+    "survivor_awakening_core": 0,
+    "s_survivor_shards": 219
+  },
+  "inventory": {
+    "core_selector_chests": 8,
+    "selector_chests": {
+      "relic_core_chest": 2,
+      "tech_core_choice_chest": 40,
+      "s_grade_excellent_equipment_choice_pack": 22,
+      "voidwalker_excellent_equipment_supply_crate": 1,
+      "legend_collectible_or_resonance_choice_chest": 1
+    },
+    "items": {
+      "xeno_awakening_crystal": 59
+    },
+    "resources": {
+      "coins": 42500000,
+      "base_tech_materials": "unlimited"
+    }
+  },
+  "collectibles": {
+    "owned": {
+      "Human Genome Mapping": "R1", "Book of Ancient Wisdom": "R1", "Immortal Lucky Coin": "R1", "Instellar Transition Matrix Design": "R1", "Angelic Tear Crystal": "R1", "Unicorn's Horn": "R1", "Otherworld Key": "R1", "Starcore Diamond": "R1", "High-Lat Energy Cube": "R1", "Void Bloom": "R1", "Eye of True Vision": "R1", "Life Hourglass": "R1", "Nano-Mimetic Mask": "R1", "Dice of Destiny": "R1", "Dimension Foil": "R1", "Mental Sync Helm": "R1", "Atomic Mech": "R1", "Time Essence Bottle": "R1", "Dragon Tooth": "R1", "Hyper Neuron": "R1", "Dark Matter Construct": "R5", "Timeline Cube": "R1", "Pisces Starlight": "R1", "Aries Starlight": "R1", "Malfunctioned Satellite Part": "R1", "Old School Camera": "R1", "Forgotten Diary": "R1", "Griffin's Golden Egg": "R1",
+      "Golden Cutlery": "Y1", "Old Medical Book": "Y4", "Savior's Memento": "Y5", "Safehouse Map": "Y3", "Lucky Charm": "Y+P2", "Scientific Luminary's Journal": "Y4", "Super Circuit Board": "Y2", "Mystical Halo": "Y3", "Infinity Score": "Y3", "Cosmic Compass": "Y+P3", "Wormhole Detector": "Y5", "EM Cage": "Y1", "Elemental Heart": "Y1", "Shuttle Capsule": "Y4", "Neurochip": "Y3", "Star-Rail Passenger Card": "Y3", "Portable Mech Case": "Y3", "Geocore Orb": "Y+P2", "Aquacore Orb": "Y5", "Pyrocore Orb": "Y+P3", "Aerocore Orb": "MAX", "Angel Fruit": "Y2", "Film Reel": "Y3", "Frozen Flame": "Y2", "Photo Album": "Y2", "Gemini Starlight": "Y3", "Leo Starlight": "Y2", "Symbio-Bloom": "Y2", "Martial Arts Trophy": "Y2",
+      "Canned Food": "P4", "Terraforming Seed": "P4", "Lost Outdoor Essential": "P4", "Glare Flashlight": "P+R1", "Apocalypse Newspaper": "P+R1", "Trapped Survivor Letter": "P+R2", "Genetic Keycard": "P4", "Bottle Cap": "P+R1", "Gas Mask": "P+R1", "Doomsayer Recording": "P+R1", "Lucky 4-Leaf Clover Bracelet": "P1"
+    },
+    "custom_sets": {
+      "set_1": {"status": "complete_red", "advanced_collectible_stars": 5},
+      "set_2": {"red_collectible_count": 6},
+      "set_3": {"red_collectible_count": 6},
+      "set_4": {"red_collectible_count": 6}
+    }
+  },
+  "sio_ce": {
+    "stats_stage": "legacy_stat_snapshot",
+    "stats": {"observedTotalAtk": 822300, "maxGear": 205},
+    "attack": {"atkBase": 128717, "atkFinal": 441298},
+    "activeSurvivor": "Venato",
+    "meta": {"synergy": true, "synergyLevel": 4, "harmonyL": "Metallia", "harmonyR": "Common", "maxGear": 205},
+    "settings": {"calcMode": "damage"},
+    "configuration_constraints": {
+      "objective": "maximum_clan_expedition_damage",
+      "allow_astral_forge_refunds": true,
+      "allow_resource_spending": true,
+      "gem_budget": 130539,
+      "omit_unlisted_resources": true,
+      "search_until_frontier_exhausted": true,
+      "survival_weight": 0
+    }
+  }
+}
