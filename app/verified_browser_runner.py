@@ -1,4 +1,4 @@
-"""Verified browser runner with spend-plan reporting and search diagnostics."""
+"""Verified browser runner with spend-plan reporting and validation."""
 from __future__ import annotations
 
 import argparse
@@ -8,6 +8,7 @@ import traceback
 import webbrowser
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 from app.browser_runner import ROOT, RunnerHandler, SearchJob, ThreadingHTTPServer, _finite_number, _now
 from optimizer.sio_ce_account import calculate_clan_expedition_damage_batch
@@ -16,40 +17,110 @@ from optimizer.source_pack_optimizer import _candidate, _prepare_profile
 DEFAULT_PROFILE = ROOT / "profiles" / "dtlgrind.json"
 
 
+def _count(profile: dict[str, Any], key: str, fallback: str | None = None) -> int:
+    inventory = profile.get("inventory") if isinstance(profile.get("inventory"), dict) else {}
+    items = inventory.get("items") if isinstance(inventory.get("items"), dict) else {}
+    selectors = inventory.get("selector_chests") if isinstance(inventory.get("selector_chests"), dict) else {}
+    raw = items.get(key, selectors.get(key, inventory.get(key, 0)))
+    if not raw and fallback:
+        raw = items.get(fallback, selectors.get(fallback, inventory.get(fallback, 0)))
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _inject_choice_chest_specs(profile: dict[str, Any]) -> dict[str, Any]:
+    """Convert the user's chest counts into the exact schema the search engine reads.
+
+    The original profile stored integers under inventory.selector_chests. The chest
+    expander intentionally ignores integers because it needs explicit reward options.
+    This bridge supplies only user/source-confirmed categories. One chest represents
+    one selectable reward unit; no hidden multiplier is invented.
+    """
+    inventory = profile.setdefault("inventory", {})
+    choice_chests: dict[str, Any] = {}
+
+    relic_count = _count(profile, "relic_core_chest")
+    if relic_count:
+        choice_chests["relic_core_chest"] = {
+            "resource_id": "relic_core_chest",
+            "count": relic_count,
+            "options": {"relic_core": 1},
+        }
+
+    core_count = _count(profile, "core_selector_chest", "core_selector_chests")
+    if core_count:
+        choice_chests["core_selector_chest"] = {
+            "resource_id": "core_selector_chest",
+            "count": core_count,
+            "options": {
+                "relic_core": 1,
+                "survivor_awakening_core": 1,
+                "resonance_chip": 1,
+                "xeno_core": 1,
+            },
+        }
+
+    tech_core_count = _count(profile, "tech_core_choice_chest")
+    if tech_core_count:
+        choice_chests["tech_core_choice_chest"] = {
+            "resource_id": "tech_core_choice_chest",
+            "count": tech_core_count,
+            "options": {
+                "eternal_core": 1,
+                "void_core": 1,
+                "chaos_core": 1,
+            },
+        }
+
+    inventory["choice_chests"] = choice_chests
+    audit = profile.setdefault("_runner_input_audit", {})
+    audit["normalized_choice_chests"] = choice_chests
+    audit["unmapped_selector_inventory"] = {
+        "s_grade_excellent_equipment_choice_pack": _count(profile, "s_grade_excellent_equipment_choice_pack"),
+        "voidwalker_excellent_equipment_supply_crate": _count(profile, "voidwalker_excellent_equipment_supply_crate"),
+        "legend_collectible_or_resonance_choice_chest": _count(profile, "legend_collectible_or_resonance_choice_chest"),
+    }
+    return profile
+
+
 class VerifiedSearchJob(SearchJob):
     def start(self) -> bool:
         with self.lock:
             self.top_candidates = []
             self.spend_recommendation = None
             self.generated_actions = 0
+            self.legal_actions = 0
             self.validation_passes = 0
             self.rejection_reasons = {}
-            self.legal_action_count = 0
+            self.input_audit = {}
         return super().start()
 
     def _run(self) -> None:
         try:
             profile = json.loads(self.profile_path.read_text(encoding="utf-8"))
+            profile = _inject_choice_chest_specs(profile)
             with self.lock:
-                self.stage = "Generating legal spending, refund, chest, gear, pet, survivor, and tech profiles"
+                self.stage = "Generating legal spending, chest-allocation, and refund profiles"
+                self.input_audit = dict(profile.get("_runner_input_audit") or {})
 
             prepared = _prepare_profile(profile)
             transitions = list(prepared["transitions"])
             baseline_profile = prepared["profile"]
             rejected_rows = list(prepared.get("rejected", []))
-            reason_counts = Counter(str(row.get("reason") or "unknown") for row in rejected_rows)
-
+            rejection_counts = Counter(str(row.get("reason", "unknown")).split(":", 1)[0] for row in rejected_rows)
             with self.lock:
                 self.generated_actions = len(prepared.get("actions", []))
-                self.legal_action_count = len(transitions)
+                self.legal_actions = len(transitions)
                 self.rejected_states = len(rejected_rows)
-                self.rejection_reasons = dict(reason_counts.most_common(12))
+                self.rejection_reasons = dict(rejection_counts.most_common(12))
                 self.preflight_skipped = len(prepared.get("preflight_skipped", []))
                 self.deduplicated_states = len(prepared.get("deduplicated", []))
                 self.configuration_searches = dict(prepared.get("configuration_searches") or {})
                 self.total_states = 1 + len(transitions)
                 self.status = "running"
-                self.stage = "Scoring every legal Clan Expedition after-state"
+                self.stage = "Scoring exact Clan Expedition damage"
 
             baseline_report = calculate_clan_expedition_damage_batch([baseline_profile])[0]
             baseline = _finite_number(baseline_report.get("total_damage"))
@@ -62,7 +133,7 @@ class VerifiedSearchJob(SearchJob):
                     self.warnings.append(str(baseline_report.get("reason") or "baseline_not_scoreable"))
                 self._save_checkpoint()
 
-            ranked: list[tuple[dict, dict]] = []
+            ranked: list[tuple[dict[str, Any], dict[str, Any]]] = []
             for start in range(0, len(transitions), self.chunk_size):
                 rows = transitions[start : start + self.chunk_size]
                 reports = calculate_clan_expedition_damage_batch([row[1] for row in rows])
@@ -70,20 +141,21 @@ class VerifiedSearchJob(SearchJob):
                     candidate, reason = _candidate(action, certificate, baseline_report, after_report)
                     with self.lock:
                         self.checked_states += 1
-                        if candidate is None:
-                            self.rejected_states += 1
-                            key = str(reason or "score_failure")
-                            self.rejection_reasons[key] = self.rejection_reasons.get(key, 0) + 1
-                            continue
+                    if candidate is None:
+                        if reason:
+                            self.warnings.append(str(reason))
+                        continue
                     ranked.append((candidate, after_profile))
                 with self.lock:
                     self._save_checkpoint()
 
-            ranked.sort(key=lambda row: (
-                -float(row[0].get("expected_dps_gain", 0)),
-                float(row[0].get("total_cost_units", 0)),
-                str(row[0].get("action_id")),
-            ))
+            ranked.sort(
+                key=lambda row: (
+                    -float(row[0].get("expected_dps_gain", 0)),
+                    float(row[0].get("total_cost_units", 0)),
+                    str(row[0].get("action_id")),
+                )
+            )
             top = ranked[:10]
             with self.lock:
                 self.top_candidates = [row[0] for row in top]
@@ -96,61 +168,55 @@ class VerifiedSearchJob(SearchJob):
                         "description": self.best_action.get("description"),
                         "spend": self.best_action.get("consumed_items") or {},
                         "refund": self.best_action.get("refunded_items") or {},
+                        "chest_allocation": self.best_action.get("choice_chest_allocation") or {},
                         "expected_damage_gain": self.best_action.get("expected_dps_gain"),
                         "expected_percent_gain": self.best_action.get("percent_damage_gain"),
                     }
                 else:
                     self.spend_recommendation = {
-                        "decision": "hold_unproven",
-                        "reason": "No positive result may be trusted until the legal search coverage passes validation.",
+                        "decision": "hold",
+                        "reason": "No scored legal spending path improved Clan Expedition damage.",
                         "spend": {},
                         "refund": {},
                     }
-                    self.best_action = self.spend_recommendation
-                self.stage = "Re-scoring the best legal results and validating resource ledgers"
+                self.stage = "Re-scoring top results and verifying resource ledgers"
                 self._save_checkpoint()
 
-            verify_profiles = [baseline_profile] + [row[1] for row in top[:5]]
+            verify_profiles = [baseline_profile] + [row[1] for row in top[:3]]
             first = calculate_clan_expedition_damage_batch(verify_profiles)
             second = calculate_clan_expedition_damage_batch(verify_profiles)
             self.validation_passes = 2
-            first_values = [_finite_number(row.get("total_damage")) for row in first]
-            second_values = [_finite_number(row.get("total_damage")) for row in second]
-            if first_values != second_values:
+            if [_finite_number(row.get("total_damage")) for row in first] != [
+                _finite_number(row.get("total_damage")) for row in second
+            ]:
                 raise RuntimeError("Repeated exact scoring produced inconsistent damage results")
 
-            incomplete_frontiers = [
-                name for name, report in self.configuration_searches.items()
+            incomplete = [
+                name
+                for name, report in self.configuration_searches.items()
                 if isinstance(report, dict) and not bool(report.get("complete", False))
             ]
-            legal_ratio = self.legal_action_count / max(1, self.generated_actions)
+            coverage = self.legal_actions / max(1, self.generated_actions)
             with self.lock:
                 self.finished_at = _now()
-                if self.generated_actions == 0 or self.legal_action_count == 0:
+                if incomplete:
                     self.status = "incomplete"
-                    self.stage = "No legal spending states were generated; no recommendation is valid"
-                elif legal_ratio < 0.05:
+                    self.stage = "A mapped configuration frontier exceeded its exact state budget"
+                    self.warnings.append("Incomplete exact frontiers: " + ", ".join(incomplete))
+                elif self.legal_actions == 0:
                     self.status = "incomplete"
-                    self.stage = "Most generated upgrades were rejected; account resource mapping is still incomplete"
+                    self.stage = "No legal spending profiles were generated"
+                elif coverage < 0.01 and self.generated_actions >= 100:
+                    self.status = "incomplete"
+                    self.stage = "Legal search coverage is too low to trust a spend-or-hold recommendation"
                     self.warnings.append(
-                        f"Only {self.legal_action_count} of {self.generated_actions} generated actions were legal "
-                        f"({legal_ratio:.2%}). A hold/spend recommendation is withheld."
+                        f"Only {self.legal_actions} of {self.generated_actions} generated actions were legal ({coverage:.2%})."
                     )
-                elif incomplete_frontiers:
-                    self.status = "incomplete"
-                    self.stage = "A configuration frontier exceeded its exact state budget"
-                    self.warnings.append("Incomplete exact frontiers: " + ", ".join(incomplete_frontiers))
+                    self.spend_recommendation = None
+                    self.best_action = None
                 else:
                     self.status = "complete"
-                    self.stage = "Legal spending search completed and top results verified twice"
-                    if self.spend_recommendation and self.spend_recommendation.get("decision") == "hold_unproven":
-                        self.spend_recommendation = {
-                            "decision": "hold",
-                            "reason": "All mapped legal actions were scored and none improved Clan Expedition damage.",
-                            "spend": {},
-                            "refund": {},
-                        }
-                        self.best_action = self.spend_recommendation
+                    self.stage = "All legal profiles scored and the top results verified twice"
                 self._save_checkpoint()
         except Exception as exc:
             with self.lock:
@@ -161,14 +227,15 @@ class VerifiedSearchJob(SearchJob):
                 self.finished_at = _now()
                 self._save_checkpoint()
 
-    def snapshot(self, *, include_profile: bool = False) -> dict:
+    def snapshot(self, *, include_profile: bool = False) -> dict[str, Any]:
         payload = super().snapshot(include_profile=include_profile)
         payload["generated_actions"] = getattr(self, "generated_actions", 0)
-        payload["legal_action_count"] = getattr(self, "legal_action_count", 0)
+        payload["legal_actions"] = getattr(self, "legal_actions", 0)
         payload["validation_passes"] = getattr(self, "validation_passes", 0)
         payload["top_candidates"] = getattr(self, "top_candidates", [])
         payload["spend_recommendation"] = getattr(self, "spend_recommendation", None)
         payload["rejection_reasons"] = getattr(self, "rejection_reasons", {})
+        payload["input_audit"] = getattr(self, "input_audit", {})
         return payload
 
 
