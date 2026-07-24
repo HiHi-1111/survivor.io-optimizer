@@ -101,7 +101,16 @@
       "voidwalker_excellent_equipment_supply_crate": 1,
       "legend_collectible_or_resonance_choice_chest": 1
     },
-    "items": {"xeno_awakening_crystal": 59},
+    "items": {
+      "xeno_awakening_crystal": 59,
+      "core_selector_chest": 8,
+      "core_selector_chests": 8,
+      "relic_core_chest": 2,
+      "tech_core_choice_chest": 40,
+      "s_grade_excellent_equipment_choice_pack": 22,
+      "voidwalker_excellent_equipment_supply_crate": 1,
+      "legend_collectible_or_resonance_choice_chest": 1
+    },
     "spare_equipment": [
       {"name": "Voidwaker Emblem", "slot": "Necklace", "side": "void", "rarity": "red", "plus": 4, "quantity": 1},
       {"name": "Void Power", "slot": "Weapon", "side": "void", "rarity": "yellow", "quantity": 1},
