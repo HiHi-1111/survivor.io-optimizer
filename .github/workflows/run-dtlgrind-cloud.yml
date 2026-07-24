@@ -1,0 +1,65 @@
+name: Run DTlgrind Cloud Optimizer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  optimize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out optimizer
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run exact DTlgrind optimizer
+        run: python tools/run_dtlgrind_cloud.py
+
+      - name: Upload full optimizer result
+        uses: actions/upload-artifact@v4
+        with:
+          name: dtlgrind-optimizer-result
+          path: |
+            site/
+            training_outputs/browser_jobs/dtlgrind_latest.json
+          retention-days: 30
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy result page
+        id: deployment
+        uses: actions/deploy-pages@v4
