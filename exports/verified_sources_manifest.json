@@ -1,0 +1,1112 @@
+{
+  "repository": "HiHi-1111/survivo",
+  "branch": "export-verified-sources-20260725",
+  "source_policy": {
+    "primary_formula_source": "user-supplied sio_tools.exp0.dev runtime bundle",
+    "primary_mechanic_sources": [
+      "user Discord formulas",
+      "optimizer_source_reference.pdf",
+      "source_database_map.pdf"
+    ]
+  },
+  "files": [
+    {
+      "path": "github/workflows/inventory-verified-sources.yml",
+      "category": "raw_or_verified_evidence",
+      "reason": "verified source/evidence filename token",
+      "bytes": 5474,
+      "sha256": "ba99ac22ff9325e37de9e5d5a2873fdf417220bb4e49b071b8017402d63e0413"
+    },
+    {
+      "path": "app/verified_browser_runner.py",
+      "category": "raw_or_verified_evidence",
+      "reason": "verified source/evidence filename token",
+      "bytes": 12853,
+      "sha256": "92d043d475ca36253b66e274271d26b19fc004c4623d5260d88a8c89a1b25dc7"
+    },
+    {
+      "path": "data_sources/source_pack/optimizer_source_reference.pdf",
+      "category": "raw_user_supplied",
+      "reason": "exact verified-source filename",
+      "bytes": 1022224,
+      "sha256": "272968b97e1fd805ab9cbfdbbd1bf3ca7347dee2af5e4de468d28dc37dba1ebc"
+    },
+    {
+      "path": "data_sources/source_pack/source_database_map.pdf",
+      "category": "raw_user_supplied",
+      "reason": "exact verified-source filename",
+      "bytes": 2433733,
+      "sha256": "228c695875657f9f65eb38b6e93616d45da223bc665fcb3d1c6f04b71f55644a"
+    },
+    {
+      "path": "docs/SIO_SOURCE_POLICY_AND_CE_SCOPE.md",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 1423,
+      "sha256": "814d856de4b65f9208a859027d7686354b703cb6b26e4d0b863f7c1418abb4db"
+    },
+    {
+      "path": "docs/SIO_UNFINISHED_WORK.md",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 6039,
+      "sha256": "ca816b85deea16d7358a1660ff8a8e35c036a46804ed01588a92222bf14c64b6"
+    },
+    {
+      "path": "knowledge/sio_feature_registry.json",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 12223,
+      "sha256": "223469ec57a22897bb725b6b763ec75895bca7fb586443d137ba1e0944d0ec84"
+    },
+    {
+      "path": "knowledge/sio_runtime_manifest.json",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 3784,
+      "sha256": "f3c5f683cf0864319a994e32c8099a37d35f51b0bfcdd70e9fade9346f8b1ba1"
+    },
+    {
+      "path": "knowledge/sio_worker_manifest.json",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 4221,
+      "sha256": "4919213d4db5f37ca576b902fd39330b39966a26fc3ebf983268535fd63c4f5c"
+    },
+    {
+      "path": "knowledge/source_pack/README.md",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1353,
+      "sha256": "00675ea4f1ca93f62320601cf5b6f9bba7d7372ec829f32c619ec9a63fc4b943"
+    },
+    {
+      "path": "knowledge/source_pack/action_templates.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 29484,
+      "sha256": "5e9eb3e4525604519f036ac27d50b0ba16a73e50aea71ad6e7554fabf046f7d3"
+    },
+    {
+      "path": "knowledge/source_pack/extraction_report.md",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 997,
+      "sha256": "21b20d3808b214c0ec856c6c7fc69f2c642c4a9cf6d66410a8d3070b3245e500"
+    },
+    {
+      "path": "knowledge/source_pack/manual_corrections.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "knowledge/source_pack/raw_extraction_pointer.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 178,
+      "sha256": "c9ae0a39b6e296673135463e50fcebaf618bca936287c26c56ee491361a436ec"
+    },
+    {
+      "path": "knowledge/source_pack/source_catalog.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 188961,
+      "sha256": "812f3a2185cb996fdc1e120f457db0589e016bb3d9b4cbde5f4d53d1a40a0ffb"
+    },
+    {
+      "path": "knowledge/source_pack/source_database.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3002510,
+      "sha256": "40f4dfb29c63cc39affa94ca9b13a6496a2a18d544d1c412791631fa141cd55d"
+    },
+    {
+      "path": "knowledge/source_pack/source_database.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 8071244,
+      "sha256": "f852ef353148526198ea2731c7414dbb8417a453be1734492f39c94ff6521bc2"
+    },
+    {
+      "path": "knowledge/source_pack/tables/breakpoint.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1332,
+      "sha256": "240b94fd37aa313f67d731d858ed0c96efe2b4500d07938631177e200c7f9aaf"
+    },
+    {
+      "path": "knowledge/source_pack/tables/breakpoint.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3389,
+      "sha256": "3e6a4f8f6ae102065d05146934f386af5de916e24144cb188f49ff2cc710e54c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/breakpoints.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1332,
+      "sha256": "240b94fd37aa313f67d731d858ed0c96efe2b4500d07938631177e200c7f9aaf"
+    },
+    {
+      "path": "knowledge/source_pack/tables/breakpoints.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3389,
+      "sha256": "3e6a4f8f6ae102065d05146934f386af5de916e24144cb188f49ff2cc710e54c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chapters.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7531,
+      "sha256": "9ca540926ed126b402a595f610dd5534229bba7542cc16ae098ed4dae04ae056"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chapters.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 27656,
+      "sha256": "9272ab7501caa9059684dc8a825eadf1ca45ff4626aa4831c1a328c63e0d2b5f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chest.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 694,
+      "sha256": "4a535732cb3874e485abb994964edb9fa283fc0c8b98e1ad81568fb5730d8867"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chest.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1121,
+      "sha256": "67609d81a55fa1a9ed95082f22fea8b5bfed60187f299342da52bfeefa5724b6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chest_odds.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4202,
+      "sha256": "3f1ab2c5c62684dc3dce827bad947374349ce473842c1accd8ee18dfee5eb8a2"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chest_odds.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 11952,
+      "sha256": "64ecf056709de4fc5e20153267e506315869a3e4ad937c714b5b9b7d384f14f4"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chests.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 694,
+      "sha256": "4a535732cb3874e485abb994964edb9fa283fc0c8b98e1ad81568fb5730d8867"
+    },
+    {
+      "path": "knowledge/source_pack/tables/chests.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1121,
+      "sha256": "67609d81a55fa1a9ed95082f22fea8b5bfed60187f299342da52bfeefa5724b6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectible_effect.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 17985,
+      "sha256": "c543fe7f0413718f4951386e351350af1bf3827d99eec36b9cde55c11f46f3d6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectible_effect.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 53445,
+      "sha256": "eefa27e0fc4faa2fc2929ccd76af897b3be3bd95018f84cf5d3c5c9e691fa070"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectible_set.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 8015,
+      "sha256": "b2a19539e23270d4c06c22138b6a7f3986b8c3ebdfe7964e07d7883712e0ddb6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectible_set.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 20911,
+      "sha256": "36d62b47654f96e7d0efd587175243f5bb65cf4e3dc96e9fe9305f3add149883"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectible_sets.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 8015,
+      "sha256": "b2a19539e23270d4c06c22138b6a7f3986b8c3ebdfe7964e07d7883712e0ddb6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectible_sets.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 20911,
+      "sha256": "36d62b47654f96e7d0efd587175243f5bb65cf4e3dc96e9fe9305f3add149883"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectibles.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 25597,
+      "sha256": "667787474a1d56dd54bc43c26ccb31a694d899092f9e4bd2db0928a63bd3630d"
+    },
+    {
+      "path": "knowledge/source_pack/tables/collectibles.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 74353,
+      "sha256": "aaf0bfbcabbf83421edb85c9cb9f0f4ba4b9048d29923f8d91ec5a83204f9a03"
+    },
+    {
+      "path": "knowledge/source_pack/tables/costs.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 166171,
+      "sha256": "f9e820c9d84a7ec222fce4848c60c987516ce9cf015a36dea000fac2236ecac5"
+    },
+    {
+      "path": "knowledge/source_pack/tables/costs.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 529159,
+      "sha256": "197b518300adce3299398d1cadc3bf5125a76780d869431ada2a1b8848c167c6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/crit_stat.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 9531,
+      "sha256": "adcaadfd9bf72b00092c54fde2405db56b6cb375c2e8a7f69893685899c557dc"
+    },
+    {
+      "path": "knowledge/source_pack/tables/crit_stat.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 33505,
+      "sha256": "9605c45b27fabb4e4bdeda1317ee47238484f0edbdb748cc90f854e8d054349f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/currencies.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 166434,
+      "sha256": "ffb5baca477af2b24606a6783834571009c4d03e5d849a49057490e6d8e0f904"
+    },
+    {
+      "path": "knowledge/source_pack/tables/currencies.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 530245,
+      "sha256": "ef2d780a61e3950c4e65c540d4411e4856a56817ff9238f96fd7c3bbfaeefca0"
+    },
+    {
+      "path": "knowledge/source_pack/tables/damage_buckets.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 159351,
+      "sha256": "80f30eb9864e63b463971d9ed9d74a7e04eda272a7370c2eeb5067b2972d00f9"
+    },
+    {
+      "path": "knowledge/source_pack/tables/damage_buckets.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 524506,
+      "sha256": "93967fcec5909e408e823c286597209279caf918ae175c73dcc101814f599eca"
+    },
+    {
+      "path": "knowledge/source_pack/tables/debuffs.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 11169,
+      "sha256": "c1d2fe92dbe067035df7bf91fc600e92b316aa91ad1bde8ebdbaa9994ea6522a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/debuffs.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 36849,
+      "sha256": "052fa524e40551461be9e69de007e66e0bf2d15b9adf93aa70ce2b1b6ef899f7"
+    },
+    {
+      "path": "knowledge/source_pack/tables/equipment_priority.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 717,
+      "sha256": "759aeb65577256c0b9748afeeb24f35dd3ea59ec9813933251160252d1b2041c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/equipment_priority.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1148,
+      "sha256": "bd258edafc7d8f5734ba0417a32f010d552321deb6f12ca180530ef4eecb1df8"
+    },
+    {
+      "path": "knowledge/source_pack/tables/event_reward.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3143,
+      "sha256": "b79d2367f47910376b9a116229e3e7bdaf3ede3079b806d7d29ae9ce8f237159"
+    },
+    {
+      "path": "knowledge/source_pack/tables/event_reward.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 9403,
+      "sha256": "9330da28ab88d80ae07d17aecab6e02e92705bc256e534e85e89695ab5329b10"
+    },
+    {
+      "path": "knowledge/source_pack/tables/exchange_path.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 16005,
+      "sha256": "4d04f157d8bdcc6f27766a06a474932f7320039ea142ff1e34214a21f052f0e0"
+    },
+    {
+      "path": "knowledge/source_pack/tables/exchange_path.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 48205,
+      "sha256": "c43359c707024f9b8dd31dd3e9ca5d84751597c976e7010202217b07a7204398"
+    },
+    {
+      "path": "knowledge/source_pack/tables/exchange_paths.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 16005,
+      "sha256": "4d04f157d8bdcc6f27766a06a474932f7320039ea142ff1e34214a21f052f0e0"
+    },
+    {
+      "path": "knowledge/source_pack/tables/exchange_paths.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 48205,
+      "sha256": "c43359c707024f9b8dd31dd3e9ca5d84751597c976e7010202217b07a7204398"
+    },
+    {
+      "path": "knowledge/source_pack/tables/forge_effects.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4157,
+      "sha256": "8eacb4ca46a06973c287f0a46dabe659fbf76527d6979e5a61454f7b7cbeb46f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/forge_effects.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 14370,
+      "sha256": "62c73d6279656732d3bd5672ef06fc5c2dfaa14b08fc891e0c1ece8fd2ab4c76"
+    },
+    {
+      "path": "knowledge/source_pack/tables/gear.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 5982,
+      "sha256": "84c15ed2827d76516073452c5c22c75e1eb955d8ed8f7fd32e7c867635fa86ee"
+    },
+    {
+      "path": "knowledge/source_pack/tables/gear.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 21111,
+      "sha256": "e395e9d7f0932aa9310b966539e1cb02fe9eb9c20488c9c68262be229dbae183"
+    },
+    {
+      "path": "knowledge/source_pack/tables/gear_effect.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4157,
+      "sha256": "8eacb4ca46a06973c287f0a46dabe659fbf76527d6979e5a61454f7b7cbeb46f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/gear_effect.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 14370,
+      "sha256": "62c73d6279656732d3bd5672ef06fc5c2dfaa14b08fc891e0c1ece8fd2ab4c76"
+    },
+    {
+      "path": "knowledge/source_pack/tables/item.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 14177,
+      "sha256": "87d0f97454a60d30cb849869467aeef895e8873fb22bfacf7ccf29c3c396ca25"
+    },
+    {
+      "path": "knowledge/source_pack/tables/item.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 48511,
+      "sha256": "8bb4d4dddbe5ab831b07fc3bc678e954d204118e021beaaa97c965b5ec41143b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/item_value.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 16264,
+      "sha256": "0dbf21443a8fd01a0768888ad2aa287445c6e394ad81e9c606f07d6d0dd6f238"
+    },
+    {
+      "path": "knowledge/source_pack/tables/item_value.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 50262,
+      "sha256": "0d171e4aba2da19aec2b2dfb1d14264d24c1a1c19a36030c04580c9f6a64b384"
+    },
+    {
+      "path": "knowledge/source_pack/tables/items.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 14177,
+      "sha256": "87d0f97454a60d30cb849869467aeef895e8873fb22bfacf7ccf29c3c396ca25"
+    },
+    {
+      "path": "knowledge/source_pack/tables/items.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 48511,
+      "sha256": "8bb4d4dddbe5ab831b07fc3bc678e954d204118e021beaaa97c965b5ec41143b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/merge_rule.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 2154,
+      "sha256": "5aab0fd6bc50f96054936eeffc31e97b5c53960874ed277cd5b6e26536f099ca"
+    },
+    {
+      "path": "knowledge/source_pack/tables/merge_rule.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 6632,
+      "sha256": "0d42d562e38ea8edf5ac1f7ecf0295f17d6f620b460012815674ad6663ce7423"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_component_effect.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 18906,
+      "sha256": "5f996acb0304253710eb32cb9ff1304e8ab8d6ea1bde30d0b8589e1368af93e1"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_component_effect.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 64202,
+      "sha256": "99003179b2149bccbae08bd7d72e5a0735669a16415673e447284614f4cbb96c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_sync_rate.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7677,
+      "sha256": "d82cd9fb08406cbaedbcbb29db144630fc182ac0ce3cf9409c9d007770176541"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_sync_rate.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 29336,
+      "sha256": "86dd12022ea89458519101a4d137d3419a91e849b76499fb068e407ae50b303a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_unlock_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1212,
+      "sha256": "3e59ba29e28d80ec38e48e347de0d2acc306f411e1def7f2225bb766cca36208"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_unlock_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3275,
+      "sha256": "3a184cf1a383e3a53b24a279ae55dfca3565c9d34b0a155aba3e3f98600fc50d"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_upgrade_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 9419,
+      "sha256": "f82190e36003686593b851b00bfd6500cf9c2f0e62ab3515b3040e38f7b1586b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mount_upgrade_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 35227,
+      "sha256": "cdc61fec7a03124a001c947e4b4d52fa9d6b95d6c1f523449025eaf8efe8a93e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mounts.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 38064,
+      "sha256": "37c36ddbc3f00eee7c1be89d3a552d79467e4e981fe64215af130ea6c451852a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/mounts.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 139795,
+      "sha256": "915ed616b427949e9222dc6a9a3fa19c5fc636e65478d7adbfdf44f22779985c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_affection_cap.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3622,
+      "sha256": "aa9e89c9f6a00f6f3e7cc19a150125590a3eaa7ff3abd455e97d90c524acc41f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_affection_cap.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 12275,
+      "sha256": "b94e874f20a845e728d0d76da16e547acaff34317a79d1edeeef82c9f5e7b07b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_affection_effect.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3575,
+      "sha256": "db6c6d6bd3180ac0613e83541752a46a44afb386e614e681939b23d413f23299"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_affection_effect.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 12162,
+      "sha256": "0c7e2610cf62ca227b21b2522cb4b52b156d717dfac0ca71ff5d9e52ef17eb8a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_awakening_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3061,
+      "sha256": "23ddb81032534455f98143199633a739b2053ba30a119c3f7e55cd4069f2f19e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_awakening_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 10851,
+      "sha256": "2ba6d82bf6482b835b0a4c6c9320ad11784ea0e62394e001bfcba3f5c4678df9"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_awakenings.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3061,
+      "sha256": "23ddb81032534455f98143199633a739b2053ba30a119c3f7e55cd4069f2f19e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_awakenings.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 10851,
+      "sha256": "2ba6d82bf6482b835b0a4c6c9320ad11784ea0e62394e001bfcba3f5c4678df9"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_deploy_skill_limit.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3054,
+      "sha256": "de7ed327e8e3ee379e7ad90a8da96ac1e22d5459d85cf1f261e7e4034d51e1fd"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_deploy_skill_limit.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 10884,
+      "sha256": "f1d2553f18877da6091c373832564a713a2fb117784ce6792d253df3bafdc7de"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_merge_rule.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 6115,
+      "sha256": "8754d39c5d03fc0d3fd0d66eb2a1fd06aec077aadf4aeeda499b210048c1a9c8"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_merge_rule.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 18691,
+      "sha256": "d35e328c20a2aeab164787ff0d8343d2ef4c869f44410f69bfce32ba7a0233a4"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_merging.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 6115,
+      "sha256": "8754d39c5d03fc0d3fd0d66eb2a1fd06aec077aadf4aeeda499b210048c1a9c8"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pet_merging.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 18691,
+      "sha256": "d35e328c20a2aeab164787ff0d8343d2ef4c869f44410f69bfce32ba7a0233a4"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pets.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 12103,
+      "sha256": "268121e5e1848ac95c102b2e9207b1fcd0eedfd5284ebe6b17044ec482cb4fe6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/pets.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 46163,
+      "sha256": "b8b5c58954e3cd548fb0e210393e4518af866f4674fbb8fdfcd4452b9926369b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/raw_evidence.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 2533327,
+      "sha256": "fa15fe9c0138e9ca42d9dd8a9021d21cfe03aaba949bac3b343f287635d4b5eb"
+    },
+    {
+      "path": "knowledge/source_pack/tables/raw_evidence.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 6535920,
+      "sha256": "dd0d1cb5ebf0006bc4705234627a229e64bcbcd5e26c26c52d4761ce45f3b9b7"
+    },
+    {
+      "path": "knowledge/source_pack/tables/resonance.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 8244,
+      "sha256": "71e18c3848517c28bbf357d503d44d82dcb850ae95bffa9ed6e629b4917b96af"
+    },
+    {
+      "path": "knowledge/source_pack/tables/resonance.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 26721,
+      "sha256": "8053561abfdfe4e8308568dd4a958622c4a5f54b771c013abd329ee813e23903"
+    },
+    {
+      "path": "knowledge/source_pack/tables/resonance_costs.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4405,
+      "sha256": "ed2481822702487fdf4e7585ab2ce06f09a2a62f00dd1ce2cbbf9290a2926e53"
+    },
+    {
+      "path": "knowledge/source_pack/tables/resonance_costs.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 12235,
+      "sha256": "f85e32c152ebac1f5af83b254d8b93be841fcc57195af829fbb036adfa112664"
+    },
+    {
+      "path": "knowledge/source_pack/tables/resources.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 43511,
+      "sha256": "8d1445142f20bf425d2bd320fcc1eda1478af01e0fb567230183e8eb027fc88a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/resources.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 134368,
+      "sha256": "bc42ecffa80724a0f02290d5b90854ec5b499ae1e3d387791d6ceb08a584ace4"
+    },
+    {
+      "path": "knowledge/source_pack/tables/rule.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 711,
+      "sha256": "eef5a057b3d5e6e03bbc23b95fd54dea667d3b41f6515b11adff1bb30b9047e0"
+    },
+    {
+      "path": "knowledge/source_pack/tables/rule.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1138,
+      "sha256": "6f245d02e88e9a830748a2a51c445853506f0cfae5a0988e3987e45714dde26e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/rules.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 2462,
+      "sha256": "66eaf9e8203e28f7eee0b6f753c34688f95251348c04d8104537830c669884a0"
+    },
+    {
+      "path": "knowledge/source_pack/tables/rules.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7767,
+      "sha256": "d86c4225abdfac85c895752dc3e0273d314ead93b9ad7b59029133e9885fd855"
+    },
+    {
+      "path": "knowledge/source_pack/tables/selectors.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4634,
+      "sha256": "52608397b2616b73d3c5d6e0d5837fe10885d2b14c377b0231986d1e845fe5b5"
+    },
+    {
+      "path": "knowledge/source_pack/tables/selectors.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 14110,
+      "sha256": "1f44f69450989e5deca7cb0bf5d3f7910e3452e989700368835f64a83b2bdcf8"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shop.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 666,
+      "sha256": "265de40663bac8e77fb7f161ff948635ab8d724ba5a3a7060ef739e8e46ebf0a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shop.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1089,
+      "sha256": "9c30ab0f55752df05eb8f71dae99eba65542985cdf89209e1de840437efd1592"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shop_item.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7814,
+      "sha256": "ec7715dc54b18482f9e2ad7ae1cc4b28eece51c172c760957e0ba25d7a609c3e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shop_item.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 20389,
+      "sha256": "041ac53a094361e94b141ba070725bee646f4f855310c7127d7f960eb7e9df72"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shop_items.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7814,
+      "sha256": "ec7715dc54b18482f9e2ad7ae1cc4b28eece51c172c760957e0ba25d7a609c3e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shop_items.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 20389,
+      "sha256": "041ac53a094361e94b141ba070725bee646f4f855310c7127d7f960eb7e9df72"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shops.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 666,
+      "sha256": "265de40663bac8e77fb7f161ff948635ab8d724ba5a3a7060ef739e8e46ebf0a"
+    },
+    {
+      "path": "knowledge/source_pack/tables/shops.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1089,
+      "sha256": "9c30ab0f55752df05eb8f71dae99eba65542985cdf89209e1de840437efd1592"
+    },
+    {
+      "path": "knowledge/source_pack/tables/skills.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1631,
+      "sha256": "e0def9e7b9641c2f3beccdb9a459a06d2fbeb36d9addbb53616a274bf13e554c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/skills.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4499,
+      "sha256": "1880d9afc4db340068fbcce068894da81781c38b51c0cae34f327757ad7439e1"
+    },
+    {
+      "path": "knowledge/source_pack/tables/ss_gear.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4157,
+      "sha256": "8eacb4ca46a06973c287f0a46dabe659fbf76527d6979e5a61454f7b7cbeb46f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/ss_gear.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 14370,
+      "sha256": "62c73d6279656732d3bd5672ef06fc5c2dfaa14b08fc891e0c1ece8fd2ab4c76"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_awakening.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3086,
+      "sha256": "ce597111e37e0224a07818e1975ca05e6f70b1855efe3a704d95c6daf7780836"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_awakening.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 10021,
+      "sha256": "bfa34e26261e5d3ba8a610f12337c9ee444c30d405302553f7339b0d24f8dc8c"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_awakening_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 19480,
+      "sha256": "00758f208abff47ae2556bfc7559b9f1fcdcfcb5cf2c97f3008a52b938f3165d"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_awakening_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 63198,
+      "sha256": "9159504a1859b32f061de0e1b957809fed54ed17b16ba15ee4cf5a6ebbdbadc9"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_awakenings.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 22163,
+      "sha256": "633255bc1f568a1c942c29d06b7e9e24481bb95a7a5794478317481d5cb8ac88"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_awakenings.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 73216,
+      "sha256": "f1c92f4861dfcf9b924cb508d3077cc84ddc44f033d68005c4ed0baad09ebe7f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_effect.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3185,
+      "sha256": "b0aab0f0673b00cba6fc11ff668996f0304786ecfdb5f73e6cbc5abee545ae0b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_effect.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 10066,
+      "sha256": "527d92536cb198c626190acb9c51223671fae11c8e0a4ddde5c1d2ab553f9323"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_energy_essence_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 93915,
+      "sha256": "ee7c5fdc54a8aece68f077b9404fc7a69652e55f19cf69059d97304adc700437"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_energy_essence_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 289595,
+      "sha256": "8b48ff1752a0b6da12f9460430c67d9f790f47dc06cc89d6b4e8935298b270bd"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_energy_essence_costs.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 270281,
+      "sha256": "9455c962400eb42a6b7f44c12361c41254a4e9059fe6a8ae6debd0cdf93add92"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_energy_essence_costs.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 856681,
+      "sha256": "007522708ebef215c023c56356f6dd12ab24ae7ac68def5cbdeaf1b027f6cb58"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_level_effect.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 176769,
+      "sha256": "43cd980d7d8e5fdb9d34cf484a8f325af27d38e90b1807c28aca3490653373c3"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_level_effect.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 567089,
+      "sha256": "eaa4da6da66bb132a31ec45663b0502b9c205b464fe7b2251e37ece43566bf7b"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_upgrade_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 6621,
+      "sha256": "790a7f3993bba475c8ab1ba435148bd75ff3ff3eb586938e8062f272404c28aa"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivor_upgrade_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 20891,
+      "sha256": "494408da2da1c716de4b00efc7d360ee616edeca3180b8dc38c6c165320aaff6"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivors.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 37223,
+      "sha256": "6f29214b1d2c35554c8d677873b19423e473423c7777067193d78a43cdef4d73"
+    },
+    {
+      "path": "knowledge/source_pack/tables/survivors.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 126431,
+      "sha256": "aaf6573b33e9fd9595efa996576ef183096ff8f3e120d093f012f4404af100d9"
+    },
+    {
+      "path": "knowledge/source_pack/tables/tech_parts.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 8244,
+      "sha256": "71e18c3848517c28bbf357d503d44d82dcb850ae95bffa9ed6e629b4917b96af"
+    },
+    {
+      "path": "knowledge/source_pack/tables/tech_parts.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 26721,
+      "sha256": "8053561abfdfe4e8308568dd4a958622c4a5f54b771c013abd329ee813e23903"
+    },
+    {
+      "path": "knowledge/source_pack/tables/tech_resonance_cost.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 4405,
+      "sha256": "ed2481822702487fdf4e7585ab2ce06f09a2a62f00dd1ce2cbbf9290a2926e53"
+    },
+    {
+      "path": "knowledge/source_pack/tables/tech_resonance_cost.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 12235,
+      "sha256": "f85e32c152ebac1f5af83b254d8b93be841fcc57195af829fbb036adfa112664"
+    },
+    {
+      "path": "knowledge/source_pack/tables/tech_resonance_energy.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 3313,
+      "sha256": "05203ae7729069e0df5c21993fa162dd0932dfeb7ae43a09a9968111c09dd7e4"
+    },
+    {
+      "path": "knowledge/source_pack/tables/tech_resonance_energy.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 11103,
+      "sha256": "ae39ee4d850a96508c6981ce1d41e7b9b02ba45357ecf4df6265e3d15351368e"
+    },
+    {
+      "path": "knowledge/source_pack/tables/unlock.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7531,
+      "sha256": "9ca540926ed126b402a595f610dd5534229bba7542cc16ae098ed4dae04ae056"
+    },
+    {
+      "path": "knowledge/source_pack/tables/unlock.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 27656,
+      "sha256": "9272ab7501caa9059684dc8a825eadf1ca45ff4626aa4831c1a328c63e0d2b5f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/unlocks.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 7531,
+      "sha256": "9ca540926ed126b402a595f610dd5534229bba7542cc16ae098ed4dae04ae056"
+    },
+    {
+      "path": "knowledge/source_pack/tables/unlocks.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 27656,
+      "sha256": "9272ab7501caa9059684dc8a825eadf1ca45ff4626aa4831c1a328c63e0d2b5f"
+    },
+    {
+      "path": "knowledge/source_pack/tables/xeno_pet.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 775,
+      "sha256": "fba48a267fc1c926099f671b816ad7343b27a468298a58d4b3310b29a6a9a054"
+    },
+    {
+      "path": "knowledge/source_pack/tables/xeno_pet.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1202,
+      "sha256": "e5d45aeca4e5b95ffa5e9bb552092628d95c1f3fb032aed3dffde96bb01354d3"
+    },
+    {
+      "path": "knowledge/source_pack/tables/xeno_pets.csv",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 775,
+      "sha256": "fba48a267fc1c926099f671b816ad7343b27a468298a58d4b3310b29a6a9a054"
+    },
+    {
+      "path": "knowledge/source_pack/tables/xeno_pets.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1202,
+      "sha256": "e5d45aeca4e5b95ffa5e9bb552092628d95c1f3fb032aed3dffde96bb01354d3"
+    },
+    {
+      "path": "knowledge/source_pack/validation_report.json",
+      "category": "verified_source_pack",
+      "reason": "source-pack material retained by optimizer",
+      "bytes": 1933,
+      "sha256": "e7053f253ee5639f5d6db91ea8a5cbde1933c957064245174243d44053ff1487"
+    },
+    {
+      "path": "tools/sio_training/extract_sio_bundle_map.py",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 6016,
+      "sha256": "3ce495487d6ce6f6861b1a5f719c9b5d29528144e295e36664e48dd825b3a285"
+    },
+    {
+      "path": "tools/sio_training/extract_sio_ce_bible.py",
+      "category": "derived_source_lock",
+      "reason": "manifest, scope, or extractor tied to supplied sources",
+      "bytes": 4050,
+      "sha256": "f9291fe08ca340f4d718451ba19670eb95599d090b1e097da8f02ad90d410ade"
+    }
+  ],
+  "counts_by_category": {
+    "raw_or_verified_evidence": 2,
+    "raw_user_supplied": 2,
+    "derived_source_lock": 7,
+    "verified_source_pack": 145
+  }
+}
