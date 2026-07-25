@@ -1,0 +1,148 @@
+name: Inventory verified user-supplied sources
+
+on:
+  push:
+    branches:
+      - export-verified-sources-20260725
+
+permissions:
+  contents: write
+
+jobs:
+  inventory:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: true
+
+      - name: Build verified-source inventory
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path('.')
+          ignored_parts = {'.git', '.venv', 'venv', 'node_modules', '__pycache__'}
+          exact_raw_names = {
+              'optimizer_source_reference.pdf',
+              'source_database_map.pdf',
+              'captured_67727_args.json',
+              'smoke_score_result.json',
+              'sio_missing_data_export_20260716_verified.json.gz',
+              'active_verified_profile.json.gz',
+          }
+          raw_name_tokens = (
+              'sio_tools',
+              'discord',
+              'verified',
+              'optimizer_source_reference',
+              'source_database_map',
+              'captured_67727',
+              'smoke_score_result',
+              'sio_missing_data_export',
+          )
+          derived_exact = {
+              'knowledge/sio_runtime_manifest.json',
+              'knowledge/sio_worker_manifest.json',
+              'knowledge/sio_feature_registry.json',
+              'docs/SIO_SOURCE_POLICY_AND_CE_SCOPE.md',
+              'docs/SIO_UNFINISHED_WORK.md',
+              'tools/sio_training/extract_sio_ce_bible.py',
+              'tools/sio_training/extract_sio_bundle_map.py',
+          }
+
+          def digest(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open('rb') as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          records = []
+          for path in sorted(p for p in root.rglob('*') if p.is_file()):
+              rel = path.as_posix().lstrip('./')
+              parts = set(path.parts)
+              if parts & ignored_parts:
+                  continue
+              low = rel.lower()
+              name = path.name.lower()
+
+              category = None
+              reason = None
+              if name in exact_raw_names:
+                  category = 'raw_user_supplied'
+                  reason = 'exact verified-source filename'
+              elif 'data/sio_training/archive/' in low:
+                  category = 'raw_user_supplied'
+                  reason = 'sIO training archive source area'
+              elif 'knowledge/source_pack/' in low:
+                  category = 'verified_source_pack'
+                  reason = 'source-pack material retained by optimizer'
+              elif any(token in name for token in raw_name_tokens):
+                  category = 'raw_or_verified_evidence'
+                  reason = 'verified source/evidence filename token'
+              elif rel in derived_exact:
+                  category = 'derived_source_lock'
+                  reason = 'manifest, scope, or extractor tied to supplied sources'
+
+              if category is None:
+                  continue
+
+              records.append({
+                  'path': rel,
+                  'category': category,
+                  'reason': reason,
+                  'bytes': path.stat().st_size,
+                  'sha256': digest(path),
+              })
+
+          output = {
+              'repository': 'HiHi-1111/survivo',
+              'branch': 'export-verified-sources-20260725',
+              'source_policy': {
+                  'primary_formula_source': 'user-supplied sio_tools.exp0.dev runtime bundle',
+                  'primary_mechanic_sources': [
+                      'user Discord formulas',
+                      'optimizer_source_reference.pdf',
+                      'source_database_map.pdf',
+                  ],
+              },
+              'files': records,
+              'counts_by_category': {},
+          }
+          for row in records:
+              key = row['category']
+              output['counts_by_category'][key] = output['counts_by_category'].get(key, 0) + 1
+
+          out = root / 'exports' / 'verified_sources_manifest.json'
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(output, indent=2), encoding='utf-8')
+
+          txt = root / 'exports' / 'verified_sources_manifest.txt'
+          lines = [
+              'Verified source inventory',
+              '=========================',
+              '',
+          ]
+          for row in records:
+              lines.append(f"[{row['category']}] {row['path']} | {row['bytes']} bytes | sha256={row['sha256']}")
+          txt.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print(json.dumps(output['counts_by_category'], indent=2))
+          print(f'Found {len(records)} source/evidence files')
+          PY
+
+      - name: Commit inventory manifest
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add exports/verified_sources_manifest.json exports/verified_sources_manifest.txt
+          git commit -m "Add verified source inventory [skip source-export]"
+          git push
