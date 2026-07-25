@@ -9,13 +9,14 @@
       "source_database_map.pdf"
     ]
   },
+  "note": "The raw sio_tools runtime ZIP is referenced by the source lock but is not stored in this GitHub checkout unless listed below.",
   "files": [
     {
       "path": "github/workflows/inventory-verified-sources.yml",
       "category": "raw_or_verified_evidence",
       "reason": "verified source/evidence filename token",
-      "bytes": 5474,
-      "sha256": "ba99ac22ff9325e37de9e5d5a2873fdf417220bb4e49b071b8017402d63e0413"
+      "bytes": 6823,
+      "sha256": "5b9d42dd950857dcae80dc8f6ea6350df0da319e120f29993e562d60e99630cf"
     },
     {
       "path": "app/verified_browser_runner.py",

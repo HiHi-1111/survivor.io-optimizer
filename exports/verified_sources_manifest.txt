@@ -1,7 +1,7 @@
 Verified source inventory
 =========================
 
-[raw_or_verified_evidence] github/workflows/inventory-verified-sources.yml | 5474 bytes | sha256=ba99ac22ff9325e37de9e5d5a2873fdf417220bb4e49b071b8017402d63e0413
+[raw_or_verified_evidence] github/workflows/inventory-verified-sources.yml | 6823 bytes | sha256=5b9d42dd950857dcae80dc8f6ea6350df0da319e120f29993e562d60e99630cf
 [raw_or_verified_evidence] app/verified_browser_runner.py | 12853 bytes | sha256=92d043d475ca36253b66e274271d26b19fc004c4623d5260d88a8c89a1b25dc7
 [raw_user_supplied] data_sources/source_pack/optimizer_source_reference.pdf | 1022224 bytes | sha256=272968b97e1fd805ab9cbfdbbd1bf3ca7347dee2af5e4de468d28dc37dba1ebc
 [raw_user_supplied] data_sources/source_pack/source_database_map.pdf | 2433733 bytes | sha256=228c695875657f9f65eb38b6e93616d45da223bc665fcb3d1c6f04b71f55644a
