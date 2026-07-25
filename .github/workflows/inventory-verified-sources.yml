@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 1
           lfs: true
 
-      - name: Build verified-source inventory
+      - name: Build verified-source inventory and archive
         shell: bash
         run: |
           python - <<'PY'
@@ -26,6 +26,8 @@ jobs:
 
           import hashlib
           import json
+          import shutil
+          import zipfile
           from pathlib import Path
 
           root = Path('.')
@@ -69,7 +71,7 @@ jobs:
           for path in sorted(p for p in root.rglob('*') if p.is_file()):
               rel = path.as_posix().lstrip('./')
               parts = set(path.parts)
-              if parts & ignored_parts:
+              if parts & ignored_parts or rel.startswith('exports/'):
                   continue
               low = rel.lower()
               name = path.name.lower()
@@ -85,12 +87,12 @@ jobs:
               elif 'knowledge/source_pack/' in low:
                   category = 'verified_source_pack'
                   reason = 'source-pack material retained by optimizer'
-              elif any(token in name for token in raw_name_tokens):
-                  category = 'raw_or_verified_evidence'
-                  reason = 'verified source/evidence filename token'
               elif rel in derived_exact:
                   category = 'derived_source_lock'
                   reason = 'manifest, scope, or extractor tied to supplied sources'
+              elif any(token in name for token in raw_name_tokens):
+                  category = 'raw_or_verified_evidence'
+                  reason = 'verified source/evidence filename token'
 
               if category is None:
                   continue
@@ -114,6 +116,7 @@ jobs:
                       'source_database_map.pdf',
                   ],
               },
+              'note': 'The raw sio_tools runtime ZIP is referenced by the source lock but is not stored in this GitHub checkout unless listed below.',
               'files': records,
               'counts_by_category': {},
           }
@@ -121,11 +124,12 @@ jobs:
               key = row['category']
               output['counts_by_category'][key] = output['counts_by_category'].get(key, 0) + 1
 
-          out = root / 'exports' / 'verified_sources_manifest.json'
-          out.parent.mkdir(parents=True, exist_ok=True)
-          out.write_text(json.dumps(output, indent=2), encoding='utf-8')
+          export_dir = root / 'exports'
+          export_dir.mkdir(parents=True, exist_ok=True)
+          manifest_json = export_dir / 'verified_sources_manifest.json'
+          manifest_json.write_text(json.dumps(output, indent=2), encoding='utf-8')
 
-          txt = root / 'exports' / 'verified_sources_manifest.txt'
+          manifest_txt = export_dir / 'verified_sources_manifest.txt'
           lines = [
               'Verified source inventory',
               '=========================',
@@ -133,16 +137,35 @@ jobs:
           ]
           for row in records:
               lines.append(f"[{row['category']}] {row['path']} | {row['bytes']} bytes | sha256={row['sha256']}")
-          txt.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          manifest_txt.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          archive = export_dir / 'verified_sources_from_github.zip'
+          included_categories = {'raw_user_supplied', 'verified_source_pack', 'derived_source_lock'}
+          with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+              zf.write(manifest_json, 'MANIFEST/verified_sources_manifest.json')
+              zf.write(manifest_txt, 'MANIFEST/verified_sources_manifest.txt')
+              for row in records:
+                  if row['category'] not in included_categories:
+                      continue
+                  source = root / row['path']
+                  zf.write(source, row['path'])
+
+          sha_file = export_dir / 'verified_sources_from_github.zip.sha256'
+          sha_file.write_text(f"{digest(archive)}  {archive.name}\n", encoding='utf-8')
           print(json.dumps(output['counts_by_category'], indent=2))
           print(f'Found {len(records)} source/evidence files')
+          print(f'Archive bytes: {archive.stat().st_size}')
           PY
 
-      - name: Commit inventory manifest
+      - name: Commit inventory and downloadable archive
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add exports/verified_sources_manifest.json exports/verified_sources_manifest.txt
-          git commit -m "Add verified source inventory [skip source-export]"
+          git add \
+            exports/verified_sources_manifest.json \
+            exports/verified_sources_manifest.txt \
+            exports/verified_sources_from_github.zip \
+            exports/verified_sources_from_github.zip.sha256
+          git commit -m "Add verified source archive [skip source-export]"
           git push
